@@ -1,0 +1,11 @@
+#visual studio
+.vs
+*.exe
+*ilk
+*.pdb
+*.obj
+*.idb
+*.pch
+*.res
+*.tlog/
+*.log
