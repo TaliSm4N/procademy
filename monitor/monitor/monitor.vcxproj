@@ -20,9 +20,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{19CEB83A-6D1F-4CE3-AE61-56F1BCC2EE77}</ProjectGuid>
+    <ProjectGuid>{23B4AC61-5010-4BC9-A9DD-F1F19049C884}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>WindowsProject1</RootNamespace>
+    <RootNamespace>monitor</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -147,17 +147,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="GraphWindow.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-    </ClInclude>
+    <ClInclude Include="monitor.h" />
+    <ClInclude Include="MonitorGraphUnit.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="WindowsProject1.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GraphWindow.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    <ClCompile Include="monitor.cpp" />
+    <ClCompile Include="MonitorGraphUnit.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
@@ -166,16 +164,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="WindowsProject1.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="WindowsProject1.rc" />
+    <ResourceCompile Include="monitor.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="monitor.ico" />
     <Image Include="small.ico" />
-    <Image Include="WindowsProject1.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
