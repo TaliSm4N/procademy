@@ -130,8 +130,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
 	case WM_CREATE:
-		g = new MonitorGraphUnit(hInst, hWnd, MonitorGraphUnit::LINE_SINGLE, 10, 10, 400, 400);
+		g = new MonitorGraphUnit(hInst, hWnd, MonitorGraphUnit::LINE_SINGLE, 10, 10, 400, 400,100);
+		g->SetDataColumnInfo(0, 0, 0, (WCHAR *)L"test");
+		SetTimer(hWnd, 1, 10, NULL);
 		break;
+	case WM_TIMER:
+		switch (wParam)
+		{
+		case 1:
+		{
+			int ran = rand() % 20+50;
+			g->InsertData(0, 0, ran);
+		}
+			break;
+		default:
+			break;
+		}
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
