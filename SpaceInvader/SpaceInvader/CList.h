@@ -20,13 +20,13 @@ public:
 		{
 		}
 
-		iterator operator ++()
+		iterator& operator ++()
 		{
 			this->_node = this->_node->_Next;
 			return *this;
 		}
 
-		iterator operator ++(int)
+		iterator& operator ++(int)
 		{
 			iterator temp(this->_node);
 			this->_node = this->_node->_Next;
