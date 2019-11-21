@@ -9,7 +9,7 @@
 #include "Console.h"
 
 #define PORT 3000
-#define FRAME 25
+#define FRAME 26
 
 #define WIDTH 80
 #define HEIGHT 23
@@ -87,7 +87,7 @@ int main()
 		keyboard();
 		network();
 		//·»´õ
-		render();
+		//render();
 		Sleep(FRAME);
 		//std::cout << "frame_check" << std::endl;
 	}
@@ -109,7 +109,11 @@ void keyboard()
 {
 	bool flag = false;
 
-	if (GetAsyncKeyState(VK_UP))
+	if (g_myP == nullptr)
+		return;
+
+	//if (GetAsyncKeyState(VK_UP))
+	if (GetAsyncKeyState(0x57))
 	{
 		if (g_myP->y > 0)
 		{
@@ -118,7 +122,8 @@ void keyboard()
 		}
 	}
 
-	if (GetAsyncKeyState(VK_DOWN))
+	//if (GetAsyncKeyState(VK_DOWN))
+	if (GetAsyncKeyState(0x53))
 	{
 		if (g_myP->y < HEIGHT)
 		{
@@ -127,7 +132,8 @@ void keyboard()
 		}
 	}
 
-	if (GetAsyncKeyState(VK_LEFT))
+	//if (GetAsyncKeyState(VK_LEFT))
+	if (GetAsyncKeyState(0x41))
 	{
 		if (g_myP->x > 0)
 		{
@@ -136,8 +142,10 @@ void keyboard()
 		}
 	}
 
-	if (GetAsyncKeyState(VK_RIGHT))
+	//if (GetAsyncKeyState(VK_RIGHT))
+	if (GetAsyncKeyState(0x44))
 	{
+
 		if (g_myP->x < WIDTH)
 		{
 			g_myP->x++;
@@ -188,7 +196,7 @@ void network()
 					}
 				}
 			}
-			//std::cout << "test g_myID:" << g_myID << std::endl;
+			std::cout << "test g_myID:" << g_myID << std::endl;
 			break;
 		case 1:
 			Player p;
