@@ -1,8 +1,11 @@
 #include "ScreenDib.h"
 
+
+
 ScreenDib::ScreenDib(int iWidth, int iHeight, int iColorBit)
 	:_iWidth(iWidth),_iHeight(iHeight),_iColorBit(iColorBit)
 {
+	memset(&_stDibinfo, 0, sizeof(BITMAPINFO));
 	CreateDibBuffer(iWidth, iHeight, iColorBit);
 
 	int _iPitch = (_iWidth * (_iColorBit/8) + 3)&~3;

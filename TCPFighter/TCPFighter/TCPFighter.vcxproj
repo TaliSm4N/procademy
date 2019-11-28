@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{774766A9-65E1-465B-9043-F4AB985261EF}</ProjectGuid>
+    <ProjectGuid>{A3E6CA3A-15B5-477C-AE39-8D7C2533F7C5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>TCPFighter</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
@@ -147,19 +147,54 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="game.h" />
+    <ClInclude Include="BaseObject.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="Frame.h" />
+    <ClInclude Include="Game.h" />
+    <ClInclude Include="network.h" />
+    <ClInclude Include="PacketDefine.h" />
+    <ClInclude Include="PlayerObject.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="ScreenDib.h" />
+    <ClInclude Include="Sprite.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TCP_Fighter.h" />
+    <ClInclude Include="TCPFighter.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="game.cpp">
+    <ClCompile Include="BaseObject.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Frame.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Game.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="network.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="PlayerObject.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="ScreenDib.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Sprite.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -167,14 +202,82 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="TCP_Fighter.cpp" />
+    <ClCompile Include="TCPFighter.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="TCP_Fighter.rc" />
+    <ResourceCompile Include="TCPFighter.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="small.ico" />
-    <Image Include="TCP_Fighter.ico" />
+    <Image Include="SpriteData\Attack1_L_01.bmp" />
+    <Image Include="SpriteData\Attack1_L_02.bmp" />
+    <Image Include="SpriteData\Attack1_L_03.bmp" />
+    <Image Include="SpriteData\Attack1_L_04.bmp" />
+    <Image Include="SpriteData\Attack1_R_01.bmp" />
+    <Image Include="SpriteData\Attack1_R_02.bmp" />
+    <Image Include="SpriteData\Attack1_R_03.bmp" />
+    <Image Include="SpriteData\Attack1_R_04.bmp" />
+    <Image Include="SpriteData\Attack2_L_01.bmp" />
+    <Image Include="SpriteData\Attack2_L_02.bmp" />
+    <Image Include="SpriteData\Attack2_L_03.bmp" />
+    <Image Include="SpriteData\Attack2_L_04.bmp" />
+    <Image Include="SpriteData\Attack2_R_01.bmp" />
+    <Image Include="SpriteData\Attack2_R_02.bmp" />
+    <Image Include="SpriteData\Attack2_R_03.bmp" />
+    <Image Include="SpriteData\Attack2_R_04.bmp" />
+    <Image Include="SpriteData\Attack3_L_01.bmp" />
+    <Image Include="SpriteData\Attack3_L_02.bmp" />
+    <Image Include="SpriteData\Attack3_L_03.bmp" />
+    <Image Include="SpriteData\Attack3_L_04.bmp" />
+    <Image Include="SpriteData\Attack3_L_05.bmp" />
+    <Image Include="SpriteData\Attack3_L_06.bmp" />
+    <Image Include="SpriteData\Attack3_R_01.bmp" />
+    <Image Include="SpriteData\Attack3_R_02.bmp" />
+    <Image Include="SpriteData\Attack3_R_03.bmp" />
+    <Image Include="SpriteData\Attack3_R_04.bmp" />
+    <Image Include="SpriteData\Attack3_R_05.bmp" />
+    <Image Include="SpriteData\Attack3_R_06.bmp" />
+    <Image Include="SpriteData\HPGuage.bmp" />
+    <Image Include="SpriteData\Move_L_01.bmp" />
+    <Image Include="SpriteData\Move_L_02.bmp" />
+    <Image Include="SpriteData\Move_L_03.bmp" />
+    <Image Include="SpriteData\Move_L_04.bmp" />
+    <Image Include="SpriteData\Move_L_05.bmp" />
+    <Image Include="SpriteData\Move_L_06.bmp" />
+    <Image Include="SpriteData\Move_L_07.bmp" />
+    <Image Include="SpriteData\Move_L_08.bmp" />
+    <Image Include="SpriteData\Move_L_09.bmp" />
+    <Image Include="SpriteData\Move_L_10.bmp" />
+    <Image Include="SpriteData\Move_L_11.bmp" />
+    <Image Include="SpriteData\Move_L_12.bmp" />
+    <Image Include="SpriteData\Move_R_01.bmp" />
+    <Image Include="SpriteData\Move_R_02.bmp" />
+    <Image Include="SpriteData\Move_R_03.bmp" />
+    <Image Include="SpriteData\Move_R_04.bmp" />
+    <Image Include="SpriteData\Move_R_05.bmp" />
+    <Image Include="SpriteData\Move_R_06.bmp" />
+    <Image Include="SpriteData\Move_R_07.bmp" />
+    <Image Include="SpriteData\Move_R_08.bmp" />
+    <Image Include="SpriteData\Move_R_09.bmp" />
+    <Image Include="SpriteData\Move_R_10.bmp" />
+    <Image Include="SpriteData\Move_R_11.bmp" />
+    <Image Include="SpriteData\Move_R_12.bmp" />
+    <Image Include="SpriteData\Shadow.bmp" />
+    <Image Include="SpriteData\Stand_L_01.bmp" />
+    <Image Include="SpriteData\Stand_L_02.bmp" />
+    <Image Include="SpriteData\Stand_L_03.bmp" />
+    <Image Include="SpriteData\Stand_R_01.bmp" />
+    <Image Include="SpriteData\Stand_R_02.bmp" />
+    <Image Include="SpriteData\Stand_R_03.bmp" />
+    <Image Include="SpriteData\xSpark_1.bmp" />
+    <Image Include="SpriteData\xSpark_2.bmp" />
+    <Image Include="SpriteData\xSpark_3.bmp" />
+    <Image Include="SpriteData\xSpark_4.bmp" />
+    <Image Include="SpriteData\_Map.bmp" />
+    <Image Include="TCPFighter.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="SpriteData\설정 및 중점정보.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

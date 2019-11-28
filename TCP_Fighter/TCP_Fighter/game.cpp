@@ -1,5 +1,8 @@
 #include "game.h"
 
+ScreenDib g_ScreenDib(640, 480, 32);
+HWND g_hWnd;
+
 void Update()
 {
 	BYTE *pDest = g_ScreenDib.GetDibBuffer();
@@ -19,7 +22,7 @@ void Update()
 	g_ScreenDib.Flip(g_hWnd, 0, 0);
 }
 
-void init(HWND hWnd)
+void initGame(HWND hWnd)
 {
 	g_hWnd = hWnd;
 }

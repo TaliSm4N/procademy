@@ -1,5 +1,5 @@
 #pragma once
-#include "stdafx.h"
+#pragma comment(lib, "winmm.lib")
 
 class ScreenDib
 {
@@ -7,17 +7,17 @@ public:
 	ScreenDib(int iWidth, int iHeight, int iColorBit);
 	virtual ~ScreenDib();
 
-	BYTE *GetDibBuffer();
-	int GetWidth();
-	int GetHeight();
-	int GetPitch();
+	BYTE *GetDibBuffer() const;
+	int GetWidth() const;
+	int GetHeight() const;
+	int GetPitch() const;
 	void Flip(HWND hWnd, int iX = 0, int iY = 0);
 
 private:
-	void CreateDibBuffer(int iWidth, int iHeight, int iColorBit);
+	void CreateDibBuffer();
 	void ReleaseDibBuffer();
 
-	BITMAPINFO _stDibinfo;
+	BITMAPINFO _stDibInfo;
 	BYTE *_bypBuffer;
 
 	int _iWidth;
