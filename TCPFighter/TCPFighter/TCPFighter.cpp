@@ -24,11 +24,14 @@ HWND g_hWnd;
 BOOL g_active=true;
 BOOL g_network = false;
 
+char IP[16];
+
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK DialogProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -36,15 +39,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ int       nCmdShow)
 {
 	timeBeginPeriod(1);
+
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: 여기에 코드를 입력합니다.
-
+	DialogBoxA(hInstance, "IP 입력", NULL, DialogProc);
     // 전역 문자열을 초기화합니다.
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_TCPFIGHTER, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
+
+	
+	//DialogBoxParamW(hInstance, L"IP 입력", NULL, DialocProc,NULL);
 
     // 응용 프로그램 초기화를 수행합니다:
     if (!InitInstance (hInstance, nCmdShow))
@@ -210,6 +217,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+
+BOOL CALLBACK DialogProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	static HWND Box;
+
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		memset(IP, 0, 16);
+		Box = GetDlgItem(hWnd, 100);
+		SetWindowTextA(Box, "127.0.0.1");
+		break;
+	case WM_COMMAND:
+		switch (wParam)
+		{
+		case IDOK:
+			GetDlgItemTextA(hWnd, 100, IP, 16);
+			EndDialog(hWnd, TRUE);
+			break;
+		}
+	default:
+		break;
+	}
+	return false;
 }
 
 // 정보 대화 상자의 메시지 처리기입니다.

@@ -65,8 +65,12 @@ public:
 	int Dequeue(char *chpData,int size);
 	int Peek(char *chpData, int size);
 	bool MoveFront(int size);
+	bool MoveRear(int size);
 
 	/////////////////////////////////////////////////////////////////////////
 	// ReadPos 에서 데이타 가져옴. ReadPos 이동.
+
+	char *GetWritePos() const;
+	char *GetReadPos() const;
 
 };

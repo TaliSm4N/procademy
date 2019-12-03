@@ -23,6 +23,9 @@ struct Session
 Session g_session;
 BOOL g_bSend=false;
 
+BOOL g_bReadDirect = true;
+BOOL g_bWriteDirect = true;
+
 bool networkInit(HWND hWnd,int WM_SOCKET)
 {
 	g_session.RecvQ = new RingBuffer(BUF_SIZE);
@@ -67,16 +70,98 @@ void ProcessSocketMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case FD_READ:
 		//system("pause");
 		//OutputDebugString(L"FD_READ");
-		ProcRead(hWnd);
+		if (g_bReadDirect)
+		{
+			ProcReadDirect(hWnd);
+		}
+		else
+			ProcRead(hWnd);
 		break;
 	case FD_WRITE:
 		g_bSend = true;
-		ProcWrite();
+		if (g_bWriteDirect)
+		{
+			ProcWriteDirect();
+		}
+		else
+			ProcWrite();
 		//system("pause");
 		//OutputDebugString(L"FD_WRITE");
 		break;
 	default:
 		break;
+	}
+}
+
+void ProcReadDirect(HWND hWnd)
+{
+	char payLoad[100];
+	BYTE end;
+	st_NETWORK_PACKET_HEADER header;
+	int size;
+
+	if (g_session.RecvQ->GetFreeSize() > g_session.RecvQ->DirectEnqueueSize())
+	{
+		size=recv(g_session.socket, g_session.RecvQ->GetWritePos(), g_session.RecvQ->DirectEnqueueSize(), 0);
+		if (size == SOCKET_ERROR)
+		{
+			//int temp = 0;
+			//system("pause");
+			if(GetLastError() != WSAEWOULDBLOCK)
+				exit(-1);
+		}
+		else
+			g_session.RecvQ->MoveRear(size);
+		size=recv(g_session.socket, g_session.RecvQ->GetWritePos(), g_session.RecvQ->GetFreeSize(), 0);
+		if (size == SOCKET_ERROR)
+		{
+			//int temp = 0;
+			//system("pause");
+			if (GetLastError() != WSAEWOULDBLOCK)
+				exit(-1);
+		}
+		else
+			g_session.RecvQ->MoveRear(size);
+	}
+	else
+	{
+		size = recv(g_session.socket, g_session.RecvQ->GetWritePos(), g_session.RecvQ->DirectEnqueueSize(), 0);
+		if (size == SOCKET_ERROR)
+		{
+			//int temp = 0;
+			//system("pause");
+			exit(-1);
+		}
+		g_session.RecvQ->MoveRear(size);
+
+	}
+
+	while (1)
+	{
+		if (sizeof(header) > g_session.RecvQ->GetUseSize())
+			break;
+
+		if (g_session.RecvQ->Peek((char *)&header, sizeof(header)) < sizeof(header))
+			break;
+		if (header.bySize + sizeof(header) + 1 > g_session.RecvQ->GetUseSize())
+			break;
+
+		g_session.RecvQ->MoveFront(sizeof(header));
+
+		if (g_session.RecvQ->Dequeue(payLoad, header.bySize) != header.bySize)
+		{
+			exit(-1);
+		}
+
+
+		PacketProc(header.byType, payLoad);
+
+		g_session.RecvQ->Dequeue((char *)&end, sizeof(BYTE));
+
+		if (end != dfNETWORK_PACKET_END)
+			exit(-1);
+
+		//메시지처리
 	}
 }
 
@@ -234,7 +319,57 @@ void SendPacket(st_NETWORK_PACKET_HEADER *pHeader, char *pPacket)
 	g_session.SendQ->Enqueue((char *)pHeader, sizeof(st_NETWORK_PACKET_HEADER));
 	g_session.SendQ->Enqueue(pPacket, pHeader->bySize);
 	g_session.SendQ->Enqueue(&endCode, 1);
-	ProcWrite();
+	
+
+	if (g_bWriteDirect)
+	{
+		ProcWriteDirect();
+	}
+	else
+		ProcWrite();
+}
+
+void ProcWriteDirect()
+{
+	if (!g_bSend)
+	{
+		return;
+	}
+	int send_size;
+
+	//if (g_session.SendQ->DirectDequeueSize());
+	if (g_session.SendQ->GetUseSize() > g_session.SendQ->DirectDequeueSize())
+	{
+		send_size = send(g_session.socket, g_session.SendQ->GetReadPos(), g_session.SendQ->DirectDequeueSize(), 0);
+
+		if (send_size == SOCKET_ERROR && GetLastError() != WSAEWOULDBLOCK)
+		{
+			g_bSend = false;
+			return;
+		}
+
+		g_session.SendQ->MoveFront(send_size);
+
+		send_size = send(g_session.socket, g_session.SendQ->GetReadPos(), g_session.SendQ->GetUseSize(), 0);
+
+		if (send_size == SOCKET_ERROR && GetLastError() != WSAEWOULDBLOCK)
+		{
+			g_bSend = false;
+			return;
+		}
+		g_session.SendQ->MoveFront(send_size);
+	}
+	else
+	{
+		send_size = send(g_session.socket, g_session.SendQ->GetReadPos(), g_session.SendQ->GetUseSize(), 0);
+
+		if (send_size == SOCKET_ERROR && GetLastError() != WSAEWOULDBLOCK)
+		{
+			g_bSend = false;
+			return;
+		}
+		g_session.SendQ->MoveFront(send_size);
+	}
 }
 
 void ProcWrite()

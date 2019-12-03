@@ -9,8 +9,6 @@
 #include "BaseObject.h"
 #include "PlayerObject.h"
 
-
-
 ScreenDib g_screen(640, 480, 32);
 
 
@@ -324,7 +322,8 @@ int GameFrame(HWND hWnd, bool active)
 {
 	static Frame frame(50);
 	
-	keyboard();
+	if(active)
+		keyboard();
 
 	Run();
 	

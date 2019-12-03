@@ -262,3 +262,20 @@ bool RingBuffer::MoveFront(int size)
 	return true;
 	*/
 }
+
+bool RingBuffer::MoveRear(int size)
+{
+	_rear += size;
+	_rear %= _capacity + 1;
+	return true;
+}
+
+char *RingBuffer::GetWritePos() const
+{
+	return _buf + _rear;
+}
+
+char *RingBuffer::GetReadPos() const
+{
+	return _buf + _front;
+}

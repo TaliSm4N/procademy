@@ -3,7 +3,7 @@
 static int test;
 
 Frame::Frame(int max)
-	:maxFrame(max), FrameTime(1000/max),TickTime(0)
+	:maxFrame(max), FrameTime(1000/max-1),TickTime(0)
 {
 	BeforeTime=timeGetTime();
 	//test = BeforeTime;
@@ -18,10 +18,10 @@ bool Frame::FrameSkip()
 	if (TickTime < FrameTime)//draw
 	{
 		Sleep(FrameTime - TickTime);
-		TickTime = timeGetTime()-NowTime;
+		TickTime = FrameTime;
 	}
 	else if(TickTime-FrameTime>=FrameTime)//skip
-	{
+	{ 
 		TickTime -= FrameTime;
 		BeforeTime = timeGetTime();
 		return false;

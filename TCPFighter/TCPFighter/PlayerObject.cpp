@@ -196,6 +196,21 @@ bool PlayerObject::SetActionAttack1()
 
 	if (PlayerCharacter&&ActionCur != ActionOld)
 	{
+		if (ActionOld >= MOVE_LL && ActionOld <= MOVE_LD)
+		{
+			st_NETWORK_PACKET_HEADER pHeader;
+			pHeader.byCode = dfNETWORK_PACKET_CODE;
+			pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
+			pHeader.byType = dfPACKET_CS_MOVE_STOP;
+			pHeader.byTemp = NULL;
+			stPACKET_CS_MOVE_STOP payload;
+			payload.Direction = DirCur;
+			payload.X = curX;
+			payload.Y = curY;
+
+			SendPacket(&pHeader, (char *)&payload);
+		}
+
 		st_NETWORK_PACKET_HEADER pHeader;
 		pHeader.byCode = dfNETWORK_PACKET_CODE;
 		pHeader.bySize = sizeof(stPACKET_CS_ATTACK);
@@ -235,8 +250,23 @@ bool PlayerObject::SetActionAttack2()
 	DelayCount = 0;
 	EndFrame = false;
 
-	if (PlayerCharacter)
+	if (PlayerCharacter&&ActionCur != ActionOld)
 	{
+		if (ActionOld >= MOVE_LL && ActionOld <= MOVE_LD)
+		{
+			st_NETWORK_PACKET_HEADER pHeader;
+			pHeader.byCode = dfNETWORK_PACKET_CODE;
+			pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
+			pHeader.byType = dfPACKET_CS_MOVE_STOP;
+			pHeader.byTemp = NULL;
+			stPACKET_CS_MOVE_STOP payload;
+			payload.Direction = DirCur;
+			payload.X = curX;
+			payload.Y = curY;
+
+			SendPacket(&pHeader, (char *)&payload);
+		}
+
 		st_NETWORK_PACKET_HEADER pHeader;
 		pHeader.byCode = dfNETWORK_PACKET_CODE;
 		pHeader.bySize = sizeof(stPACKET_CS_ATTACK);
@@ -278,6 +308,21 @@ bool PlayerObject::SetActionAttack3()
 
 	if (PlayerCharacter&&ActionCur != ActionOld)
 	{
+		if (ActionOld >= MOVE_LL && ActionOld <= MOVE_LD)
+		{
+			st_NETWORK_PACKET_HEADER pHeader;
+			pHeader.byCode = dfNETWORK_PACKET_CODE;
+			pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
+			pHeader.byType = dfPACKET_CS_MOVE_STOP;
+			pHeader.byTemp = NULL;
+			stPACKET_CS_MOVE_STOP payload;
+			payload.Direction = DirCur;
+			payload.X = curX;
+			payload.Y = curY;
+
+			SendPacket(&pHeader, (char *)&payload);
+		}
+
 		st_NETWORK_PACKET_HEADER pHeader;
 		pHeader.byCode = dfNETWORK_PACKET_CODE;
 		pHeader.bySize = sizeof(stPACKET_CS_ATTACK);
