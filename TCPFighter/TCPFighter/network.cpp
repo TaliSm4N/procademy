@@ -3,7 +3,9 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include "network.h"
-#include "PacketDefine.h"
+
+
+#include "Game.h"
 
 //#include "PacketDefine.h"
 
@@ -60,7 +62,7 @@ void ProcessSocketMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (WSAGETSELECTEVENT(lParam))
 	{
 	case FD_CLOSE:
-		//OutputDebugString(L"FD_CLOSE");
+		exit(1);
 		break;
 	case FD_READ:
 		//system("pause");
@@ -84,9 +86,13 @@ void ProcRead(HWND hWnd)
 	char payLoad[100];
 	int enq;
 	int size;
+	int recv_size;
+	BYTE end;
 	st_NETWORK_PACKET_HEADER header;
 
-	size = recv(g_session.socket, buf, sizeof(buf), 0);
+	recv_size = min(g_session.RecvQ->GetFreeSize(), sizeof(buf));
+
+	size = recv(g_session.socket, buf, recv_size, 0);
 
 	if (size == SOCKET_ERROR)
 	{
@@ -111,7 +117,7 @@ void ProcRead(HWND hWnd)
 
 		if (g_session.RecvQ->Peek((char *)&header, sizeof(header)) < sizeof(header))
 			break;
-		if (header.bySize + sizeof(header) >= g_session.RecvQ->GetUseSize())
+		if (header.bySize + sizeof(header)+1 > g_session.RecvQ->GetUseSize())
 			break;
 
 		g_session.RecvQ->MoveFront(sizeof(header));
@@ -121,9 +127,113 @@ void ProcRead(HWND hWnd)
 			exit(-1);
 		}
 
+		
+		PacketProc(header.byType, payLoad);
+
+		g_session.RecvQ->Dequeue((char *)&end, sizeof(BYTE));
+
+		if (end != dfNETWORK_PACKET_END)
+			exit(-1);
+
 		//메시지처리
 	}
 
+	//ProcWrite();
+}
+
+void PacketProc(BYTE byPacketType, char *Packet)
+{
+	switch (byPacketType)
+	{
+	case dfPACKET_SC_CREATE_MY_CHARACTER:
+	{
+		DWORD id = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->ID;
+		BYTE dir = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->Direction;
+		WORD x = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->X;
+		WORD y = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->Y;
+		BYTE hp = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->HP;
+		CreatePlayer(id, dir, x, y, hp, true);
+	}
+		break;
+	case dfPACKET_SC_CREATE_OTHER_CHARACTER:
+	{
+		DWORD id = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->ID;
+		BYTE dir = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->Direction;
+		WORD x = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->X;
+		WORD y = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->Y;
+		BYTE hp = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->HP;
+		CreatePlayer(id, dir, x, y, hp, false);
+	}
+		break;
+	case dfPACKET_SC_DELETE_CHARACTER:
+		DeletePlayer(((stPACKET_SC_DELETE_CHARACTER *)Packet)->ID);
+		break;
+	case dfPACKET_SC_MOVE_START:
+	{
+		DWORD ID = ((stPACKET_SC_MOVE_START *)Packet)->ID;
+		BYTE Direction = ((stPACKET_SC_MOVE_START *)Packet)->Direction;
+		WORD X = ((stPACKET_SC_MOVE_START *)Packet)->X;
+		WORD Y = ((stPACKET_SC_MOVE_START *)Packet)->Y;
+		MovePlayer(ID, Direction, X, Y);
+	}
+		break;
+	case dfPACKET_SC_MOVE_STOP:
+	{
+		DWORD ID = ((stPACKET_SC_MOVE_STOP *)Packet)->ID;
+		BYTE Direction = ((stPACKET_SC_MOVE_STOP *)Packet)->Direction;
+		WORD X = ((stPACKET_SC_MOVE_STOP *)Packet)->X;
+		WORD Y = ((stPACKET_SC_MOVE_STOP *)Packet)->Y;
+		StopPlayer(ID, Direction, X, Y);
+	}
+		break;
+	case dfPACKET_SC_ATTACK1:
+	{
+		DWORD ID = ((stPACKET_SC_ATTACK *)Packet)->ID;
+		BYTE Direction = ((stPACKET_SC_ATTACK *)Packet)->Direction;
+		WORD X = ((stPACKET_SC_ATTACK *)Packet)->X;
+		WORD Y = ((stPACKET_SC_ATTACK *)Packet)->Y;
+		Attack1Player(ID, Direction, X, Y);
+	}
+		break;
+	case dfPACKET_SC_ATTACK2:
+	{
+		DWORD ID = ((stPACKET_SC_ATTACK *)Packet)->ID;
+		BYTE Direction = ((stPACKET_SC_ATTACK *)Packet)->Direction;
+		WORD X = ((stPACKET_SC_ATTACK *)Packet)->X;
+		WORD Y = ((stPACKET_SC_ATTACK *)Packet)->Y;
+		Attack2Player(ID, Direction, X, Y);
+	}
+		break;
+	case dfPACKET_SC_ATTACK3:
+	{
+		DWORD ID = ((stPACKET_SC_ATTACK *)Packet)->ID;
+		BYTE Direction = ((stPACKET_SC_ATTACK *)Packet)->Direction;
+		WORD X = ((stPACKET_SC_ATTACK *)Packet)->X;
+		WORD Y = ((stPACKET_SC_ATTACK *)Packet)->Y;
+		Attack3Player(ID, Direction, X, Y);
+	}
+		break;
+	case dfPACKET_SC_DAMAGE:
+	{
+		DWORD AttackID = ((stPACKET_SC_DAMAGE *)Packet)->AttackID;
+		DWORD DamageID = ((stPACKET_SC_DAMAGE *)Packet)->DamageID;
+		WORD DamageHP = ((stPACKET_SC_DAMAGE *)Packet)->DamageHP;
+		DamagePlayer(AttackID, DamageID, DamageHP);
+	}
+		break;
+	default:
+		break;
+	}
+}
+
+void SendPacket(st_NETWORK_PACKET_HEADER *pHeader, char *pPacket)
+{ 
+	char endCode = dfNETWORK_PACKET_END;
+	if (g_session.SendQ->GetFreeSize() < sizeof(st_NETWORK_PACKET_HEADER) + pHeader->bySize + 1)
+		exit(-1);
+	g_session.SendQ->Enqueue((char *)pHeader, sizeof(st_NETWORK_PACKET_HEADER));
+	g_session.SendQ->Enqueue(pPacket, pHeader->bySize);
+	g_session.SendQ->Enqueue(&endCode, 1);
 	ProcWrite();
 }
 

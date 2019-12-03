@@ -1,15 +1,16 @@
 #include "Frame.h"
 
+static int test;
 
 Frame::Frame(int max)
 	:maxFrame(max), FrameTime(1000/max),TickTime(0)
 {
 	BeforeTime=timeGetTime();
+	//test = BeforeTime;
 }
 
 bool Frame::FrameSkip()
 {
-	
 	NowTime = timeGetTime();
 	TickTime += NowTime - BeforeTime;
 
@@ -17,7 +18,7 @@ bool Frame::FrameSkip()
 	if (TickTime < FrameTime)//draw
 	{
 		Sleep(FrameTime - TickTime);
-		TickTime = FrameTime;
+		TickTime = timeGetTime()-NowTime;
 	}
 	else if(TickTime-FrameTime>=FrameTime)//skip
 	{

@@ -20,7 +20,7 @@
 #ifndef __PACKET_DEFINE__
 #define __PACKET_DEFINE__
 #include <Windows.h>
-
+#pragma pack(push,1) 
 //---------------------------------------------------------------
 // 패킷헤더.
 //
@@ -71,6 +71,7 @@ struct st_NETWORK_PACKET_HEADER
 //
 //---------------------------------------------------------------
 
+
 struct stPACKET_SC_CREATE_MY_CHARACTER
 {
 	DWORD	ID;
@@ -78,7 +79,7 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 	WORD	X;
 	WORD	Y;
 	BYTE	HP;
-}
+};
 
 
 #define	dfPACKET_SC_CREATE_OTHER_CHARACTER		1
@@ -107,7 +108,10 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	4	-	ID
 //
 //---------------------------------------------------------------
-
+struct stPACKET_SC_DELETE_CHARACTER
+{
+	DWORD ID;
+};
 
 
 #define	dfPACKET_CS_MOVE_START					10
@@ -125,6 +129,14 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	2	-	Y
 //
 //---------------------------------------------------------------
+
+struct stPACKET_CS_MOVE_START
+{
+	BYTE Direction;
+	WORD X;
+	WORD Y;
+};
+
 #define dfPACKET_MOVE_DIR_LL					0
 #define dfPACKET_MOVE_DIR_LU					1
 #define dfPACKET_MOVE_DIR_UU					2
@@ -153,7 +165,13 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	2	-	Y
 //
 //---------------------------------------------------------------
-
+struct stPACKET_SC_MOVE_START
+{
+	DWORD ID;
+	BYTE Direction;
+	WORD X;
+	WORD Y;
+};
 
 
 
@@ -169,6 +187,12 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //
 //---------------------------------------------------------------
 
+struct stPACKET_CS_MOVE_STOP
+{
+	BYTE Direction;
+	WORD X;
+	WORD Y;
+};
 
 #define	dfPACKET_SC_MOVE_STOP					13
 //---------------------------------------------------------------
@@ -183,7 +207,13 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	2	-	Y
 //
 //---------------------------------------------------------------
-
+struct stPACKET_SC_MOVE_STOP
+{
+	DWORD ID;
+	BYTE Direction;
+	WORD X;
+	WORD Y;
+};
 
 
 #define	dfPACKET_CS_ATTACK1						20
@@ -200,6 +230,12 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	2	-	Y	
 //
 //---------------------------------------------------------------
+struct stPACKET_CS_ATTACK
+{
+	BYTE Direction;
+	WORD X;
+	WORD Y;
+};
 
 #define	dfPACKET_SC_ATTACK1						21
 //---------------------------------------------------------------
@@ -214,6 +250,13 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	2	-	Y
 //
 //---------------------------------------------------------------
+struct stPACKET_SC_ATTACK
+{
+	DWORD ID;
+	BYTE Direction;
+	WORD X;
+	WORD Y;
+};
 
 
 
@@ -232,6 +275,7 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //
 //---------------------------------------------------------------
 
+
 #define	dfPACKET_SC_ATTACK2						23
 //---------------------------------------------------------------
 // 캐릭터 공격 패킷							Server -> Client
@@ -245,6 +289,7 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	2	-	Y
 //
 //---------------------------------------------------------------
+
 
 #define	dfPACKET_CS_ATTACK3						24
 //---------------------------------------------------------------
@@ -290,9 +335,14 @@ struct stPACKET_SC_CREATE_MY_CHARACTER
 //	1	-	DamageHP	( 피해자 HP )
 //
 //---------------------------------------------------------------
+struct stPACKET_SC_DAMAGE
+{
+	DWORD AttackID;
+	DWORD DamageID;
+	BYTE DamageHP;
+};
 
 
-
-
+#pragma pack(pop) 
 #endif
 

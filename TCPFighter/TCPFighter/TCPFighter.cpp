@@ -21,6 +21,8 @@ WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 //ScreenDib g_screen(640,480,32);
 HWND g_hWnd;
+BOOL g_active=true;
+BOOL g_network = false;
 
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -66,7 +68,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
 		else
 		{
-			GameFrame(g_hWnd);
+			if(g_network)
+				GameFrame(g_hWnd,g_active);
 			//g_screen.Flip(g_hWnd);
 		}
 
@@ -117,8 +120,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, SCREEN_WIDTH, SCREEN_HEIGHT, nullptr, nullptr, hInstance, nullptr);
+   //HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   //   CW_USEDEFAULT, 0, SCREEN_WIDTH, SCREEN_HEIGHT, nullptr, nullptr, hInstance, nullptr);
+
+   HWND hWnd = CreateWindowEx(0, szTitle, szTitle,WS_SYSMENU|WS_CAPTION|WS_MINIMIZEBOX,
+	   CW_USEDEFAULT, CW_USEDEFAULT, SCREEN_WIDTH, SCREEN_HEIGHT, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -127,6 +133,20 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
+   SetFocus(hWnd);
+
+   RECT WindowRect;
+   WindowRect.top = 0;
+   WindowRect.left = 0;
+   WindowRect.right = 640;
+   WindowRect.bottom = 480;
+
+   AdjustWindowRectEx(&WindowRect, GetWindowStyle(hWnd), GetMenu(hWnd) != NULL, GetWindowExStyle(hWnd));
+
+   int x = (GetSystemMetrics(SM_CXSCREEN) / 2) - (640 / 2);
+   int y = (GetSystemMetrics(SM_CYSCREEN) / 2) - (480 / 2);
+
+   MoveWindow(hWnd, x, y, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top, TRUE);
 
    return TRUE;
 }
@@ -148,10 +168,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 		
 		g_hWnd = hWnd;
+		g_network=networkInit(hWnd, WM_SOCKET);
 		init();
-		networkInit(hWnd, WM_SOCKET);
 		break;
 	case WM_SOCKET:
+		ProcessSocketMessage(hWnd, message, wParam, lParam);
+		break;
+	case WM_ACTIVATEAPP:
+		g_active = (BOOL)wParam;
 		break;
     case WM_COMMAND:
         {

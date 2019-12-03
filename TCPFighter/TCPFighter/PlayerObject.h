@@ -3,15 +3,6 @@
 
 #include "Sprite.h"
 
-#define dfPACKET_MOVE_DIR_LL					0
-#define dfPACKET_MOVE_DIR_LU					1
-#define dfPACKET_MOVE_DIR_UU					2
-#define dfPACKET_MOVE_DIR_RU					3
-#define dfPACKET_MOVE_DIR_RR					4
-#define dfPACKET_MOVE_DIR_RD					5
-#define dfPACKET_MOVE_DIR_DD					6
-#define dfPACKET_MOVE_DIR_LD					7
-
 #define dfRANGE_MOVE_TOP	50
 #define dfRANGE_MOVE_LEFT	10
 #define dfRANGE_MOVE_RIGHT	630
@@ -24,14 +15,20 @@
 #define dfDELAY_ATTACK3	4
 #define dfDELAY_EFFECT	3
 
-#define RIGHT 0
-#define LEFT 1
+#define LEFT 0
+#define RIGHT 4
 
-enum Status {STAND=0,MOVE,ATTACK1, ATTACK2, ATTACK3};
+#define MOVE_SPEED_X 3
+#define MOVE_SPEED_Y 2
+
+
+enum Status {MOVE_LL=0,MOVE_LU,MOVE_UU,
+	MOVE_RU,MOVE_RR,MOVE_RD,
+	MOVE_DD,MOVE_LD,STAND,ATTACK1, ATTACK2, ATTACK3};
 class PlayerObject :public BaseObject
 {
 public:
-	PlayerObject(int ObjectId,int ObjectType, int x = 320, int y = 240,bool player=false);
+	PlayerObject(int ObjectId,int ObjectType, int direction, int x = 320, int y = 240,char hp=100,bool player=false);
 	bool ActionProc();
 	int GetDirection() const;
 	char GetHP() const;
@@ -42,11 +39,13 @@ public:
 	bool SetActionAttack1();
 	bool SetActionAttack2();
 	bool SetActionAttack3();
-	bool SetActionMove();
+	bool SetActionMove(int dir);
 	bool SetActionStand();
 	void SetDirection(int dir);
-	void SetSprite();
 	void SetHP(char newHP);
+	void SetPosition(int x, int y);
+	DWORD GetAction() const;
+	//void SetHit(int id);
 
 private:
 	bool PlayerCharacter;
@@ -55,6 +54,14 @@ private:
 	DWORD ActionOld;
 	int DirCur;
 	int DirOld;
+
+	BOOL hit;
+	int HitDelay;
+	int HitCount;
+
+	void movePosition(int x, int y);
+	
+	//void setSprite(int stat);
 	/*
 	bool EndFrame;
 	DWORD actionInput;

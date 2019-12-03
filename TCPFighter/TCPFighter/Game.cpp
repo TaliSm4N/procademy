@@ -2,6 +2,7 @@
 #include "ScreenDib.h"
 #include "Sprite.h"
 #include "Frame.h"
+#include "EffectObject.h"
 #include <Windows.h>
 #include <list>
 
@@ -148,12 +149,20 @@ BOOL init()
 		return false;											   
 	if (!s.settingSprite(STAND_L_03, (char *)"SpriteData\\Stand_L_03.bmp", 71, 90) )
 		return false;											   
+	if (!s.settingSprite(STAND_L_04, (char *)"SpriteData\\Stand_L_02.bmp", 71, 90))
+		return false;
+	if (!s.settingSprite(STAND_L_05, (char *)"SpriteData\\Stand_L_01.bmp", 71, 90))
+		return false;
 																   
 	if (!s.settingSprite(STAND_R_01, (char *)"SpriteData\\Stand_R_01.bmp", 71, 90))
 		return false;
 	if (!s.settingSprite(STAND_R_02, (char *)"SpriteData\\Stand_R_02.bmp", 71, 90))
 		return false;
 	if (!s.settingSprite(STAND_R_03, (char *)"SpriteData\\Stand_R_03.bmp", 71, 90))
+		return false;
+	if (!s.settingSprite(STAND_R_04, (char *)"SpriteData\\Stand_R_02.bmp", 71, 90))
+		return false;
+	if (!s.settingSprite(STAND_R_05, (char *)"SpriteData\\Stand_R_01.bmp", 71, 90))
 		return false;
 
 	if (!s.settingSprite(XSPARK_01, (char *)"SpriteData\\xSpark_1.bmp", 70, 70))
@@ -165,9 +174,13 @@ BOOL init()
 	if (!s.settingSprite(XSPARK_04, (char *)"SpriteData\\xSpark_4.bmp", 70, 70))
 		return false;
 
-	PlayerObject *testP = new PlayerObject(0, PLAYER,320,240,true);
-	myPlayer = testP;
-	objectList.push_back(testP);
+	//PlayerObject *testP = new PlayerObject(0, PLAYER,LEFT,320,240,true);
+	//PlayerObject *test2P = new PlayerObject(0, PLAYER, RIGHT, 320, 240, false);
+	//EffectObject *terE = new EffectObject(0, EFFECT, 100, 100);
+	//myPlayer = testP;
+	//objectList.push_back(testP);
+	//objectList.push_back(test2P);
+	//objectList.push_back(terE);
 
 	return true;
 }
@@ -179,6 +192,27 @@ BOOL keyboard()
 
 	if (myPlayer == NULL)
 		return false;
+
+	//공격 입력 우선 입력
+	//Z
+	if (GetAsyncKeyState(0x5A))
+	{
+		myPlayer->ActionInput(ATTACK1);
+		return true;
+	}
+
+	//X
+	if (GetAsyncKeyState(0x58))
+	{
+		myPlayer->ActionInput(ATTACK2);
+		return true;
+	}
+
+	if (GetAsyncKeyState(0x43))
+	{
+		myPlayer->ActionInput(ATTACK3);
+		return true;
+	}
 
 	if (GetAsyncKeyState(VK_UP))
 	{
@@ -197,26 +231,28 @@ BOOL keyboard()
 		rl++;
 	}
 
+	
+
 	if (ud < 0)
 	{
 		if (rl < 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_LD);
+			myPlayer->ActionInput(MOVE_LD);
 		}
 		else if (rl == 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_DD);
+			myPlayer->ActionInput(MOVE_DD);
 		}
 		else if (rl > 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_RD);
+			myPlayer->ActionInput(MOVE_RD);
 		}
 	}
 	else if(ud == 0)
 	{
 		if (rl < 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_LL);
+			myPlayer->ActionInput(MOVE_LL);
 		}
 		else if (rl == 0)
 		{
@@ -225,25 +261,25 @@ BOOL keyboard()
 		}
 		else if (rl > 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_RR);
+			myPlayer->ActionInput(MOVE_RR);
 		}
 	}
 	else if (ud > 0)
 	{
 		if (rl < 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_LU);
+			myPlayer->ActionInput(MOVE_LU);
 		}
 		else if (rl == 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_UU);
+			myPlayer->ActionInput(MOVE_UU);
 		}
 		else if (rl > 0)
 		{
-			myPlayer->SetDirection(dfPACKET_MOVE_DIR_RU);
+			myPlayer->ActionInput(MOVE_RU);
 		}
 	}
-	myPlayer->ActionInput(MOVE);
+	//myPlayer->ActionInput(MOVE);
 
 	return true;
 }
@@ -252,6 +288,9 @@ BOOL Draw(HWND hWnd)
 {
 	s.draw(MAP, g_screen.GetDibBuffer(), 0, 0, g_screen.GetWidth(), g_screen.GetHeight(), g_screen.GetPitch());
 	
+	if (objectList.empty())
+		return false;
+
 	//s.draw(STAND_L_02, g_screen.GetDibBuffer(), 640, 100, g_screen.GetWidth(), g_screen.GetHeight(), g_screen.GetPitch());
 	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
 	{
@@ -265,15 +304,23 @@ BOOL Draw(HWND hWnd)
 
 BOOL Run()
 {
-	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	BOOL ret;
+	for (auto iter = objectList.begin(); iter != objectList.end();)
 	{
-		(*iter)->Run();
+		ret=(*iter)->Run();
+
+		if (!ret)
+		{
+			iter = objectList.erase(iter);
+		}
+		else
+			iter++;
 	}
 
 	return true;
 }
 
-int GameFrame(HWND hWnd)
+int GameFrame(HWND hWnd, bool active)
 {
 	static Frame frame(50);
 	
@@ -286,4 +333,157 @@ int GameFrame(HWND hWnd)
 		Draw(hWnd);
 	Sleep(0);
 	return 0;
+}
+
+BOOL CreatePlayer(int id, int dir, int x, int y, char hp,bool player)
+{
+	PlayerObject *temp = new PlayerObject(id, PLAYER, dir, x, y,hp, player);
+
+	objectList.push_back(temp);
+
+	if (player)
+		myPlayer = temp;
+
+	return true;
+}
+
+BOOL DeletePlayer(int id)
+{
+	for (auto iter = objectList.begin(); iter != objectList.end();iter++)
+	{
+		if ((*iter)->GetObjectID() == id)
+		{
+			iter = objectList.erase(iter);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+BOOL MovePlayer(int id, int dir,short x,short y)
+{
+	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	{
+		if ((*iter)->GetObjectID() == id)
+		{
+			((PlayerObject *)(*iter))->SetPosition(x, y);
+			((PlayerObject *)(*iter))->ActionInput(dir);
+			break;
+		}
+	}
+
+	return true;
+}
+
+BOOL StopPlayer(int id, int dir,short x, short y)
+{
+	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	{
+		if ((*iter)->GetObjectID() == id)
+		{
+			((PlayerObject *)(*iter))->SetPosition(x, y);
+			((PlayerObject *)(*iter))->ActionInput(STAND);
+			break;
+		}
+	}
+
+	return true;
+}
+
+BOOL Attack1Player(int id, int dir, short x, short y)
+{
+	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	{
+		if ((*iter)->GetObjectID() == id)
+		{
+			((PlayerObject *)(*iter))->SetPosition(x, y);
+			((PlayerObject *)(*iter))->ActionInput(ATTACK1);
+			break;
+		}
+	}
+	return true;
+}
+
+BOOL Attack2Player(int id, int dir, short x, short y)
+{
+	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	{
+		if ((*iter)->GetObjectID() == id)
+		{
+			((PlayerObject *)(*iter))->SetPosition(x, y);
+			((PlayerObject *)(*iter))->ActionInput(ATTACK2);
+			break;
+		}
+	}
+	return true;
+}
+
+BOOL Attack3Player(int id, int dir, short x, short y)
+{
+	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	{
+		if ((*iter)->GetObjectID() == id)
+		{
+			((PlayerObject *)(*iter))->SetPosition(x, y);
+			((PlayerObject *)(*iter))->ActionInput(ATTACK3);
+			break;
+		}
+	}
+	return true;
+}
+
+BOOL DamagePlayer(int AttackID, int DamageID, char DamageHP)
+{
+	bool breakBool = false;
+	PlayerObject *hitP = NULL;
+	PlayerObject *atkP = NULL;
+	EffectObject *eff=NULL;
+	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	{
+		if ((*iter)->GetObjectID() == DamageID)
+		{
+			((PlayerObject *)(*iter))->SetHP(DamageHP);
+			hitP = (PlayerObject *)(*iter);
+			if (!breakBool)
+				breakBool = true;
+			else
+				break;
+			//break;
+		}
+
+		if ((*iter)->GetObjectID() == AttackID)
+		{
+			atkP = ((PlayerObject *)(*iter));
+			//((PlayerObject *)(*iter))->SetHit(DamageID);
+			if (!breakBool)
+				breakBool = true;
+			else
+				break;
+			//break;
+		}
+	}
+
+	if (hitP == NULL || atkP == NULL)
+		return false;
+
+	switch (atkP->GetAction())
+	{
+	case ATTACK1:
+		eff = new EffectObject(3, EFFECT, hitP->GetCurX(), hitP->GetCurY() - 45);
+		break;
+	case ATTACK2:
+		eff = new EffectObject(6, EFFECT, hitP->GetCurX(), hitP->GetCurY() - 45);
+		break;
+	case ATTACK3:
+		eff = new EffectObject(12, EFFECT, hitP->GetCurX(), hitP->GetCurY() - 45);
+		break;
+	default:
+		break;
+	}
+	if(eff!=NULL)
+		objectList.push_back(eff);
+	
+	
+	return true;
 }

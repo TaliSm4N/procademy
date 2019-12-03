@@ -1,7 +1,7 @@
 #include "BaseObject.h"
 
 BaseObject::BaseObject(int id, int type, int x, int y)
-	:curX(x),curY(y),ObjectID(id),ObjectType(type)
+	:curX(x),curY(y),ObjectID(id),ObjectType(type),SpriteStart(0),SpriteNow(0),SpriteEnd(0)
 {
 
 }
@@ -49,8 +49,10 @@ int BaseObject::NextFrame()
 		DelayCount = 0;
 		SpriteNow++;
 		if (SpriteNow > SpriteEnd)
+		{
 			SpriteNow = SpriteStart;
-		EndFrame = true;
+			EndFrame = true;
+		}
 	}
 
 	return 0;

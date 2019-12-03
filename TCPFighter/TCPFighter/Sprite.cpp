@@ -113,7 +113,7 @@ bool SpriteList::settingSprite(int num, const char *path, int cX, int cY)
 	return false;
 }
 
-bool SpriteList::draw(int num, BYTE *dib, int x, int y, int width, int height,int pitch)
+bool SpriteList::draw(int num, BYTE *dib, int x, int y, int width, int height,int pitch,int len)
 {
 	if (num >= ListSize)
 		return false;
@@ -123,7 +123,7 @@ bool SpriteList::draw(int num, BYTE *dib, int x, int y, int width, int height,in
 	
 	Sprite *sprite = &s_list[num];
 	
-	int spWidth = sprite->iWidth;
+	int spWidth = sprite->iWidth*len/100;
 	int spHeight = sprite->iHeight;
 	
 	DWORD *dest = (DWORD *)dib;
@@ -166,6 +166,67 @@ bool SpriteList::draw(int num, BYTE *dib, int x, int y, int width, int height,in
 			if ((*(img + j + (sprite->iPitch / 4)*i) & 0x00ffffff) != 0x00ffffff)
 			{
 				*(dest+j+x+(pitch/4)*(i+y)) = *(img+j+(sprite->iPitch/4)*i);
+			}
+			int temp;
+		}
+	}
+
+	return true;
+}
+
+bool SpriteList::drawColor(int num, BYTE *dib, int x, int y, int width, int height, int pitch, int color, int len)
+{
+	if (num >= ListSize)
+		return false;
+
+	if (s_list[num].bypImage == NULL)
+		return false;
+
+	Sprite *sprite = &s_list[num];
+
+	int spWidth = sprite->iWidth*len / 100;
+	int spHeight = sprite->iHeight;
+
+	DWORD *dest = (DWORD *)dib;
+	DWORD *img = (DWORD *)sprite->bypImage;
+
+	x -= sprite->iCenterPointX;
+	y -= sprite->iCenterPointY;
+
+	if (y < 0)
+	{
+		spHeight += y;
+		img = (DWORD *)(sprite->bypImage + sprite->iPitch*(-y));
+		y = 0;
+	}
+
+	if (y + sprite->iHeight >= height)
+	{
+		spHeight -= y + sprite->iHeight - height;
+	}
+
+	if (x < 0)
+	{
+		spWidth += x;
+		img -= x;
+		x = 0;
+	}
+
+	if (x + sprite->iWidth >= width)
+	{
+		spWidth -= x + sprite->iWidth - width;
+	}
+
+	if (spWidth <= 0 || spHeight <= 0)
+		return false;
+
+	for (int i = 0; i < spHeight; i++)
+	{
+		for (int j = 0; j < spWidth; j++)
+		{
+			if ((*(img + j + (sprite->iPitch / 4)*i) & 0x00ffffff) != 0x00ffffff)
+			{
+				*(dest + j + x + (pitch / 4)*(i + y)) = *(img + j + (sprite->iPitch / 4)*i)|color;
 			}
 			int temp;
 		}
