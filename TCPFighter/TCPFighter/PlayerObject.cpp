@@ -198,30 +198,31 @@ bool PlayerObject::SetActionAttack1()
 	{
 		if (ActionOld >= MOVE_LL && ActionOld <= MOVE_LD)
 		{
-			st_NETWORK_PACKET_HEADER pHeader;
-			pHeader.byCode = dfNETWORK_PACKET_CODE;
-			pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
-			pHeader.byType = dfPACKET_CS_MOVE_STOP;
-			pHeader.byTemp = NULL;
-			stPACKET_CS_MOVE_STOP payload;
-			payload.Direction = DirCur;
-			payload.X = curX;
-			payload.Y = curY;
-
-			SendPacket(&pHeader, (char *)&payload);
+			SendStand(DirCur, curX, curY);
+			//st_NETWORK_PACKET_HEADER pHeader;
+			//pHeader.byCode = dfNETWORK_PACKET_CODE;
+			//pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
+			//pHeader.byType = dfPACKET_CS_MOVE_STOP;
+			//pHeader.byTemp = NULL;
+			//stPACKET_CS_MOVE_STOP payload;
+			//payload.Direction = DirCur;
+			//payload.X = curX;
+			//payload.Y = curY;
+			//
+			//SendPacket(&pHeader, (char *)&payload);
 		}
-
-		st_NETWORK_PACKET_HEADER pHeader;
-		pHeader.byCode = dfNETWORK_PACKET_CODE;
-		pHeader.bySize = sizeof(stPACKET_CS_ATTACK);
-		pHeader.byType = dfPACKET_CS_ATTACK1;
-		pHeader.byTemp = NULL;
-		stPACKET_CS_MOVE_STOP payload;
-		payload.Direction = DirCur;
-		payload.X = curX;
-		payload.Y = curY;
-
-		SendPacket(&pHeader, (char *)&payload);
+		SendAttack(dfPACKET_CS_ATTACK1, DirCur, curX, curY);
+		//st_NETWORK_PACKET_HEADER pHeader;
+		//pHeader.byCode = dfNETWORK_PACKET_CODE;
+		//pHeader.bySize = sizeof(stPACKET_CS_ATTACK);
+		//pHeader.byType = dfPACKET_CS_ATTACK1;
+		//pHeader.byTemp = NULL;
+		//stPACKET_CS_MOVE_STOP payload;
+		//payload.Direction = DirCur;
+		//payload.X = curX;
+		//payload.Y = curY;
+		//
+		//SendPacket(&pHeader, (char *)&payload);
 	}
 
 	return true;
@@ -254,30 +255,10 @@ bool PlayerObject::SetActionAttack2()
 	{
 		if (ActionOld >= MOVE_LL && ActionOld <= MOVE_LD)
 		{
-			st_NETWORK_PACKET_HEADER pHeader;
-			pHeader.byCode = dfNETWORK_PACKET_CODE;
-			pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
-			pHeader.byType = dfPACKET_CS_MOVE_STOP;
-			pHeader.byTemp = NULL;
-			stPACKET_CS_MOVE_STOP payload;
-			payload.Direction = DirCur;
-			payload.X = curX;
-			payload.Y = curY;
-
-			SendPacket(&pHeader, (char *)&payload);
+			SendStand(DirCur, curX, curY);
 		}
 
-		st_NETWORK_PACKET_HEADER pHeader;
-		pHeader.byCode = dfNETWORK_PACKET_CODE;
-		pHeader.bySize = sizeof(stPACKET_CS_ATTACK);
-		pHeader.byType = dfPACKET_CS_ATTACK2;
-		pHeader.byTemp = NULL;
-		stPACKET_CS_MOVE_STOP payload;
-		payload.Direction = DirCur;
-		payload.X = curX;
-		payload.Y = curY;
-
-		SendPacket(&pHeader, (char *)&payload);
+		SendAttack(dfPACKET_CS_ATTACK2, DirCur, curX, curY);
 	}
 
 	return true;
@@ -310,30 +291,10 @@ bool PlayerObject::SetActionAttack3()
 	{
 		if (ActionOld >= MOVE_LL && ActionOld <= MOVE_LD)
 		{
-			st_NETWORK_PACKET_HEADER pHeader;
-			pHeader.byCode = dfNETWORK_PACKET_CODE;
-			pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
-			pHeader.byType = dfPACKET_CS_MOVE_STOP;
-			pHeader.byTemp = NULL;
-			stPACKET_CS_MOVE_STOP payload;
-			payload.Direction = DirCur;
-			payload.X = curX;
-			payload.Y = curY;
-
-			SendPacket(&pHeader, (char *)&payload);
+			SendStand(DirCur, curX, curY);
 		}
 
-		st_NETWORK_PACKET_HEADER pHeader;
-		pHeader.byCode = dfNETWORK_PACKET_CODE;
-		pHeader.bySize = sizeof(stPACKET_CS_ATTACK);
-		pHeader.byType = dfPACKET_CS_ATTACK3;
-		pHeader.byTemp = NULL;
-		stPACKET_CS_MOVE_STOP payload;
-		payload.Direction = DirCur;
-		payload.X = curX;
-		payload.Y = curY;
-
-		SendPacket(&pHeader, (char *)&payload);
+		SendAttack(dfPACKET_CS_ATTACK3, DirCur, curX, curY);
 	}
 
 	return true;
@@ -347,17 +308,18 @@ bool PlayerObject::SetActionMove(int dir)
 
 	if (PlayerCharacter&&ActionCur != ActionOld)
 	{
-		st_NETWORK_PACKET_HEADER pHeader;
-		pHeader.byCode = dfNETWORK_PACKET_CODE;
-		pHeader.bySize = sizeof(stPACKET_CS_MOVE_START);
-		pHeader.byType = dfPACKET_CS_MOVE_START;
-		pHeader.byTemp = NULL;
-		stPACKET_CS_MOVE_START payload;
-		payload.Direction = ActionCur;
-		payload.X = curX;
-		payload.Y = curY;
-
-		SendPacket(&pHeader, (char *)&payload);
+		SendMove(ActionCur, curX, curY);
+		//st_NETWORK_PACKET_HEADER pHeader;
+		//pHeader.byCode = dfNETWORK_PACKET_CODE;
+		//pHeader.bySize = sizeof(stPACKET_CS_MOVE_START);
+		//pHeader.byType = dfPACKET_CS_MOVE_START;
+		//pHeader.byTemp = NULL;
+		//stPACKET_CS_MOVE_START payload;
+		//payload.Direction = ActionCur;
+		//payload.X = curX;
+		//payload.Y = curY;
+		//
+		//SendPacket(&pHeader, (char *)&payload);
 	}
 
 	if (DirCur == DirOld&&(ActionOld>=MOVE_LL&&ActionOld<=MOVE_DD))
@@ -404,17 +366,7 @@ bool PlayerObject::SetActionStand()
 
 	if (PlayerCharacter&&ActionCur != ActionOld&&!(ActionOld>=ATTACK1&&ActionOld<=ATTACK3))
 	{
-		st_NETWORK_PACKET_HEADER pHeader;
-		pHeader.byCode = dfNETWORK_PACKET_CODE;
-		pHeader.bySize = sizeof(stPACKET_CS_MOVE_STOP);
-		pHeader.byType = dfPACKET_CS_MOVE_STOP;
-		pHeader.byTemp = NULL;
-		stPACKET_CS_MOVE_STOP payload;
-		payload.Direction = DirCur;
-		payload.X = curX;
-		payload.Y = curY;
-
-		SendPacket(&pHeader, (char *)&payload);
+		SendStand(DirCur, curX, curY);
 	}
 
 	return true;

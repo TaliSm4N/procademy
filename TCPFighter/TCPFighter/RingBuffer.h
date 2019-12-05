@@ -1,6 +1,7 @@
 #pragma once
 
 #define DEFAULT_SIZE 100
+#include "Packet.h"
 
 class RingBuffer
 {
@@ -62,7 +63,9 @@ public:
 	// Return: (int)넣은 크기.
 	/////////////////////////////////////////////////////////////////////////
 	int Enqueue(char *chpData, int iSize);
+	int Enqueue(Packet &p);
 	int Dequeue(char *chpData,int size);
+	int Dequeue(Packet &p,int iSize);
 	int Peek(char *chpData, int size);
 	bool MoveFront(int size);
 	bool MoveRear(int size);

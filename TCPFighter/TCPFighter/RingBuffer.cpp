@@ -138,6 +138,34 @@ int RingBuffer::Enqueue(char *chpData, int iSize)
 	*/
 }
 
+int  RingBuffer::Enqueue(Packet &p)
+{
+	int temp = GetFreeSize();
+	int size= p.GetDataSize();
+	if (temp < size)
+	{
+		size = temp;
+	}
+	temp = DirectEnqueueSize();
+	if (temp < size)
+	{
+		memcpy_s(_buf + _rear, temp, p.GetBufferPtr(), temp);
+		_rear += temp;
+		_rear %= _capacity + 1;
+		memcpy_s(_buf + _rear, size - temp, p.GetBufferPtr() + temp, size - temp);
+		_rear += size - temp;
+		_rear %= _capacity + 1;
+	}
+	else
+	{
+		memcpy_s(_buf + _rear, size, p.GetBufferPtr(), size);
+		_rear += size;
+		_rear %= _capacity + 1;
+	}
+
+	return size;
+}
+
 int RingBuffer::Dequeue(char *chpData, int iSize)
 {
 	int temp = GetUseSize();
@@ -192,6 +220,35 @@ int RingBuffer::Dequeue(char *chpData, int iSize)
 		return 0;
 	}
 	*/
+}
+
+int  RingBuffer::Dequeue(Packet &p,int iSize)
+{
+	int temp = GetUseSize();
+	int freeSize = p.GetBufferSize()-p.GetDataSize();
+
+	if (temp < iSize)
+	{
+		iSize = temp;
+	}
+	temp = DirectDequeueSize();
+	if (temp < iSize)
+	{
+		p.PutData(_buf + _front, temp);
+		//memcpy_s(chpData, temp, _buf + _front, temp);
+		MoveFront(temp);
+		p.PutData(_buf + _front, iSize - temp);
+		//memcpy_s(chpData + temp, iSize - temp, _buf + _front, iSize - temp);
+		MoveFront(iSize - temp);
+	}
+	else
+	{
+		p.PutData(_buf + _front, iSize);
+		//memcpy_s(chpData, iSize, _buf + _front, iSize);
+		MoveFront(iSize);
+	}
+
+	return iSize;
 }
 
 int RingBuffer::Peek(char *chpData, int iSize)

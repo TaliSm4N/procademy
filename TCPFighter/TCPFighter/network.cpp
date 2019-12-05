@@ -99,6 +99,7 @@ void ProcReadDirect(HWND hWnd)
 	BYTE end;
 	st_NETWORK_PACKET_HEADER header;
 	int size;
+	Packet p;
 
 	if (g_session.RecvQ->GetFreeSize() > g_session.RecvQ->DirectEnqueueSize())
 	{
@@ -148,13 +149,14 @@ void ProcReadDirect(HWND hWnd)
 
 		g_session.RecvQ->MoveFront(sizeof(header));
 
-		if (g_session.RecvQ->Dequeue(payLoad, header.bySize) != header.bySize)
+		//if (g_session.RecvQ->Dequeue(payLoad, header.bySize) != header.bySize)
+		if (g_session.RecvQ->Dequeue(p, header.bySize) != header.bySize)
 		{
 			exit(-1);
 		}
 
 
-		PacketProc(header.byType, payLoad);
+		PacketProc(header.byType, p);
 
 		g_session.RecvQ->Dequeue((char *)&end, sizeof(BYTE));
 
@@ -174,6 +176,7 @@ void ProcRead(HWND hWnd)
 	int recv_size;
 	BYTE end;
 	st_NETWORK_PACKET_HEADER header;
+	//Packet p;
 
 	recv_size = min(g_session.RecvQ->GetFreeSize(), sizeof(buf));
 
@@ -208,6 +211,7 @@ void ProcRead(HWND hWnd)
 		g_session.RecvQ->MoveFront(sizeof(header));
 
 		if (g_session.RecvQ->Dequeue(payLoad, header.bySize) != header.bySize)
+		//if (g_session.RecvQ->Dequeue(p) != header.bySize)
 		{
 			exit(-1);
 		}
@@ -311,6 +315,132 @@ void PacketProc(BYTE byPacketType, char *Packet)
 	}
 }
 
+void PacketProc(BYTE byPacketType, Packet &p)
+{
+	switch (byPacketType)
+	{
+	case dfPACKET_SC_CREATE_MY_CHARACTER:
+	{
+		//DWORD id = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->ID;
+		//BYTE dir = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->Direction;
+		//WORD x = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->X;
+		//WORD y = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->Y;
+		//BYTE hp = ((stPACKET_SC_CREATE_MY_CHARACTER *)Packet)->HP;
+		DWORD id;
+		BYTE dir;
+		WORD x;
+		WORD y;
+		BYTE hp;
+
+		p >> id >> dir >> x >> y >> hp;
+
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+
+		CreatePlayer(id, dir, x, y, hp, true);
+	}
+	break;
+	case dfPACKET_SC_CREATE_OTHER_CHARACTER:
+	{
+		DWORD id;
+		BYTE dir;
+		WORD x;
+		WORD y;
+		BYTE hp;
+
+		p >> id >> dir >> x >> y >> hp;
+
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+
+		CreatePlayer(id, dir, x, y, hp, false);
+	}
+	break;
+	case dfPACKET_SC_DELETE_CHARACTER:
+	{
+		DWORD id;
+		p >> id;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		DeletePlayer(id);
+	}
+		break;
+	case dfPACKET_SC_MOVE_START:
+	{
+		DWORD ID;// = ((stPACKET_SC_MOVE_START *)Packet)->ID;
+		BYTE Direction;// = ((stPACKET_SC_MOVE_START *)Packet)->Direction;
+		WORD X;// = ((stPACKET_SC_MOVE_START *)Packet)->X;
+		WORD Y;// = ((stPACKET_SC_MOVE_START *)Packet)->Y;
+		p >> ID >> Direction >> X >> Y;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		MovePlayer(ID, Direction, X, Y);
+	}
+	break;
+	case dfPACKET_SC_MOVE_STOP:
+	{
+		DWORD ID;// = ((stPACKET_SC_MOVE_STOP *)Packet)->ID;
+		BYTE Direction;// = ((stPACKET_SC_MOVE_STOP *)Packet)->Direction;
+		WORD X;// = ((stPACKET_SC_MOVE_STOP *)Packet)->X;
+		WORD Y;// = ((stPACKET_SC_MOVE_STOP *)Packet)->Y;
+		p >> ID >> Direction >> X >> Y;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		StopPlayer(ID, Direction, X, Y);
+	}
+	break;
+	case dfPACKET_SC_ATTACK1:
+	{
+		DWORD ID;// = ((stPACKET_SC_ATTACK *)Packet)->ID;
+		BYTE Direction;// = ((stPACKET_SC_ATTACK *)Packet)->Direction;
+		WORD X;// = ((stPACKET_SC_ATTACK *)Packet)->X;
+		WORD Y;// = ((stPACKET_SC_ATTACK *)Packet)->Y;
+		p >> ID >> Direction >> X >> Y;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		Attack1Player(ID, Direction, X, Y);
+	}
+	break;
+	case dfPACKET_SC_ATTACK2:
+	{
+		DWORD ID;// = ((stPACKET_SC_ATTACK *)Packet)->ID;
+		BYTE Direction;// = ((stPACKET_SC_ATTACK *)Packet)->Direction;
+		WORD X;// = ((stPACKET_SC_ATTACK *)Packet)->X;
+		WORD Y;// = ((stPACKET_SC_ATTACK *)Packet)->Y;
+		p >> ID >> Direction >> X >> Y;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		Attack2Player(ID, Direction, X, Y);
+	}
+	break;
+	case dfPACKET_SC_ATTACK3:
+	{
+		DWORD ID;// = ((stPACKET_SC_ATTACK *)Packet)->ID;
+		BYTE Direction;// = ((stPACKET_SC_ATTACK *)Packet)->Direction;
+		WORD X;// = ((stPACKET_SC_ATTACK *)Packet)->X;
+		WORD Y;// = ((stPACKET_SC_ATTACK *)Packet)->Y;
+		p >> ID >> Direction >> X >> Y;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		Attack3Player(ID, Direction, X, Y);
+	}
+	break;
+	case dfPACKET_SC_DAMAGE:
+	{
+		DWORD AttackID;// = ((stPACKET_SC_DAMAGE *)Packet)->AttackID;
+		DWORD DamageID;// = ((stPACKET_SC_DAMAGE *)Packet)->DamageID;
+		BYTE DamageHP;// = ((stPACKET_SC_DAMAGE *)Packet)->DamageHP;
+		p >> AttackID >> DamageID >> DamageHP;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		DamagePlayer(AttackID, DamageID, DamageHP);
+	}
+	break;
+	default:
+		break;
+	}
+}
+
 void SendPacket(st_NETWORK_PACKET_HEADER *pHeader, char *pPacket)
 { 
 	char endCode = dfNETWORK_PACKET_END;
@@ -320,6 +450,23 @@ void SendPacket(st_NETWORK_PACKET_HEADER *pHeader, char *pPacket)
 	g_session.SendQ->Enqueue(pPacket, pHeader->bySize);
 	g_session.SendQ->Enqueue(&endCode, 1);
 	
+
+	if (g_bWriteDirect)
+	{
+		ProcWriteDirect();
+	}
+	else
+		ProcWrite();
+}
+
+void SendPacket(st_NETWORK_PACKET_HEADER *pHeader, Packet &p)
+{
+	char endCode = dfNETWORK_PACKET_END;
+	if (g_session.SendQ->GetFreeSize() < sizeof(st_NETWORK_PACKET_HEADER) + pHeader->bySize + 1)
+		exit(-1);
+	g_session.SendQ->Enqueue((char *)pHeader, sizeof(st_NETWORK_PACKET_HEADER));
+	g_session.SendQ->Enqueue(p);
+	//g_session.SendQ->Enqueue(&endCode, 1);
 
 	if (g_bWriteDirect)
 	{
@@ -392,4 +539,69 @@ void ProcWrite()
 	g_session.SendQ->MoveFront(send_size);
 
 	return;
+}
+
+void SendAttack(BYTE atkType, BYTE dir, WORD x, WORD y)
+{
+	Packet p;
+
+	st_NETWORK_PACKET_HEADER pHeader;
+	pHeader.byCode = dfNETWORK_PACKET_CODE;
+	pHeader.bySize = 5;
+	pHeader.byType = atkType;
+	pHeader.byTemp = NULL;
+
+	p << dir << x << y<< dfNETWORK_PACKET_END;
+
+	if (p.GetLastError() == E_PUTDATA_ERROR)
+	{
+		exit(1);
+	}
+
+	SendPacket(&pHeader, p);
+	//stPACKET_CS_MOVE_STOP payload;
+	//payload.Direction = dir;
+	//payload.X = x;
+	//payload.Y = y;
+
+
+}
+
+void SendMove(BYTE dir, WORD x, WORD y)
+{
+	Packet p;
+
+	st_NETWORK_PACKET_HEADER pHeader;
+	pHeader.byCode = dfNETWORK_PACKET_CODE;
+	pHeader.bySize = 5;
+	pHeader.byType = dfPACKET_CS_MOVE_START;
+	pHeader.byTemp = NULL;
+
+	p << dir << x << y << dfNETWORK_PACKET_END;
+
+	if (p.GetLastError() == E_PUTDATA_ERROR)
+	{
+		exit(1);
+	}
+
+	SendPacket(&pHeader, p);
+}
+void SendStand(BYTE dir, WORD x, WORD y)
+{
+	Packet p;
+
+	st_NETWORK_PACKET_HEADER pHeader;
+	pHeader.byCode = dfNETWORK_PACKET_CODE;
+	pHeader.bySize = 5;
+	pHeader.byType = dfPACKET_CS_MOVE_STOP;
+	pHeader.byTemp = NULL;
+
+	p << dir << x << y << dfNETWORK_PACKET_END;
+
+	if (p.GetLastError() == E_PUTDATA_ERROR)
+	{
+		exit(1);
+	}
+
+	SendPacket(&pHeader, p);
 }
