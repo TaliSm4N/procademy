@@ -4,9 +4,9 @@ RedBlackTree::RedBlackTree()
 {
 	NIL = new NODE();
 	NIL->Color = BLACK;
-	NIL->pParent = nullptr;
-	NIL->pLeft = nullptr;
-	NIL->pRight = nullptr;
+	NIL->pParent = NIL;
+	NIL->pLeft = NIL;
+	NIL->pRight = NIL;
 	rootNode = nullptr;
 }
 
@@ -76,18 +76,323 @@ bool RedBlackTree::InsertNode(int iData)
 			curNode->pRight = newNode;
 			newNode->pParent = curNode;
 		}
-		Balance(newNode);
+		InsertBalance(newNode);
 	}
 	rootNode->Color = BLACK;
 	return true;
 }
 
-RedBlackTree::NODE *RedBlackTree::SearchNode(int iData)
+bool RedBlackTree::DeleteNode(int iData)
 {
-	return NIL;
+	NODE *pNode = SearchNode(iData);
+	NODE *curNode = pNode;
+	bool left = false;
+	bool right = false;
+
+	if (pNode->pLeft != NIL)
+		left=true;
+	if (pNode->pRight != NIL)
+		right = true;
+
+	if (left)
+	{
+		curNode=pNode->pLeft;
+
+		while (curNode->pRight != NIL)
+		{
+			curNode = curNode->pRight;
+		}
+	}
+	else if (right)
+	{
+		curNode = pNode->pRight;
+
+		while (curNode->pLeft != NIL)
+		{
+			curNode = curNode->pLeft;
+		}
+	}
+
+
+	/*
+	NODE *pNode = SearchNode(iData);
+	NODE *curNode=pNode;
+	bool leftChild = false;
+	bool rightChild = false;
+
+	if (pNode == NIL)
+		return false;
+	if (pNode->pLeft != NIL)
+		leftChild = true;
+	if (pNode->pRight != NIL)
+		rightChild = true;
+
+	if (leftChild || rightChild)
+	{
+		if (leftChild)
+		{
+			curNode = pNode->pLeft;
+
+			while (curNode->pRight != NIL)
+			{
+				curNode = curNode->pRight;
+			}
+		}
+		else if (rightChild)
+		{
+			curNode = pNode->pRight;
+
+			while (curNode->pLeft != NIL)
+			{
+				curNode = curNode->pLeft;
+			}
+		}
+
+		pNode->key = curNode->key;
+		pNode = curNode;
+	}
+
+	
+
+	if (pNode->pParent->pLeft == pNode)
+	{
+		pNode->pRight->pParent = pNode->pParent;
+		pNode->pParent->pLeft = pNode->pRight;
+		//delete pNode;
+	}
+	else
+	{
+		pNode->pLeft->pParent = pNode->pParent;
+		pNode->pParent->pRight = pNode->pLeft;
+		//delete pNode;
+	}
+
+	if (pNode->Color!=RED)
+	{
+		DeleteBalance(pNode);
+	}
+	delete pNode;
+
+	*/
+	/*
+	NODE *pNode = SearchNode(iData);
+	NODE *curNode;
+	bool leftChild = false;
+	bool rightChild = false;
+
+	if (pNode == NIL)
+		return false;
+	if (pNode->pLeft != NIL)
+		leftChild = true;
+	if (pNode->pRight != NIL)
+		rightChild = true;
+
+	if(leftChild||rightChild)
+	{
+		if (leftChild)
+		{
+			curNode = pNode->pLeft;
+
+			while (curNode->pRight!=NIL)
+			{
+				curNode = curNode->pRight;
+			}
+		}
+		else if (rightChild)
+		{
+			curNode = pNode->pRight;
+
+			while (curNode->pLeft != NIL)
+			{
+				curNode = curNode->pLeft;
+			}
+		}
+
+		pNode->key = curNode->key;
+		pNode = curNode;
+	}
+
+	Delete(pNode);
+	*/
 }
 
-bool RedBlackTree::Balance(NODE *newNode)
+bool RedBlackTree::DeleteBalance(NODE *pNode)
+{
+	/*
+	NODE *parent = pNode->pParent;
+	NODE *brother;
+	bool left;
+	if (parent->pLeft == pNode)
+	{
+		brother = parent->pRight;
+		left = true;
+	}
+	else
+	{
+		brother = parent->pLeft;
+		left = false;
+	}
+
+	if (pNode->pLeft->Color == RED || pNode->pRight->Color == RED)
+	{
+		if (left)
+		{
+			pNode->pRight->Color = BLACK;
+		}
+		else
+		{
+			pNode->pLeft->Color = BLACK;
+		}
+	}
+	else if (brother->Color == RED)
+	{
+		brother->Color = BLACK;
+
+		if (left)
+		{
+			LeftRotate(parent);
+			DeleteBalance(pNode->pRight);
+		}
+		else
+		{
+			RightRotate(parent);
+			DeleteBalance(pNode->pLeft);
+		}
+	}
+	else
+	{
+		if (brother->pLeft->Color == BLACK && brother->pRight->Color == BLACK)
+		{
+			brother->Color = BLACK;
+			DeleteBalance(parent->pParent);
+		}
+		else
+		{
+			if (left)
+			{
+				if (brother->pLeft->Color == RED)
+				{
+					brother->pLeft->Color = BLACK;
+					brother->Color = RED;
+					RightRotate(brother);
+					brother = brother->pParent;
+				}
+
+				brother->Color = parent->Color;
+				parent->Color = BLACK;
+				brother->pRight->Color = BLACK;
+
+				LeftRotate(parent);
+			}
+			else
+			{
+				if (brother->pRight->Color == RED)
+				{
+					brother->pRight->Color = BLACK;
+					brother->Color = RED;
+					LeftRotate(brother);
+					brother = brother->pParent;
+				}
+
+				brother->Color = parent->Color;
+				parent->Color = BLACK;
+				brother->pLeft->Color = BLACK;
+
+				RightRotate(parent);
+			}
+		}
+	}
+	
+	return true;
+	*/
+	/*
+	NODE *parent = pNode->pParent;
+
+	if (pNode->Color == RED)
+	{
+		if (parent->pLeft == pNode)
+		{
+			parent->pLeft = pNode->pLeft;
+		}
+		else if (parent->pRight == pNode)
+		{
+			parent->pRight = pNode->pRight;
+		}
+
+		delete pNode;
+	}
+	else
+	{
+		//삭제 노드의 형제가 레드
+		if (parent->pLeft->Color != parent->pRight->Color)
+		{
+			if (parent->Color == RED)
+			{
+				if (parent->pLeft == pNode)
+				{
+					parent->pRight->Color = BLACK;
+				}
+				else
+				{
+					parent->pLeft->Color = BLACK;
+				}
+			}
+			else
+			{
+				if (parent->pLeft == pNode)
+				{
+					parent->pRight->Color = BLACK;
+					parent->Color = RED;
+					LeftRotate(parent);
+					Delete(pNode);
+				}
+				else
+				{
+					parent->pLeft->Color = BLACK;
+					parent->Color = RED;
+					RightRotate(parent);
+					Delete(pNode);
+				}
+			}
+		}
+		else//삭제노드의 형제는 BLACK
+		{
+			NODE *brother;
+
+			if()
+		}
+	}
+	*/
+}
+
+RedBlackTree::NODE *RedBlackTree::SearchNode(int iData)
+{
+	NODE *curNode = rootNode;
+
+	if (rootNode == nullptr)
+		return NIL;
+
+	while (1)
+	{
+		if (curNode->key < iData)
+		{
+			curNode = curNode->pRight;
+		}
+		else if (curNode->key > iData)
+		{
+			curNode = curNode->pLeft;
+		}
+		else if (curNode->key == iData)
+		{
+			break;
+		}
+		else if (curNode == NIL)
+			break;
+	}
+	return curNode;
+}
+
+bool RedBlackTree::InsertBalance(NODE *newNode)
 {
 	NODE *parent= newNode->pParent;
 	NODE *gParent;
@@ -109,7 +414,7 @@ bool RedBlackTree::Balance(NODE *newNode)
 		gParent->pRight->Color = BLACK;
 
 		if(gParent!=rootNode)
-			Balance(gParent);
+			InsertBalance(gParent);
 	}
 	else
 	{
@@ -273,4 +578,8 @@ bool RedBlackTree::LeftRotate(NODE *pivotNode)
 	}
 
 	return true;
+}
+
+void RedBlackTree::Print()
+{
 }

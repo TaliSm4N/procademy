@@ -30,11 +30,14 @@ public:
 	bool DeleteNode(int iData);
 	NODE *SearchNode(int iData);
 	bool ReleaseTree(void);
+
+	void Print();
 	
 private:
-	bool Balance(NODE *newNode);
+	bool InsertBalance(NODE *newNode);
 	bool RightRotate(NODE *pivotNode);
 	bool LeftRotate(NODE *pivotNode);
+	bool DeleteBalance(NODE *pNode);
 
 private:
 	NODE *rootNode;
