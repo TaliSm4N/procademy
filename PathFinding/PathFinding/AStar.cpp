@@ -350,6 +350,30 @@ bool AStar::draw(BYTE *dib, int pitch,int blockSize)
 
 	drawGrid(dib, blockSize, pitch);
 
+	
+
+	if (testToken>0)
+	{
+		if (openList.empty())
+			return true;
+
+		for (auto iter = openList.begin(); iter != openList.end(); iter++)
+		{
+			writeLine(dib, blockSize, pitch, *iter, (*iter)->parent, 0xffc0cb);
+		}
+	}
+
+	if (testToken > 1)
+	{
+		if (closeList.empty())
+			return true;
+
+		for (auto iter = closeList.begin(); iter != closeList.end(); iter++)
+		{
+			writeLine(dib, blockSize, pitch, *iter, (*iter)->parent,0x8b00ff );
+		}
+	}
+
 	if (showToken || successFind)
 	{
 		int oldX;
@@ -365,30 +389,8 @@ bool AStar::draw(BYTE *dib, int pitch,int blockSize)
 
 		while (pathNode != NULL)
 		{
-			writeLine(dib,blockSize,pitch, pathNode,pathNode->parent);
+			writeLine(dib, blockSize, pitch, pathNode, pathNode->parent, 0x00ff0000);
 			pathNode = pathNode->parent;
-		}
-	}
-
-	if (testToken>0)
-	{
-		if (openList.empty())
-			return true;
-
-		for (auto iter = openList.begin(); iter != openList.end(); iter++)
-		{
-			writeLine(dib, blockSize, pitch, *iter, (*iter)->parent);
-		}
-	}
-
-	if (testToken > 1)
-	{
-		if (closeList.empty())
-			return true;
-
-		for (auto iter = closeList.begin(); iter != closeList.end(); iter++)
-		{
-			writeLine(dib, blockSize, pitch, *iter, (*iter)->parent);
 		}
 	}
 
@@ -491,9 +493,9 @@ void AStar::drawGrid(BYTE *dib, int blockSize, int pitch)
 	}
 }
 
-void AStar::writeLine(BYTE *dib, int blockSize,int pitch, NODE *sNode, NODE *eNode)
+void AStar::writeLine(BYTE *dib, int blockSize,int pitch, NODE *sNode, NODE *eNode,DWORD color)
 {
-	DWORD color = 0x00ff0000;
+	//DWORD color = 0x00ff0000;
 	DWORD *dest = (DWORD *)dib;
 
 	if (eNode == NULL)

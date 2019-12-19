@@ -70,7 +70,7 @@ public:
 	};
 private:
 	int manhattan(int x, int y);
-	void writeLine(BYTE *dib,int blockSize,int pitch, NODE *sNode, NODE *eNode);
+	void writeLine(BYTE *dib,int blockSize,int pitch, NODE *sNode, NODE *eNode,DWORD color);
 	void drawGrid(BYTE *dib, int blockSize, int pitch);
 	void resetList();
 private:

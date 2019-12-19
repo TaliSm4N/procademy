@@ -68,8 +68,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	while (1)
 	{
+
+
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
+			if (msg.message == WM_QUIT)
+				break;
+
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
@@ -82,7 +87,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 					g_find = false;
 				}
 			}
-
+	
 			AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 			//drawGrid();
 			g_screen->Flip(g_hWnd);
@@ -207,6 +212,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     //    break;
 	case WM_LBUTTONDBLCLK:
 	{
+		g_find = false;
 		AstarPath->resetFind();
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
@@ -216,7 +222,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		AstarPath->setTile(START, x / BLOCK_SIZE, y / BLOCK_SIZE);
 		AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-		//drawGrid();
 		g_screen->Flip(hWnd);
 		wall = false;
 		erase = false;
@@ -224,6 +229,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_RBUTTONDBLCLK:
 	{
+		g_find = false;
 		AstarPath->resetFind();
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
@@ -232,38 +238,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		AstarPath->setTile(END, x / BLOCK_SIZE, y / BLOCK_SIZE);
-		AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-		//drawGrid();
-		g_screen->Flip(hWnd);
+		//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+		//g_screen->Flip(hWnd);
 		wall = false;
 		erase = false;
 	}
 	break;
 	case WM_LBUTTONDOWN:
+		g_find = false;
 		wall = true;
 		break;
 	case WM_LBUTTONUP:
+		g_find = false;
 		wall = false;
 		break;
 	case WM_RBUTTONDOWN:
+		g_find = false;
 		erase = true;
 		break;
 	case WM_RBUTTONUP:
+		g_find = false;
 		erase = false;
 		break;
 	case WM_MOUSEMOVE:
 		if (wall)
 		{
+			g_find = false;
 			AstarPath->resetFind();
 			int x = LOWORD(lParam) / BLOCK_SIZE;
 			int y = HIWORD(lParam) / BLOCK_SIZE;
 			AstarPath->setTile(WALL, x, y);
 			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			////drawGrid();
-			//g_screen->Flip(hWnd);
+			//drawGrid();
+			g_screen->Flip(hWnd);
 		}
 		else if (erase)
 		{
+			g_find = false;
 			AstarPath->resetFind();
 			int x = LOWORD(lParam) / BLOCK_SIZE;
 			int y = HIWORD(lParam) / BLOCK_SIZE;
@@ -284,53 +295,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		//Find path 
 		case VK_SPACE:
-			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			////drawGrid();
-			//g_screen->Flip(hWnd);
+			g_find = false;
+			AstarPath->Find();
 			break;
 		//Find path
 		case 0x46://F key
 			AstarPath->resetFind();
 			g_find = true;
-			//while (AstarPath->Find() == 0)
-			//{
-			//	//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			//	////drawGrid();
-			//	//g_screen->Flip(hWnd);
-			//}
 			break;
 		//clear find history
 		case 0x43://C key
+			g_find = false;
 			AstarPath->resetFind();
-			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			////drawGrid();
-			//g_screen->Flip(hWnd);
 			break;
 		//reset Map
 		case 0x52://R key
+			g_find = false;
 			AstarPath->resetMap();
-			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			////drawGrid();
-			//g_screen->Flip(hWnd);
 			break;
 		//Togle Test Mode
 		case 0x54://T key
 			AstarPath->TestMode();
-			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			//
-			////drawGrid();
-			//g_screen->Flip(hWnd);
 			break;
 		//Togle Show Path Mode
 		case 0x59://Y key
 			AstarPath->ShowMode();
-			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			////drawGrid();
-			//g_screen->Flip(hWnd);
 			break;
 		default:
 			break;
 		}
+		//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+		////drawGrid();
+		//g_screen->Flip(hWnd);
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -339,9 +335,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
 			//
 			//
-			AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
-			//drawGrid();
-			g_screen->Flip(hWnd);
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			////drawGrid();
+			//g_screen->Flip(hWnd);
         }
         break;
     case WM_DESTROY:
