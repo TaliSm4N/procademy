@@ -1,9 +1,11 @@
-﻿// PathFinding.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
+﻿// pathFinding.cpp : 응용 프로그램에 대한 진입점을 정의합니다.
 //
 
 #include "stdafx.h"
-#include "PathFinding.h"
+#include "pathFinding.h"
 #include "ScreenDib.h"
+#include "AStar.h"
+#include <windowsx.h>
 
 #define MAX_LOADSTRING 100
 
@@ -15,18 +17,12 @@
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
-
-enum MODE {START=1,END=2,WALL=3,DELETE_WALL=4};
-
-MODE g_mode=START;
-
-int block[SCREEN_HEIGHT / BLOCK_SIZE][SCREEN_WIDTH / BLOCK_SIZE];
-
-ScreenDib g_screen(SCREEN_WIDTH, SCREEN_HEIGHT, 32);
-
 HWND g_hWnd;
-void drawGrid();
-void drawBlock();
+BOOL g_find = false;
+
+AStar *AstarPath = nullptr;
+
+ScreenDib *g_screen;// = new ScreenDib(SCREEN_WIDTH, SCREEN_HEIGHT, 32);
 
 
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
@@ -61,15 +57,37 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg;
 
     // 기본 메시지 루프입니다:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-			
-        }
-    }
+    //while (GetMessage(&msg, nullptr, 0, 0))
+    //{
+    //    if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+    //    {
+    //        TranslateMessage(&msg);
+    //        DispatchMessage(&msg);
+    //    }
+    //}
+
+	while (1)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else
+		{
+			if (g_find)
+			{
+				if (AstarPath->Find() != 0)
+				{
+					g_find = false;
+				}
+			}
+
+			AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			//drawGrid();
+			g_screen->Flip(g_hWnd);
+		}
+	}
 
     return (int) msg.wParam;
 }
@@ -87,7 +105,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
+    wcex.style          = CS_HREDRAW | CS_VREDRAW| CS_DBLCLKS;
     wcex.lpfnWndProc    = WndProc;
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
@@ -116,12 +134,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-	//HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-	//   CW_USEDEFAULT, 0, SCREEN_WIDTH, SCREEN_HEIGHT, nullptr, nullptr, hInstance, nullptr);
+	 //HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+	 //   CW_USEDEFAULT, 0, SCREEN_WIDTH, SCREEN_HEIGHT, nullptr, nullptr, hInstance, nullptr);
 
 	HWND hWnd = CreateWindowEx(0, szTitle, szTitle, WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX,
 		CW_USEDEFAULT, CW_USEDEFAULT, SCREEN_WIDTH, SCREEN_HEIGHT, nullptr, nullptr, hInstance, nullptr);
-
+	g_hWnd = hWnd;
 	if (!hWnd)
 	{
 		return FALSE;
@@ -159,108 +177,172 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	static bool Draw = false;
-	static int oldX;
-	static int oldY;
-	int x;
-	int y;
+	static bool wall = false;
+	static bool erase = false;
+	
+
+
     switch (message)
     {
-    case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // 메뉴 선택을 구문 분석합니다:
-            switch (wmId)
-            {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
-        break;
-	case WM_LBUTTONUP:
-		Draw = false;
+	case WM_CREATE:
+		AstarPath=new AStar(SCREEN_WIDTH / BLOCK_SIZE, SCREEN_HEIGHT / BLOCK_SIZE);
+		g_screen = new ScreenDib(SCREEN_WIDTH, SCREEN_HEIGHT, 32);
 		break;
-	case WM_LBUTTONDOWN:
-		Draw = true;
-	case WM_MOUSEMOVE:
+    //case WM_COMMAND:
+    //    {
+    //        int wmId = LOWORD(wParam);
+    //        // 메뉴 선택을 구문 분석합니다:
+    //        switch (wmId)
+    //        {
+    //        case IDM_ABOUT:
+    //            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+    //            break;
+    //        case IDM_EXIT:
+    //            DestroyWindow(hWnd);
+    //            break;
+    //        default:
+    //            return DefWindowProc(hWnd, message, wParam, lParam);
+    //        }
+    //    }
+    //    break;
+	case WM_LBUTTONDBLCLK:
 	{
-		if (Draw)
-		{
-			x = LOWORD(lParam);
-			y = HIWORD(lParam);
+		AstarPath->resetFind();
+		int x = LOWORD(lParam);
+		int y = HIWORD(lParam);
 
-			if (x > SCREEN_WIDTH || y > SCREEN_HEIGHT)
-				break;
+		if (x > SCREEN_WIDTH || y > SCREEN_HEIGHT)
+			break;
 
-			int *setBlock = &block[y / BLOCK_SIZE][x / BLOCK_SIZE];
-
-			if (g_mode == DELETE_WALL)
-			{
-				*setBlock = 0;
-			}
-			else if(*setBlock==0)
-			{
-				if (g_mode == START || g_mode == END)
-				{
-					for (int i = 0; i < SCREEN_HEIGHT / BLOCK_SIZE; i++)
-					{
-						for (int j = 0; j < SCREEN_WIDTH / BLOCK_SIZE; j++)
-						{
-							if (block[i][j] == g_mode)
-								block[i][j] = 0;
-						}
-					}
-				}
-				*setBlock = g_mode;
-
-			}
-
-			//oldX = x;
-			//oldY = y;
-			drawBlock();
-			drawGrid();
-			g_screen.Flip(hWnd);
-		}
+		AstarPath->setTile(START, x / BLOCK_SIZE, y / BLOCK_SIZE);
+		AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+		//drawGrid();
+		g_screen->Flip(hWnd);
+		wall = false;
+		erase = false;
 	}
-		break;
 	break;
-	case WM_KEYDOWN:
+	case WM_RBUTTONDBLCLK:
 	{
+		AstarPath->resetFind();
+		int x = LOWORD(lParam);
+		int y = HIWORD(lParam);
+
+		if (x > SCREEN_WIDTH || y > SCREEN_HEIGHT)
+			break;
+
+		AstarPath->setTile(END, x / BLOCK_SIZE, y / BLOCK_SIZE);
+		AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+		//drawGrid();
+		g_screen->Flip(hWnd);
+		wall = false;
+		erase = false;
+	}
+	break;
+	case WM_LBUTTONDOWN:
+		wall = true;
+		break;
+	case WM_LBUTTONUP:
+		wall = false;
+		break;
+	case WM_RBUTTONDOWN:
+		erase = true;
+		break;
+	case WM_RBUTTONUP:
+		erase = false;
+		break;
+	case WM_MOUSEMOVE:
+		if (wall)
+		{
+			AstarPath->resetFind();
+			int x = LOWORD(lParam) / BLOCK_SIZE;
+			int y = HIWORD(lParam) / BLOCK_SIZE;
+			AstarPath->setTile(WALL, x, y);
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			////drawGrid();
+			//g_screen->Flip(hWnd);
+		}
+		else if (erase)
+		{
+			AstarPath->resetFind();
+			int x = LOWORD(lParam) / BLOCK_SIZE;
+			int y = HIWORD(lParam) / BLOCK_SIZE;
+
+			if (AstarPath->getTile(x, y) == WALL)
+			{
+				AstarPath->setTile(DELETE_WALL, x, y);
+			}
+
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			////drawGrid();
+			//g_screen->Flip(hWnd);
+		}
+		break;
+
+	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		case 0x53://S key
-			g_mode = START;
+		//Find path 
+		case VK_SPACE:
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			////drawGrid();
+			//g_screen->Flip(hWnd);
 			break;
-		case 0x45://E key
-			g_mode = END;
-			break;
-		case 0x57://W key
-			g_mode = WALL;
-			break;
-		case 0x44://D key
-			g_mode = DELETE_WALL;
-			break;
+		//Find path
 		case 0x46://F key
+			AstarPath->resetFind();
+			g_find = true;
+			//while (AstarPath->Find() == 0)
+			//{
+			//	//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			//	////drawGrid();
+			//	//g_screen->Flip(hWnd);
+			//}
+			break;
+		//clear find history
+		case 0x43://C key
+			AstarPath->resetFind();
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			////drawGrid();
+			//g_screen->Flip(hWnd);
+			break;
+		//reset Map
+		case 0x52://R key
+			AstarPath->resetMap();
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			////drawGrid();
+			//g_screen->Flip(hWnd);
+			break;
+		//Togle Test Mode
+		case 0x54://T key
+			AstarPath->TestMode();
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			//
+			////drawGrid();
+			//g_screen->Flip(hWnd);
+			break;
+		//Togle Show Path Mode
+		case 0x59://Y key
+			AstarPath->ShowMode();
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			////drawGrid();
+			//g_screen->Flip(hWnd);
+			break;
+		default:
 			break;
 		}
-	}
-	break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
             EndPaint(hWnd, &ps);
+			//
+			//
+			AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			//drawGrid();
+			g_screen->Flip(hWnd);
         }
-		drawBlock();
-		drawGrid();
-		g_screen.Flip(hWnd);
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -289,55 +371,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
     return (INT_PTR)FALSE;
-}
-
-void drawGrid()
-{
-	BYTE *dib = g_screen.GetDibBuffer();
-	DWORD *dest = (DWORD *)dib;
-	int pitch = g_screen.GetPitch();
-	for (int i = 1; i < SCREEN_HEIGHT; i++)
-	{
-		for (int j = 1; j < SCREEN_WIDTH; j ++)
-		{
-			if(i%20==0||j%20==0)
-				*(dest + j + (pitch / 4)*i) = 0x00000000;
-		}
-	}
-}
-
-void drawBlock()
-{
-	BYTE *dib = g_screen.GetDibBuffer();
-	DWORD *dest = (DWORD *)dib;
-	int pitch = g_screen.GetPitch();
-	DWORD color = 0x00000000;
-	for (int i = 0; i < SCREEN_HEIGHT / BLOCK_SIZE; i++)
-	{
-		for (int j = 0; j < SCREEN_WIDTH / BLOCK_SIZE; j++)
-		{
-			switch (block[i][j])
-			{
-			case START:
-				color = 0x00ff0000;
-				break;
-			case END:
-				color = 0x000000ff;
-				break;
-			case WALL:
-				color = 0x00555555;
-				break;
-			default:
-				color = 0x00ffffff;
-				//return;
-				break;
-			}
-
-			for (int iDraw = i * BLOCK_SIZE; iDraw < i*BLOCK_SIZE + BLOCK_SIZE; iDraw++)
-			{
-				for (int jDraw = j * BLOCK_SIZE; jDraw < j*BLOCK_SIZE + BLOCK_SIZE; jDraw++)
-					*(dest + jDraw + (pitch / 4)*iDraw) = color;
-			}
-		}
-	}
 }

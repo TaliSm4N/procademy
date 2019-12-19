@@ -24,7 +24,10 @@
     <ClInclude Include="Resource.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="PathFinding.h">
+    <ClInclude Include="pathFinding.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AStar.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ScreenDib.h">
@@ -35,7 +38,10 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="PathFinding.cpp">
+    <ClCompile Include="pathFinding.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="AStar.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="ScreenDib.cpp">
@@ -43,7 +49,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="PathFinding.rc">
+    <ResourceCompile Include="pathFinding.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -51,7 +57,7 @@
     <Image Include="small.ico">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="PathFinding.ico">
+    <Image Include="pathFinding.ico">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>

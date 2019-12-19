@@ -20,9 +20,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{A141BE6A-7CD9-4761-9ABE-2F3D8116D189}</ProjectGuid>
+    <ProjectGuid>{D7453056-8472-4785-8957-F26D59CF7232}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>PathFinding</RootNamespace>
+    <RootNamespace>pathFinding</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -84,7 +84,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
@@ -147,17 +147,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="PathFinding.h" />
+    <ClInclude Include="AStar.h" />
+    <ClInclude Include="pathFinding.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ScreenDib.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PathFinding.cpp" />
-    <ClCompile Include="ScreenDib.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="AStar.cpp" />
+    <ClCompile Include="pathFinding.cpp" />
+    <ClCompile Include="ScreenDib.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -166,10 +166,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="PathFinding.rc" />
+    <ResourceCompile Include="pathFinding.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="PathFinding.ico" />
+    <Image Include="pathFinding.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

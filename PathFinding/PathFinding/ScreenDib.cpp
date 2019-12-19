@@ -95,6 +95,7 @@ void ScreenDib::Flip(HWND hWnd, int iX, int iY)
 
 
 	//frame set
+	/*
 	static char szFrame[5];
 	static int iFrame = 0;
 	static DWORD dwTick = 0;
@@ -107,6 +108,7 @@ void ScreenDib::Flip(HWND hWnd, int iX, int iY)
 	}
 
 	TextOutA(hDC, 0, 0, szFrame, (int)strlen(szFrame));
+	*/
 
 	ReleaseDC(hWnd, hDC);
 }
