@@ -112,7 +112,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -147,7 +147,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AStar.h" />
+    <ClInclude Include="AStar.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="JPS.h" />
+    <ClInclude Include="Map.h" />
     <ClInclude Include="pathFinding.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ScreenDib.h" />
@@ -155,7 +159,11 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AStar.cpp" />
+    <ClCompile Include="AStar.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="JPS.cpp" />
+    <ClCompile Include="Map.cpp" />
     <ClCompile Include="pathFinding.cpp" />
     <ClCompile Include="ScreenDib.cpp" />
     <ClCompile Include="stdafx.cpp">

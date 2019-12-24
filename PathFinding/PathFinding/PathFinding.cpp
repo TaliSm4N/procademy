@@ -4,7 +4,9 @@
 #include "stdafx.h"
 #include "pathFinding.h"
 #include "ScreenDib.h"
-#include "AStar.h"
+//#include "AStar.h"
+#include "JPS.h"
+#include "Map.h"
 #include <windowsx.h>
 
 #define MAX_LOADSTRING 100
@@ -20,7 +22,9 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름�
 HWND g_hWnd;
 BOOL g_find = false;
 
-AStar *AstarPath = nullptr;
+//AStar *AstarPath = nullptr;
+
+JPS *jps;
 
 ScreenDib *g_screen;// = new ScreenDib(SCREEN_WIDTH, SCREEN_HEIGHT, 32);
 
@@ -80,15 +84,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else
 		{
-			if (g_find)
-			{
-				if (AstarPath->Find() != 0)
-				{
-					g_find = false;
-				}
-			}
+			//if (g_find)
+			//{
+			//	if (AstarPath->Find() != 0)
+			//	{
+			//		g_find = false;
+			//	}
+			//}
 	
-			AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			jps->GetMap()->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 			//drawGrid();
 			g_screen->Flip(g_hWnd);
 		}
@@ -190,7 +195,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
 	case WM_CREATE:
-		AstarPath=new AStar(SCREEN_WIDTH / BLOCK_SIZE, SCREEN_HEIGHT / BLOCK_SIZE);
+		//AstarPath=new AStar(SCREEN_WIDTH / BLOCK_SIZE, SCREEN_HEIGHT / BLOCK_SIZE);
+		jps = new JPS(SCREEN_WIDTH / BLOCK_SIZE, SCREEN_HEIGHT / BLOCK_SIZE);
 		g_screen = new ScreenDib(SCREEN_WIDTH, SCREEN_HEIGHT, 32);
 		break;
     //case WM_COMMAND:
@@ -213,15 +219,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONDBLCLK:
 	{
 		g_find = false;
-		AstarPath->resetFind();
+		//AstarPath->resetFind();
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
 
 		if (x > SCREEN_WIDTH || y > SCREEN_HEIGHT)
 			break;
-
-		AstarPath->setTile(START, x / BLOCK_SIZE, y / BLOCK_SIZE);
-		AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+		jps->GetMap()->setTile(MODE::START, x / BLOCK_SIZE, y / BLOCK_SIZE);
+		//AstarPath->setTile(START, x / BLOCK_SIZE, y / BLOCK_SIZE);
+		//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 		g_screen->Flip(hWnd);
 		wall = false;
 		erase = false;
@@ -230,14 +236,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_RBUTTONDBLCLK:
 	{
 		g_find = false;
-		AstarPath->resetFind();
+		//AstarPath->resetFind();
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
 
 		if (x > SCREEN_WIDTH || y > SCREEN_HEIGHT)
 			break;
-
-		AstarPath->setTile(END, x / BLOCK_SIZE, y / BLOCK_SIZE);
+		jps->GetMap()->setTile(END, x / BLOCK_SIZE, y / BLOCK_SIZE);
+		//AstarPath->setTile(END, x / BLOCK_SIZE, y / BLOCK_SIZE);
 		//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 		//g_screen->Flip(hWnd);
 		wall = false;
@@ -264,10 +270,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (wall)
 		{
 			g_find = false;
-			AstarPath->resetFind();
+			//AstarPath->resetFind();
 			int x = LOWORD(lParam) / BLOCK_SIZE;
 			int y = HIWORD(lParam) / BLOCK_SIZE;
-			AstarPath->setTile(WALL, x, y);
+			jps->GetMap()->setTile(MODE::WALL, x, y);
+			//AstarPath->setTile(WALL, x, y);
 			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 			//drawGrid();
 			g_screen->Flip(hWnd);
@@ -275,14 +282,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		else if (erase)
 		{
 			g_find = false;
-			AstarPath->resetFind();
+			//AstarPath->resetFind();
 			int x = LOWORD(lParam) / BLOCK_SIZE;
 			int y = HIWORD(lParam) / BLOCK_SIZE;
 
-			if (AstarPath->getTile(x, y) == WALL)
+			if (jps->GetMap()->getTile(x, y) == WALL)
 			{
-				AstarPath->setTile(DELETE_WALL, x, y);
+				jps->GetMap()->setTile(MODE::DELETE_WALL, x, y);
 			}
+
+			//if (AstarPath->getTile(x, y) == WALL)
+			//{
+			//	AstarPath->setTile(DELETE_WALL, x, y);
+			//}
 
 			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 			////drawGrid();
@@ -296,30 +308,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		//Find path 
 		case VK_SPACE:
 			g_find = false;
-			AstarPath->Find();
+			//AstarPath->Find();
 			break;
 		//Find path
 		case 0x46://F key
-			AstarPath->resetFind();
+			//AstarPath->resetFind();
 			g_find = true;
 			break;
 		//clear find history
 		case 0x43://C key
 			g_find = false;
-			AstarPath->resetFind();
+			//AstarPath->resetFind();
 			break;
 		//reset Map
 		case 0x52://R key
 			g_find = false;
-			AstarPath->resetMap();
+			//AstarPath->resetMap();
 			break;
 		//Togle Test Mode
 		case 0x54://T key
-			AstarPath->TestMode();
+			//AstarPath->TestMode();
 			break;
 		//Togle Show Path Mode
 		case 0x59://Y key
-			AstarPath->ShowMode();
+			//AstarPath->ShowMode();
 			break;
 		default:
 			break;
