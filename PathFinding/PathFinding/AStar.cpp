@@ -389,7 +389,7 @@ bool AStar::draw(BYTE *dib, int pitch,int blockSize)
 
 		while (pathNode != NULL)
 		{
-			writeLine(dib, blockSize, pitch, pathNode, pathNode->parent, 0x00ff0000);
+			//writeLine(dib, blockSize, pitch, pathNode, pathNode->parent, 0x00ff0000);
 			pathNode = pathNode->parent;
 		}
 	}

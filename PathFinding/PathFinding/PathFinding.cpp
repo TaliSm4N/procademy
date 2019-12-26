@@ -84,15 +84,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else
 		{
-			//if (g_find)
-			//{
-			//	if (AstarPath->Find() != 0)
-			//	{
-			//		g_find = false;
-			//	}
-			//}
+			if (g_find)
+			{
+				if (jps->Find() != 0)
+				{
+					g_find = false;
+				}
+			}
 	
-			jps->GetMap()->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
+			jps->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 			//AstarPath->draw(g_screen->GetDibBuffer(), g_screen->GetPitch(), BLOCK_SIZE);
 			//drawGrid();
 			g_screen->Flip(g_hWnd);
@@ -288,7 +288,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			if (jps->GetMap()->getTile(x, y) == WALL)
 			{
-				jps->GetMap()->setTile(MODE::DELETE_WALL, x, y);
+				jps->GetMap()->setTile(MODE::ROAD, x, y);
 			}
 
 			//if (AstarPath->getTile(x, y) == WALL)
@@ -308,6 +308,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		//Find path 
 		case VK_SPACE:
 			g_find = false;
+			jps->Find();
 			//AstarPath->Find();
 			break;
 		//Find path
@@ -318,11 +319,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		//clear find history
 		case 0x43://C key
 			g_find = false;
+			jps->resetFind();
 			//AstarPath->resetFind();
 			break;
 		//reset Map
 		case 0x52://R key
 			g_find = false;
+			jps->resetMap();
 			//AstarPath->resetMap();
 			break;
 		//Togle Test Mode

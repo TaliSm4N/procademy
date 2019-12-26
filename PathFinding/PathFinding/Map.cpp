@@ -1,7 +1,7 @@
 #include "Map.h"
 
 Map::Map(int w,int h)
-	:width(w),height(h)
+	:width(w),height(h),successFind(false)
 {
 	tile = new int *[h];
 	
@@ -23,14 +23,14 @@ Map::~Map()
 	delete[] tile;
 }
 
-void Map::setTile(MODE mode, int x, int y)
+void Map::setTile(int mode, int x, int y)
 {
 	bool out = false;
 	if (mode == ROAD)
 	{
 		tile[y][x] = 0;
 	}
-	else if (tile[y][x] == 0)
+	else if (tile[y][x] == 0||tile[y][x]>=SEARCH||tile[y][x]==OPEN||tile[y][x]==CLOSE)
 	{
 		if (mode == START || mode == END)
 		{
@@ -64,8 +64,11 @@ void Map::setTile(MODE mode, int x, int y)
 }
 int Map::getTile(int x, int y)
 {
-	if ((x < 0 || x >= width) && (y < 0 || y >= height))
+	if ((x < 0 || x >= width) || (y < 0 || y >= height))
 		return WRONG;
+
+	//if (tile[y][x] >= SEARCH)
+	//	return ROAD;
 
 	return (tile[y][x]);
 }
@@ -74,6 +77,8 @@ bool Map::draw(BYTE *dib,int pitch,int blockSize)
 {
 	DWORD *dest = (DWORD *)dib;
 	DWORD color = 0x00000000;
+	static DWORD pathColor = 0xFFC0CB;
+	bool test = false;
 
 	for (int i = 0; i < height; i++)
 	{
@@ -81,6 +86,9 @@ bool Map::draw(BYTE *dib,int pitch,int blockSize)
 		{
 			switch (tile[i][j])
 			{
+			case ROAD:
+				color = 0x00ffffff;
+				break;
 			case START:
 				color = 0x0000ff00;
 				break;
@@ -96,8 +104,29 @@ bool Map::draw(BYTE *dib,int pitch,int blockSize)
 			case CLOSE:
 				color = 0x00ffff00;
 				break;
+			case PATH:
+				color = pathColor;
+				test = true;
+				break;
 			default:
-				color = 0x00ffffff;
+				switch (tile[i][j] % 5)
+				{
+				case 0:
+					color = 0x00ff00ff;
+					break;
+				case 1:
+					color = 0x00ff5500;
+					break;
+				case 2:
+					color = 0x0000ffff;
+					break;
+				case 3:
+					color = 0x00751267;
+					break;
+				case 4:
+					color = 0x00126344;
+					break;
+				}
 				//return;
 				break;
 			}
@@ -119,5 +148,31 @@ bool Map::draw(BYTE *dib,int pitch,int blockSize)
 		}
 	}
 
+	if (test)
+		pathColor++;
+
 	return true;
+}
+
+void Map::resetMap()
+{
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+			tile[i][j] = 0;
+	}
+	successFind = false;
+}
+
+void Map::resetFind()
+{
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			if (tile[i][j] != START && tile[i][j] != END && tile[i][j] != WALL)
+				tile[i][j] = 0;
+		}
+	}
+	successFind = false;
 }
