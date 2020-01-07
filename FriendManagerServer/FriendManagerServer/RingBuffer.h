@@ -7,6 +7,7 @@ class RingBuffer
 public:
 	RingBuffer();
 	RingBuffer(int iBufferSize);
+	~RingBuffer();
 
 private:
 	int _size;

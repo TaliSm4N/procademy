@@ -15,6 +15,11 @@ RingBuffer::RingBuffer(int iBufferSize)
 	//_buf = new char[iBufferSize+1];
 }
 
+RingBuffer::~RingBuffer()
+{
+	delete []_buf;
+}
+
 void RingBuffer::Resize(int size)
 {
 }
@@ -152,6 +157,10 @@ int  RingBuffer::Enqueue(Packet &p)
 	{
 		size = temp;
 	}
+
+	if (0 >= size)
+		return 0;
+
 	temp = DirectEnqueueSize();
 	if (temp < size)
 	{
@@ -180,6 +189,9 @@ int RingBuffer::Dequeue(char *chpData, int iSize)
 	{
 		iSize = temp;
 	}
+
+	if (0 >= iSize)
+		return 0;
 
 	temp = DirectDequeueSize();
 	if (temp < iSize)
@@ -266,44 +278,22 @@ int RingBuffer::Peek(char *chpData, int iSize)
 		iSize = temp;
 	}
 
+	if (0 >= iSize)
+		return 0;
+
 	temp = DirectDequeueSize();
 	if (temp < iSize)
 	{
 		memcpy(chpData, _buf + _front, temp);
-		//MoveFront(temp);
 		memcpy(chpData + temp, _buf, iSize - temp);
-		//MoveFront(iSize - temp);
 	}
 	else
 	{
 		memcpy(chpData, _buf + _front, iSize);
-		//MoveFront(iSize);
 	}
 
 	return iSize;
-	/*
-	int len;
 
-	if (iSize > GetUseSize())
-		iSize = GetUseSize();
-
-	if (DirectDequeueSize() > iSize)
-	{
-		len = iSize;
-		memcpy_s(chpData, len, _buf + _front, len);
-	}
-	else
-	{
-		len = DirectDequeueSize();
-		memcpy_s(chpData, len, _buf + _front, len);
-		iSize -= len;
-
-		memcpy_s(chpData + len, iSize, _buf, iSize);
-		iSize += len;
-	}
-	_size -= iSize;
-	return iSize;
-	*/
 }
 
 bool RingBuffer::MoveFront(int size)

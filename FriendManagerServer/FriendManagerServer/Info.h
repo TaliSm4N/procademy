@@ -31,11 +31,4 @@ struct LoginUser
 	int sock;
 	RingBuffer SendQ;
 	RingBuffer RecvQ;
-
-	~LoginUser()
-	{
-		SendQ.~RingBuffer();
-		RecvQ.~RingBuffer();
-		
-	};
 };

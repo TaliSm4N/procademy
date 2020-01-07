@@ -82,7 +82,7 @@ int Packet::PutData(char *chpSrc, int iSrcSize)
 		return -1;
 	}
 
-	memcpy_s(GetBufferPtr()+rear, freeSize, chpSrc, iSrcSize);
+	memcpy(GetBufferPtr()+rear, chpSrc, iSrcSize);
 	rear += iSrcSize;
 
 	return iSrcSize;
@@ -92,7 +92,7 @@ Packet &Packet::operator = (Packet &clSrcPacket)
 {
 	buf = new char[clSrcPacket.size];
 	size = clSrcPacket.size;
-	memcpy_s(buf, size, clSrcPacket.buf, clSrcPacket.size);
+	memcpy(buf, clSrcPacket.buf, clSrcPacket.size);
 	err = clSrcPacket.err;
 	mode = clSrcPacket.mode;
 	front = clSrcPacket.front;
@@ -108,7 +108,7 @@ Packet &Packet::operator << (BYTE byValue)
 {
 	if (rear + sizeof(BYTE) < size)
 	{
-		memcpy_s(buf + rear, sizeof(BYTE), &byValue, sizeof(BYTE));
+		memcpy(buf + rear, &byValue, sizeof(BYTE));
 		MoveWritePos(sizeof(BYTE));
 	}
 	else
@@ -122,7 +122,7 @@ Packet &Packet::operator << (char chValue)
 {
 	if (rear + sizeof(char) < size)
 	{
-		memcpy_s(buf + rear, sizeof(char), &chValue, sizeof(char));
+		memcpy(buf + rear, &chValue, sizeof(char));
 		MoveWritePos(sizeof(char));
 	}
 	else
@@ -137,7 +137,7 @@ Packet &Packet::operator << (short shValue)
 {
 	if (rear + sizeof(short) < size)
 	{
-		memcpy_s(buf + rear, sizeof(short), &shValue, sizeof(short));
+		memcpy(buf + rear, &shValue, sizeof(short));
 		MoveWritePos(sizeof(short));
 	}
 	else
@@ -151,7 +151,7 @@ Packet &Packet::operator << (WORD wValue)
 {
 	if (rear + sizeof(WORD) < size)
 	{
-		memcpy_s(buf + rear, sizeof(WORD), &wValue, sizeof(WORD));
+		memcpy(buf + rear, &wValue, sizeof(WORD));
 		MoveWritePos(sizeof(WORD));
 	}
 	else
@@ -166,7 +166,7 @@ Packet &Packet::operator << (int iValue)
 {
 	if (rear + sizeof(int) < size)
 	{
-		memcpy_s(buf + rear, sizeof(int), &iValue, sizeof(int));
+		memcpy(buf + rear, &iValue, sizeof(int));
 		MoveWritePos(sizeof(int));
 	}
 	else
@@ -180,7 +180,7 @@ Packet &Packet::operator << (DWORD dwValue)
 {
 	if (rear + sizeof(DWORD) < size)
 	{
-		memcpy_s(buf + rear, sizeof(DWORD), &dwValue, sizeof(DWORD));
+		memcpy(buf + rear, &dwValue, sizeof(DWORD));
 		MoveWritePos(sizeof(DWORD));
 	}
 	else
@@ -194,7 +194,7 @@ Packet &Packet::operator << (float fValue)
 {
 	if (rear + sizeof(float) < size)
 	{
-		memcpy_s(buf + rear, sizeof(float), &fValue, sizeof(float));
+		memcpy(buf + rear, &fValue, sizeof(float));
 		MoveWritePos(sizeof(float));
 	}
 	else
@@ -209,7 +209,7 @@ Packet &Packet::operator << (__int64 iValue)
 {
 	if (rear + sizeof(__int64) < size)
 	{
-		memcpy_s(buf + rear, sizeof(__int64), &iValue, sizeof(__int64));
+		memcpy(buf + rear, &iValue, sizeof(__int64));
 		MoveWritePos(sizeof(__int64));
 	}
 	else
@@ -223,7 +223,7 @@ Packet &Packet::operator << (double dValue)
 {
 	if (rear + sizeof(double) < size)
 	{
-		memcpy_s(buf + rear, sizeof(double), &dValue, sizeof(double));
+		memcpy(buf + rear, &dValue, sizeof(double));
 		MoveWritePos(sizeof(double));
 	}
 	else
@@ -238,7 +238,7 @@ Packet &Packet::operator << (UINT64 iValue)
 {
 	if (rear + sizeof(UINT64) < size)
 	{
-		memcpy_s(buf + rear, sizeof(UINT64), &iValue, sizeof(UINT64));
+		memcpy(buf + rear, &iValue, sizeof(UINT64));
 		MoveWritePos(sizeof(UINT64));
 	}
 	else
@@ -253,7 +253,7 @@ Packet &Packet::operator << (UINT iValue)
 {
 	if (rear + sizeof(UINT) < size)
 	{
-		memcpy_s(buf + rear, sizeof(UINT), &iValue, sizeof(UINT));
+		memcpy(buf + rear, &iValue, sizeof(UINT));
 		MoveWritePos(sizeof(UINT));
 	}
 	else
@@ -272,7 +272,7 @@ Packet &Packet::operator >> (BYTE &byValue)
 {
 	if (front + sizeof(BYTE) <= rear)
 	{
-		memcpy_s(&byValue, sizeof(BYTE), buf + front, sizeof(BYTE));
+		memcpy(&byValue, buf + front, sizeof(BYTE));
 		MoveReadPos(sizeof(BYTE));
 	}
 	else
@@ -286,7 +286,7 @@ Packet &Packet::operator >> (char &chValue)
 {
 	if (front + sizeof(char) <= rear)
 	{
-		memcpy_s(&chValue, sizeof(char), buf + front, sizeof(char));
+		memcpy(&chValue, buf + front, sizeof(char));
 		MoveReadPos(sizeof(char));
 	}
 	else
@@ -301,7 +301,7 @@ Packet &Packet::operator >> (short &shValue)
 {
 	if (front + sizeof(short) <= rear)
 	{
-		memcpy_s(&shValue, sizeof(short), buf + front, sizeof(short));
+		memcpy(&shValue, buf + front, sizeof(short));
 		MoveReadPos(sizeof(short));
 	}
 	else
@@ -330,7 +330,7 @@ Packet &Packet::operator >> (int &iValue)
 {
 	if (front + sizeof(int) <= rear)
 	{
-		memcpy_s(&iValue, sizeof(int), buf + front, sizeof(int));
+		memcpy(&iValue, buf + front, sizeof(int));
 		MoveReadPos(sizeof(int));
 	}
 	else
@@ -344,7 +344,7 @@ Packet &Packet::operator >> (DWORD &dwValue)
 {
 	if (front + sizeof(DWORD) <= rear)
 	{
-		memcpy_s(&dwValue, sizeof(DWORD), buf + front, sizeof(DWORD));
+		memcpy(&dwValue, buf + front, sizeof(DWORD));
 		MoveReadPos(sizeof(DWORD));
 	}
 	else
@@ -358,7 +358,7 @@ Packet &Packet::operator >> (float &fValue)
 {
 	if (front + sizeof(float) <= rear)
 	{
-		memcpy_s(&fValue, sizeof(float), buf + front, sizeof(float));
+		memcpy(&fValue, buf + front, sizeof(float));
 		MoveReadPos(sizeof(float));
 	}
 	else
@@ -373,7 +373,7 @@ Packet &Packet::operator >> (__int64 &iValue)
 {
 	if (front + sizeof(__int64) <= rear)
 	{
-		memcpy_s(&iValue, sizeof(__int64), buf + front, sizeof(__int64));
+		memcpy(&iValue, buf + front, sizeof(__int64));
 		MoveReadPos(sizeof(__int64));
 	}
 	else
@@ -387,7 +387,7 @@ Packet &Packet::operator >> (double &dValue)
 {
 	if (front + sizeof(double) <= rear)
 	{
-		memcpy_s(&dValue, sizeof(double), buf + front, sizeof(double));
+		memcpy(&dValue, buf + front, sizeof(double));
 		MoveReadPos(sizeof(double));
 	}
 	else
@@ -402,7 +402,7 @@ Packet &Packet::operator >> (UINT64 &iValue)
 {
 	if (front + sizeof(UINT64) <= rear)
 	{
-		memcpy_s(&iValue, sizeof(UINT64), buf + front, sizeof(UINT64));
+		memcpy(&iValue, buf + front, sizeof(UINT64));
 		MoveReadPos(sizeof(UINT64));
 	}
 	else
@@ -417,7 +417,7 @@ Packet &Packet::operator >> (UINT &iValue)
 {
 	if (front + sizeof(UINT) <= rear)
 	{
-		memcpy_s(&iValue, sizeof(UINT), buf + front, sizeof(UINT));
+		memcpy(&iValue, buf + front, sizeof(UINT));
 		MoveReadPos(sizeof(UINT));
 	}
 	else

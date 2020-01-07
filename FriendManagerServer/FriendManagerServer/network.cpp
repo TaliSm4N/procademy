@@ -185,6 +185,7 @@ bool callSelect(int *IDTable,SOCKET *sockTable,FD_SET *ReadSet,FD_SET *WriteSet)
 						UserMap.remove(client);
 						//UserMap.erase(client->clientNo);
 						delete client;
+
 						std::cout << IDTable[i] << "유저 접속 종료" << std::endl;
 						clientCount--;
 					}
@@ -216,6 +217,7 @@ bool procAccept()
 		client->clientNo = g_clientNo;
 		if (client->sock == INVALID_SOCKET)
 		{
+			delete client;
 			//std::wcout << L"accept failed" << std::endl;
 			return false;
 		}
@@ -229,6 +231,8 @@ bool procAccept()
 		clientCount++;
 		count++;
 	}
+
+	
 
 	return true;
 }
@@ -286,7 +290,7 @@ bool procRecv(DWORD userID)
 	LoginUser* client = FindClient(userID);
 	int size;
 	int t_size;
-	Packet payLoad;
+	//Packet payLoad;
 	if (client == NULL)
 		return false;
 	
@@ -440,10 +444,10 @@ bool SendUnicast(LoginUser* client, st_PACKET_HEADER& header, Packet& p)
 	}
 
 	client->SendQ.Enqueue((char*)&header, sizeof(header));
-	client->SendQ.Enqueue(p);
+	client->SendQ.Enqueue(payLoad);
 
 	//send(client->socket, client->SendQ.GetReadPos(), sizeof(header), NULL);
-	
+	payLoad.Clear();
 
 	return true;
 }
@@ -469,7 +473,7 @@ bool SendBroadCastAll(LoginUser* client, st_PACKET_HEADER& header, Packet& p)
 {
 	for (auto iter = UserMap.begin(); iter != UserMap.end(); iter++)
 	{
-		SendUnicast(*iter, header, p);
+		SendUnicast(*iter, header, payLoad);
 		//SendUnicast(iter->second, header, p);
 	}
 
@@ -748,7 +752,7 @@ bool sendRemove(LoginUser *client, UINT64 accountNo, BYTE result)
 
 	header.byCode = dfPACKET_CODE;
 	header.wMsgType = df_RES_FRIEND_REMOVE;
-	header.wPayloadSize = p.GetDataSize();
+	header.wPayloadSize = payLoad.GetDataSize();
 
 	SendUnicast(client, header, p);
 
@@ -788,13 +792,13 @@ bool sendRequest(LoginUser *client, UINT64 accountNo, BYTE result)
 {
 	Packet p;
 	st_PACKET_HEADER header;
-	p << accountNo << result;
+	payLoad << accountNo << result;
 
 	header.byCode = dfPACKET_CODE;
 	header.wMsgType = df_RES_FRIEND_REQUEST;
 	header.wPayloadSize = p.GetDataSize();
 
-	SendUnicast(client, header, p);
+	SendUnicast(client, header, payLoad);
 
 	return true;
 }
@@ -802,7 +806,7 @@ bool sendRequest(LoginUser *client, UINT64 accountNo, BYTE result)
 bool recvRequestCancel(LoginUser *client, Packet &p)
 {
 	UINT accountNo;
-	p >> accountNo;
+	payLoad >> accountNo;
 
 	if (AccountMap.find(accountNo) == AccountMap.end())
 	{
@@ -833,13 +837,13 @@ bool sendRequestCancel(LoginUser *client, UINT64 accountNo, BYTE result)
 {
 	Packet p;
 	st_PACKET_HEADER header;
-	p << accountNo << result;
+	payLoad << accountNo << result;
 
 	header.byCode = dfPACKET_CODE;
 	header.wMsgType = df_RES_FRIEND_CANCEL;
-	header.wPayloadSize = p.GetDataSize();
+	header.wPayloadSize = payLoad.GetDataSize();
 
-	SendUnicast(client, header, p);
+	SendUnicast(client, header, payLoad);
 
 	return true;
 }
@@ -847,7 +851,7 @@ bool sendRequestCancel(LoginUser *client, UINT64 accountNo, BYTE result)
 bool recvRequestDeny(LoginUser *client, Packet &p)
 {
 	UINT accountNo;
-	p >> accountNo;
+	payLoad >> accountNo;
 
 	if (AccountMap.find(accountNo) == AccountMap.end())
 	{
@@ -873,15 +877,15 @@ bool recvRequestDeny(LoginUser *client, Packet &p)
 
 bool sendRequestDeny(LoginUser *client, UINT64 accountNo, BYTE result)
 {
-	Packet p;
+	//Packet p;
 	st_PACKET_HEADER header;
-	p << accountNo << result;
+	payLoad << accountNo << result;
 
 	header.byCode = dfPACKET_CODE;
 	header.wMsgType = df_RES_FRIEND_DENY;
-	header.wPayloadSize = p.GetDataSize();
+	header.wPayloadSize = payLoad.GetDataSize();
 
-	SendUnicast(client, header, p);
+	SendUnicast(client, header, payLoad);
 
 	return true;
 }
@@ -889,7 +893,7 @@ bool sendRequestDeny(LoginUser *client, UINT64 accountNo, BYTE result)
 bool recvAgree(LoginUser *client, Packet &p)
 {
 	UINT accountNo;
-	p >> accountNo;
+	payLoad >> accountNo;
 
 	if (AccountMap.find(accountNo) == AccountMap.end())
 	{
@@ -928,15 +932,15 @@ bool recvAgree(LoginUser *client, Packet &p)
 
 bool sendAgree(LoginUser *client, UINT64 accountNo, BYTE result)
 {
-	Packet p;
+	//Packet p;
 	st_PACKET_HEADER header;
-	p << accountNo << result;
+	payLoad << accountNo << result;
 
 	header.byCode = dfPACKET_CODE;
 	header.wMsgType = df_RES_FRIEND_AGREE;
-	header.wPayloadSize = p.GetDataSize();
+	header.wPayloadSize = payLoad.GetDataSize();
 
-	SendUnicast(client, header, p);
+	SendUnicast(client, header, payLoad);
 
 	return true;
 }
@@ -949,9 +953,9 @@ bool recvStress(LoginUser *client, Packet &p)
 
 	header.byCode = dfPACKET_CODE;
 	header.wMsgType = df_RES_STRESS_ECHO;
-	header.wPayloadSize = p.GetDataSize();
+	header.wPayloadSize = payLoad.GetDataSize();
 
-	SendUnicast(client, header, p);
+	SendUnicast(client, header, payLoad);
 
 	return true;
 }
