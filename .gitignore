@@ -9,3 +9,6 @@
 *.res
 *.tlog/
 *.log
+*.iobj
+*.ipdb
+*.pdb
