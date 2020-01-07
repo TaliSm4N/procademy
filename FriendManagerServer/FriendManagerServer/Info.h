@@ -11,14 +11,16 @@ struct Account
 
 struct Friend
 {
-	int froomAccountNo;
-	int toAccountNo;
+	UINT64 fromAccountNo;
+	Account *fromAccount;
+	Account *toAccount;
 };
 
 struct FriendRequest
 {
-	int froomAccountNo;
-	int toAccountNo;
+	UINT64 fromAccountNo;
+	Account *fromAccount;
+	Account *toAccount;
 };
 
 struct LoginUser
@@ -29,4 +31,11 @@ struct LoginUser
 	int sock;
 	RingBuffer SendQ;
 	RingBuffer RecvQ;
+
+	~LoginUser()
+	{
+		SendQ.~RingBuffer();
+		RecvQ.~RingBuffer();
+		
+	};
 };

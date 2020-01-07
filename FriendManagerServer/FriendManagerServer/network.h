@@ -20,3 +20,33 @@ bool sendAccountADD(LoginUser *client, UINT64 accountNo);
 
 bool recvLogin(LoginUser *client, Packet &p);
 bool sendLogin(LoginUser *client);
+
+bool recvAccountList(LoginUser *client);
+bool sendAccountList(LoginUser *client);
+
+bool recvFriendList(LoginUser *client);
+bool sendFriendList(LoginUser *client);
+
+bool recvRequestList(LoginUser *client);
+bool sendRequestList(LoginUser *client);
+
+bool recvReplyList(LoginUser *client);
+bool sendReplyList(LoginUser *client);
+
+bool recvRemove(LoginUser *client, Packet &p);
+bool sendRemove(LoginUser *client, UINT64 accountNo, BYTE result);
+
+bool recvRequest(LoginUser *client, Packet &p);
+bool sendRequest(LoginUser *client, UINT64 accountNo, BYTE result);
+
+bool recvRequestCancel(LoginUser *client, Packet &p);
+bool sendRequestCancel(LoginUser *client, UINT64 accountNo, BYTE result);
+
+bool recvRequestDeny(LoginUser *client, Packet &p);
+bool sendRequestDeny(LoginUser *client, UINT64 accountNo, BYTE result);
+
+bool recvAgree(LoginUser *client, Packet &p);
+bool sendAgree(LoginUser *client, UINT64 accountNo, BYTE result);
+
+bool recvStress(LoginUser *client, Packet &p);
+bool sendStress(LoginUser *client, Packet &p);

@@ -11,6 +11,8 @@ Global
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		최적화끈릴리즈|x64 = 최적화끈릴리즈|x64
+		최적화끈릴리즈|x86 = 최적화끈릴리즈|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.Debug|x64.ActiveCfg = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.Release|x64.Build.0 = Release|x64
 		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.Release|x86.ActiveCfg = Release|Win32
 		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.Release|x86.Build.0 = Release|Win32
+		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.최적화끈릴리즈|x64.ActiveCfg = 최적화끈릴리즈|x64
+		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.최적화끈릴리즈|x64.Build.0 = 최적화끈릴리즈|x64
+		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.최적화끈릴리즈|x86.ActiveCfg = 최적화끈릴리즈|Win32
+		{F9DB322E-DE45-4062-AE8D-D5233EBFE559}.최적화끈릴리즈|x86.Build.0 = 최적화끈릴리즈|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

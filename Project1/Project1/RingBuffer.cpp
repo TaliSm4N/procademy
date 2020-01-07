@@ -20,7 +20,7 @@ int RingBuffer::GetBufferSize() const
 
 int RingBuffer::GetUseSize() const
 {
-	return (_rear - _front + _capacity + 1) % (_capacity + 1);
+	return (_rear - _front + _capacity) % (_capacity + 1);
 	//return (_rear - _front + _capacity) % (_capacity + 1);
 
 	//return _size;

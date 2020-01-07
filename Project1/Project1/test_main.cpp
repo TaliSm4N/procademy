@@ -4,7 +4,7 @@
 #include <ctime>
 #include <Windows.h>
 
-char testStr[82] = "1234567890 abcdefghijklmnopqrstuvwxyz 1234567890 abcdefghijklmnopqrstuvwxyz 12345";
+char testStr[81*3+1] = "1234567890 abcdefghijklmnopqrstuvwxyz 1234567890 abcdefghijklmnopqrstuvwxyz 123451234567890 abcdefghijklmnopqrstuvwxyz 1234567890 abcdefghijklmnopqrstuvwxyz 123451234567890 abcdefghijklmnopqrstuvwxyz 1234567890 abcdefghijklmnopqrstuvwxyz 12345";
 
 
 int main()
@@ -13,9 +13,9 @@ int main()
 
 	srand(time(NULL));
 
-	RingBuffer *rb = new RingBuffer(40);
+	RingBuffer *rb = new RingBuffer(1000);
 	int randNum;
-	int len = 81;
+	int len = 81*3;
 	int cur = 0;
 	int temp;
 
