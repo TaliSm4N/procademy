@@ -2,11 +2,12 @@
 #include "BaseObject.h"
 
 #include "Sprite.h"
+#include "Camera.h"
 
-#define dfRANGE_MOVE_TOP	50
-#define dfRANGE_MOVE_LEFT	10
-#define dfRANGE_MOVE_RIGHT	630
-#define dfRANGE_MOVE_BOTTOM	470
+#define dfRANGE_MOVE_TOP	0
+#define dfRANGE_MOVE_LEFT	0
+#define dfRANGE_MOVE_RIGHT	6400
+#define dfRANGE_MOVE_BOTTOM	6400
 
 #define dfDELAY_STAND	5
 #define dfDELAY_MOVE	4
@@ -47,6 +48,8 @@ public:
 	DWORD GetAction() const;
 	//void SetHit(int id);
 
+	void connectCamera(Camera *camera);
+
 private:
 	bool PlayerCharacter;
 	char HP;
@@ -60,6 +63,8 @@ private:
 	int HitCount;
 
 	void movePosition(int x, int y);
+
+	Camera *cam;
 	
 	//void setSprite(int stat);
 	/*

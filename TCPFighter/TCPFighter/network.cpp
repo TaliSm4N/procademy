@@ -9,7 +9,7 @@
 
 //#include "PacketDefine.h"
 
-#define PORT 5000
+#define PORT 20000
 #define BUF_SIZE 1024
 #define IP "127.0.0.1"
 
@@ -436,6 +436,16 @@ void PacketProc(BYTE byPacketType, Packet &p)
 		DamagePlayer(AttackID, DamageID, DamageHP);
 	}
 	break;
+	case dfPACKET_SC_SYNC:
+	{
+		DWORD SyncID;
+		WORD X;
+		WORD Y;
+		p >> SyncID >> X >> Y;
+		if (p.GetLastError() == E_GETDATA_ERROR)
+			exit(1);
+		SyncPlayer(SyncID, X, Y);
+	}
 	default:
 		break;
 	}

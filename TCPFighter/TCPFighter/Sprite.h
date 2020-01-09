@@ -17,7 +17,8 @@ enum eSprite
 	SHADOW,
 	STAND_L_01, STAND_L_02, STAND_L_03, STAND_L_04, STAND_L_05,
 	STAND_R_01, STAND_R_02, STAND_R_03, STAND_R_04, STAND_R_05,
-	XSPARK_01, XSPARK_02, XSPARK_03, XSPARK_04
+	XSPARK_01, XSPARK_02, XSPARK_03, XSPARK_04,
+	TILE
 };
 
 class SpriteList
@@ -38,6 +39,7 @@ public:
 	bool settingSprite(int num, const char *path, int cX, int cY);
 	void releaseSprite(int num);
 	bool draw(int num, BYTE *dib, int x, int y,int width,int height,int pitch,int len=100);
+	bool drawMap(int num, BYTE *dib, int x, int y, int width, int height, int pitch, int len = 100);
 	bool drawColor(int num, BYTE *dib, int x, int y, int width, int height, int pitch,int color, int len = 100);
 private:
 	int ListSize;

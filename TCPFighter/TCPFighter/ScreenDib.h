@@ -1,5 +1,6 @@
 #pragma once
 #pragma comment(lib, "winmm.lib")
+#include "Camera.h"
 
 class ScreenDib
 {
@@ -12,6 +13,7 @@ public:
 	int GetHeight() const;
 	int GetPitch() const;
 	void Flip(HWND hWnd, int iX = 0, int iY = 0);
+	Camera *GetCamera() { return cam; };
 
 private:
 	void CreateDibBuffer();
@@ -26,4 +28,5 @@ private:
 	int _iColorBit;
 	int _iBufferSize;
 
+	Camera *cam;
 };

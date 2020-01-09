@@ -18,3 +18,5 @@ BOOL Attack1Player(int id, int dir, short x, short y);
 BOOL Attack2Player(int id, int dir, short x, short y);
 BOOL Attack3Player(int id, int dir, short x, short y);
 BOOL DamagePlayer(int AttackID, int DamageID, char DamageHP);
+
+BOOL SyncPlayer(DWORD SyncID, WORD x, WORD y);

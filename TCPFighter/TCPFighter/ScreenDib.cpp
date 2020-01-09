@@ -34,6 +34,7 @@ ScreenDib::ScreenDib(int iWidth, int iHeight, int iColorBit)
 	:_iWidth(iWidth),_iHeight(iHeight),_iColorBit(iColorBit)
 {
 	CreateDibBuffer();
+	cam = new Camera(_iWidth, _iHeight);
 }
 
 ScreenDib::~ScreenDib()

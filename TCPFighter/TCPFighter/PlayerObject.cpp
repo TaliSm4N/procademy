@@ -3,7 +3,7 @@
 #include "network.h"
 
 PlayerObject::PlayerObject(int Id, int  Type, int direction, int x, int y,char hp, bool player)
-	:BaseObject(Id,Type,x,y),PlayerCharacter(player),HP(hp),hit(false)
+	:BaseObject(Id,Type,x,y),PlayerCharacter(player),HP(hp),hit(false),cam(NULL)
 {
 	ActionCur = STAND;
 	ActionOld = STAND;
@@ -109,14 +109,13 @@ bool PlayerObject::IsPlayer() const
 }
 bool PlayerObject::Render(SpriteList &s, ScreenDib &dib)
 {	
-	s.draw(SHADOW, dib.GetDibBuffer(), curX, curY, dib.GetWidth(), dib.GetHeight(), dib.GetPitch());
 	if (PlayerCharacter)
 	{
-		s.drawColor(SpriteNow, dib.GetDibBuffer(), curX, curY, dib.GetWidth(), dib.GetHeight(), dib.GetPitch(), 0x000000ff);
+		s.drawColor(SpriteNow, dib.GetDibBuffer(), dib.GetCamera()->TransX(curX), dib.GetCamera()->TransY(curY), dib.GetWidth(), dib.GetHeight(), dib.GetPitch(), 0x000000ff);
 	}
 	else
-		s.draw(SpriteNow, dib.GetDibBuffer(),curX, curY, dib.GetWidth(), dib.GetHeight(), dib.GetPitch());
-	s.draw(HPGUAGE, dib.GetDibBuffer(), curX-35, curY+10, dib.GetWidth(), dib.GetHeight(), dib.GetPitch(),GetHP());
+		s.draw(SpriteNow, dib.GetDibBuffer(), dib.GetCamera()->TransX(curX), dib.GetCamera()->TransY(curY), dib.GetWidth(), dib.GetHeight(), dib.GetPitch());
+	s.draw(HPGUAGE, dib.GetDibBuffer(), dib.GetCamera()->TransX(curX)-35, dib.GetCamera()->TransY(curY)+10, dib.GetWidth(), dib.GetHeight(), dib.GetPitch(),GetHP());
 	
 	return true;
 } 
@@ -395,12 +394,25 @@ void PlayerObject::movePosition(int x, int y)
 
 	curX += x;
 	curY += y;
+
+	if (cam != NULL)
+	{
+		cam->SetX(curX);
+		cam->SetY(curY);
+	}
+
 }
 
 void PlayerObject::SetPosition(int x, int y)
 {
 	curX = x;
 	curY = y;
+
+	if (cam != NULL)
+	{
+		cam->SetX(curX);
+		cam->SetY(curY);
+	}
 }
 
 DWORD PlayerObject::GetAction() const
@@ -409,4 +421,11 @@ DWORD PlayerObject::GetAction() const
 		return ActionCur;
 	
 	return actionInput;
+}
+
+void PlayerObject::connectCamera(Camera *camera)
+{ 
+	cam = camera; 
+	cam->SetX(curX);
+	cam->SetY(curY);
 }

@@ -172,6 +172,9 @@ BOOL init()
 	if (!s.settingSprite(XSPARK_04, (char *)"SpriteData\\xSpark_4.bmp", 70, 70))
 		return false;
 
+	if (!s.settingSprite(TILE, (char *)"SpriteData\\Tile_01.bmp", 0, 0))
+		return false;
+
 	//PlayerObject *testP = new PlayerObject(0, PLAYER,LEFT,320,240,true);
 	//PlayerObject *test2P = new PlayerObject(0, PLAYER, RIGHT, 320, 240, false);
 	//EffectObject *terE = new EffectObject(0, EFFECT, 100, 100);
@@ -284,10 +287,20 @@ BOOL keyboard()
 
 BOOL Draw(HWND hWnd)
 {
-	s.draw(MAP, g_screen.GetDibBuffer(), 0, 0, g_screen.GetWidth(), g_screen.GetHeight(), g_screen.GetPitch());
-	
+	//s.draw(MAP, g_screen.GetDibBuffer(), 0, 0, g_screen.GetWidth(), g_screen.GetHeight(), g_screen.GetPitch());
+
 	if (objectList.empty())
 		return false;
+
+	
+	
+	for (int i = 0; i < 640 / 64 + 2; i++)
+	{
+		for (int j = 0; j < 480 / 64 + 2; j++)
+		{
+			s.drawMap(TILE, g_screen.GetDibBuffer(), i * 64- g_screen.GetCamera()->GetX() % 64, j * 64 - g_screen.GetCamera()->GetY() % 64, g_screen.GetWidth(), g_screen.GetHeight(), g_screen.GetPitch());
+		}
+	}
 
 	//s.draw(STAND_L_02, g_screen.GetDibBuffer(), 640, 100, g_screen.GetWidth(), g_screen.GetHeight(), g_screen.GetPitch());
 	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
@@ -341,7 +354,10 @@ BOOL CreatePlayer(int id, int dir, int x, int y, char hp,bool player)
 	objectList.push_back(temp);
 
 	if (player)
+	{
 		myPlayer = temp;
+		myPlayer->connectCamera(g_screen.GetCamera());
+	}
 
 	return true;
 }
@@ -484,5 +500,19 @@ BOOL DamagePlayer(int AttackID, int DamageID, char DamageHP)
 		objectList.push_back(eff);
 	
 	
+	return true;
+}
+
+BOOL SyncPlayer(DWORD SyncID, WORD x, WORD y)
+{
+	for (auto iter = objectList.begin(); iter != objectList.end(); iter++)
+	{
+		if ((*iter)->GetObjectID() == SyncID)
+		{
+			((PlayerObject *)(*iter))->SetPosition(x, y);
+			break;
+		}
+	}
+
 	return true;
 }
