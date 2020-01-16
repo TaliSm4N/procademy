@@ -1,12 +1,14 @@
-#pragma once
+#ifndef __LUMO_RINGBUFFER__
+#define __LUMO_RINGBUFFER__
 
-#define DEFAULT_SIZE 77
+#define RINGBUF_DEFAULT_SIZE 10000
 
 class RingBuffer
 {
 public:
-
-	RingBuffer(int iBufferSize=DEFAULT_SIZE);
+	RingBuffer();
+	RingBuffer(int iBufferSize);
+	~RingBuffer();
 
 private:
 	int _size;
@@ -15,7 +17,7 @@ private:
 	int _capacity;
 	char *_buf;
 
-private: 
+private:
 	void Initial(int iBufferSize);
 
 	bool isFull();
@@ -55,18 +57,24 @@ public:
 	int DirectDequeueSize(void) const;
 
 
-	/////////////////////////////////////////////////////////////////////////
-	// WritePos 에 데이타 넣음.
-	//
-	// Parameters: (char *)데이타 포인터. (int)크기. 
-	// Return: (int)넣은 크기.
-	/////////////////////////////////////////////////////////////////////////
 	int Enqueue(char *chpData, int iSize);
-	int Dequeue(char *chpData,int size);
+	//int Enqueue(Packet &p);
+	int Dequeue(char *chpData, int size);
+	//int Dequeue(Packet &p, int iSize);
 	int Peek(char *chpData, int size);
 	bool MoveFront(int size);
+	bool MoveRear(int size);
 
-	/////////////////////////////////////////////////////////////////////////
-	// ReadPos 에서 데이타 가져옴. ReadPos 이동.
+	bool MoveWritePos(int size) { return MoveRear(size); }
+	bool MoveReadPos(int size) { return MoveFront(size); }
+
+
+	char *GetWritePos() const;
+	char *GetReadPos() const;
+
+	//int Put(char *chpData, int iSize);
+	//int Get(char *chpData, int iSize);
 
 };
+
+#endif

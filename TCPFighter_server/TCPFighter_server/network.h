@@ -8,6 +8,10 @@ struct Session
 	DWORD sessionID;//session의 고유 ID
 	RingBuffer RecvQ;//수신 큐
 	RingBuffer SendQ;//송신 큐
+
+	DWORD recvTime;
+	DWORD recvPacketCount;
+	DWORD recvSecondTick;
 };
 
 //packe process 결과
@@ -37,6 +41,8 @@ bool PacketProc(Session *session, BYTE type, Packet &p);
 
 bool SendUnicast(Session* session, Packet& p);
 bool SendBroadCast(Session* session, Packet& p, bool sendMe = false);
+bool SendBroadCastSector(int x,int y, Packet& p, Session* exceptSession=NULL);
+bool SendBroadCastSectorAround(Session* session, Packet& p, bool sendMe = false);
 
 bool DisconnectSession(Session *session);
 

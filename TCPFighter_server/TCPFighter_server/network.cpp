@@ -1,6 +1,7 @@
 #pragma comment(lib,"ws2_32")
 #include <WinSock2.h>
 #include <map>
+#include <list>
 
 #include "Packet.h"
 #include "RingBuffer.h"
@@ -9,6 +10,9 @@
 #include "Game.h"
 #include "Protocol.h"
 #include "PacketProc.h"
+#include "MakePacket.h"
+#include "Sector.h"
+#include "monitor.h"
 
 SOCKET g_listenSock;
 
@@ -67,6 +71,8 @@ bool NetworkProcess()
 
 	Session *session;
 
+	monitorUnit.MonitorNetwork(START);
+
 	FD_ZERO(&ReadSet);
 	FD_ZERO(&WriteSet);
 	memset(SessionIDTable, 0, sizeof(DWORD) * FD_SETSIZE);
@@ -110,7 +116,8 @@ bool NetworkProcess()
 
 	if(sockCount>0)
 		CallSelect(SessionIDTable, SessionSockTable, &ReadSet, &WriteSet, sockCount);
-
+	
+	monitorUnit.MonitorNetwork(END);
 	return true;
 }
 
@@ -195,6 +202,8 @@ bool ProcAccept()
 		session->sock = sock;
 		session->sessionID = sessionID;
 		sessionID++;
+		session->recvPacketCount = 0;
+		session->recvTime = timeGetTime();
 
 		//세션 추가
 		g_sessionMap.insert(std::make_pair(session->sessionID, session));
@@ -208,7 +217,6 @@ bool ProcRecv(DWORD sID)
 {
 	int recvSize;
 	PROCRESULT result;
-	st_PACKET_HEADER header;
 	Session *session = g_sessionMap.find(sID)->second;
 
 	//없는 세션
@@ -216,13 +224,16 @@ bool ProcRecv(DWORD sID)
 		return false;
 
 	recvSize = recv(session->sock, session->RecvQ.GetWritePos(), session->RecvQ.DirectEnqueueSize(), 0);
-	_LOG(dfLOG_LEVEL_DEBUG, L"ProcRecv");
-	_LOG(dfLOG_LEVEL_DEBUG, L"SessionID: %d\n",sID);
+	//_LOG(dfLOG_LEVEL_DEBUG, L"ProcRecv");
+	//_LOG(dfLOG_LEVEL_DEBUG, L"SessionID: %d\n",sID);
 	//socket 에러 또는 recvQ가 가득찼을 경우
 	if (recvSize == SOCKET_ERROR || recvSize == 0)
 	{
 		return false;
 	}
+
+	session->recvTime = timeGetTime();
+	session->recvPacketCount++;
 
 	//수신한 데이터 처리
 	if (recvSize > 0)
@@ -254,8 +265,8 @@ bool ProcSend(DWORD sID)
 	if (session == NULL)
 		return false;
 
-	_LOG(dfLOG_LEVEL_DEBUG, L"ProcSend");
-	_LOG(dfLOG_LEVEL_DEBUG, L"SessionID: %d\n", sID);
+	//_LOG(dfLOG_LEVEL_DEBUG, L"ProcSend");
+	//_LOG(dfLOG_LEVEL_DEBUG, L"SessionID: %d\n", sID);
 
 	sendSize = session->SendQ.DirectDequeueSize();
 	
@@ -328,12 +339,16 @@ bool PacketProc(Session *session, BYTE type, Packet &p)
 		MoveStop(session, p);
 		break;
 	case dfPACKET_CS_ATTACK1:
+		Attack1(session, p);
 		break;
 	case dfPACKET_CS_ATTACK2:
+		Attack2(session, p);
 		break;
 	case dfPACKET_CS_ATTACK3:
+		Attack3(session, p);
 		break;
 	case dfPACKET_CS_ECHO:
+		Echo(session, p);
 		break;
 	}
 
@@ -346,7 +361,16 @@ bool SendUnicast(Session* session, Packet& p)
 	{
 		return false;
 	}
-	session->SendQ.Enqueue(p);
+
+	if (session->SendQ.GetFreeSize() >= p.GetDataSize())
+	{
+		session->SendQ.Enqueue(p);
+	}
+	else
+	{
+		_LOG(dfLOG_LEVEL_ERROR, L"SendQ size Lack");
+		return false;
+	}
 
 	return true;
 }
@@ -364,9 +388,42 @@ bool SendBroadCast(Session* session, Packet& p, bool sendMe)
 	return true;
 }
 
+bool SendBroadCastSector(int x, int y, Packet& p, Session* exceptSession)
+{
+	Player *player;
+	for (auto iter = g_Sector[y][x].begin(); iter != g_Sector[y][x].end(); iter++)
+	{
+		player = *iter;
+
+		if (exceptSession==NULL||exceptSession->sessionID != player->sessionID)
+		{
+			SendUnicast(player->session, p);
+		}
+	}
+
+	return true;
+}
+bool SendBroadCastSectorAround(Session* session, Packet& p, bool sendMe)
+{
+	SectorAround sectorAround;
+	Player *player = g_playerMap.find(session->sessionID)->second;
+	GetSectorAround(player->curSector.x, player->curSector.y, &sectorAround);
+
+	for (int i = 0; i < sectorAround.count; i++)
+	{
+		if(sendMe)
+			SendBroadCastSector(sectorAround.around[i].x, sectorAround.around[i].y, p);
+		else
+			SendBroadCastSector(sectorAround.around[i].x, sectorAround.around[i].y, p,session);
+	}
+
+	return true;
+}
+
 bool DisconnectSession(Session *session)
 {
 	Player *player;
+	Packet p;
 
 	if (session == NULL)
 		return false;
@@ -376,12 +433,16 @@ bool DisconnectSession(Session *session)
 
 	if (player != NULL)
 	{
+		MakePacketRemovePlayer(p, player->sessionID);
+		SectorRemovePlayer(player);
+		SendBroadCastSectorAround(session, p);
+
 		g_playerMap.erase(session->sessionID);
 		delete player;
 	}
 	closesocket(session->sock);
 
-	_LOG(dfLOG_LEVEL_DEBUG, L"#Disconnect Session # SessionID : %d\n", session->sessionID);
+	_LOG(dfLOG_LEVEL_ALWAYS, L"#Disconnect Session # SessionID : %d\n", session->sessionID);
 
 	delete session;
 

@@ -120,6 +120,7 @@
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MakePacket.cpp" />
+    <ClCompile Include="monitor.cpp" />
     <ClCompile Include="network.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PacketProc.cpp" />
@@ -130,6 +131,7 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="MakePacket.h" />
+    <ClInclude Include="monitor.h" />
     <ClInclude Include="network.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketProc.h" />
