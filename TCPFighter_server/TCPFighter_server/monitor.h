@@ -13,8 +13,17 @@ public:
 
 	void SetNetwork() { bNetwork = !bNetwork; }
 	bool GetNetwork() { return bNetwork; }
+
+	void SetPacket() { bPacket = !bPacket; }
+	bool GetPacket() { return bPacket; }
+
+	void MonitorSendPacket();
+	void MonitorRecvPacket();
+	void MonitorSend();
+	void MonitorRecv();
 private:
 	void ShowNetwork();
+	void ShowPacket();
 private:
 
 	int loop_cnt;// = 0;
@@ -33,6 +42,13 @@ private:
 	int sec_cnt;
 
 	bool bNetwork;
+
+	int sendPacketCnt;
+	int recvPacketCnt;
+	int sendCnt;
+	int recvCnt;
+
+	bool bPacket;
 };
 
 extern Monitor monitorUnit;

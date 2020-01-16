@@ -224,6 +224,7 @@ bool ProcRecv(DWORD sID)
 		return false;
 
 	recvSize = recv(session->sock, session->RecvQ.GetWritePos(), session->RecvQ.DirectEnqueueSize(), 0);
+	monitorUnit.MonitorRecv();
 	//_LOG(dfLOG_LEVEL_DEBUG, L"ProcRecv");
 	//_LOG(dfLOG_LEVEL_DEBUG, L"SessionID: %d\n",sID);
 	//socket 에러 또는 recvQ가 가득찼을 경우
@@ -274,6 +275,7 @@ bool ProcSend(DWORD sID)
 		return true;
 
 	result = send(session->sock, session->SendQ.GetReadPos(), sendSize, 0);
+	monitorUnit.MonitorSend();
 
 	if (result == SOCKET_ERROR)
 	{
@@ -321,6 +323,8 @@ PROCRESULT CompleteRecvPacket(Session *session)
 		return FAIL;
 	if (endCode != dfNETWORK_PACKET_END)
 		return FAIL;
+
+	monitorUnit.MonitorRecvPacket();
 
 	if (!PacketProc(session, header.byType, payload))
 		return FAIL;
@@ -371,6 +375,8 @@ bool SendUnicast(Session* session, Packet& p)
 		_LOG(dfLOG_LEVEL_ERROR, L"SendQ size Lack");
 		return false;
 	}
+
+	monitorUnit.MonitorSendPacket();
 
 	return true;
 }

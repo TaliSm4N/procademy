@@ -15,7 +15,7 @@ Monitor monitorUnit;
 
 Monitor::Monitor()
 	:checkTime(1000),min_check(60),\
-	frame_cnt(0),sec_cnt(0),bNetwork(true)
+	frame_cnt(0),sec_cnt(0),bNetwork(true), bPacket(true)
 {
 
 }
@@ -34,6 +34,11 @@ void Monitor::MonitorInit()
 	networkTick = 0;
 	networkTickMin = -1;
 	networkTickMax = 0;
+
+	sendPacketCnt = 0;
+	recvPacketCnt = 0;
+	sendCnt = 0;
+	recvCnt = 0;
 }
 
 void ServerControl()
@@ -51,6 +56,7 @@ void ServerControl()
 			wprintf(L"U - Key Unlock\n");
 			wprintf(L"I - Get Mode Info\n");
 			wprintf(L"N - Network Monitoring on/off\n");
+			wprintf(L"P - Packet I/O Monitoring on/off\n");
 			wprintf(L"--------------------\n");
 		}
 		else if (controlKey == L'u' || controlKey == L'U')
@@ -82,6 +88,14 @@ void ServerControl()
 				else
 					wprintf(L"Network monitoring off\n");
 			}
+			else if (controlKey == L'p' || controlKey == L'P')
+			{
+				monitorUnit.SetPacket();
+				if (monitorUnit.GetPacket())
+					wprintf(L"Packet I/O monitoring on\n");
+				else
+					wprintf(L"Packet I/O monitoring off\n");
+			}
 		}
 	}
 }
@@ -101,10 +115,10 @@ void Monitor::Run()
 		if (sec_cnt >= min_check || frame_cnt != FRAME)
 		{
 			_LOG(dfLOG_LEVEL_ALWAYS, L"Monitoring");
-			if (bNetwork)
-			{
-				ShowNetwork();
-			}
+
+			ShowNetwork();
+			ShowPacket();
+
 			MonitorInit();
 		}
 		frame_cnt = 0;
@@ -113,24 +127,47 @@ void Monitor::Run()
 
 void Monitor::ShowNetwork()
 {
+	if (!bNetwork)
+		return;
 	_LOG_NOTIME(dfLOG_LEVEL_ALWAYS, L"\
 -------------------------------------------\n\
-Loop %d/s frame %d connectUser %05d\n\
+Loop %05d/s frame %03d connectUser %05d\n\
+LoopCnt %06d\n\
 -------------------------------------------\n\
-logic(avr) %03dms network(avr) %03dms\n\
-logic(min) %03dms network(min) %03dms\n\
-logic(max) %03dms network(max) %03dms\n\
+logic(avr) %04dms network(avr) %04dms\n\
+logic(all) %04dms network(all) %04dms\n\
+logic(min) %04dms network(min) %04dms\n\
+logic(max) %04dms network(max) %04dms\n\
 -------------------------------------------\n",\
 loop_cnt / sec_cnt, frame_cnt, g_playerMap.size(),\
+loop_cnt,\
 logicTick/loop_cnt, networkTick/ loop_cnt,\
+logicTick, networkTick, \
 logicTickMin, networkTickMin,\
 logicTickMax, networkTickMax);
+}
+
+void Monitor::ShowPacket()
+{
+	if (!bPacket)
+		return;
+	_LOG_NOTIME(dfLOG_LEVEL_ALWAYS, L"\
+-------------------------------------------\n\
+SendPacketCnt %07d/s\n\
+SendCnt	      %07d/s\n\
+RecvPacketCnt %07d/s\n\
+RecvCnt	      %07d/s\n\
+-------------------------------------------\n\
+", sendPacketCnt/sec_cnt, sendCnt/sec_cnt, recvPacketCnt / sec_cnt, recvCnt / sec_cnt);
 }
 
 void Monitor::MonitorNetwork(MONITORING timing)
 {
 	static int startTime;
 	static int endTime;
+
+	if (!bNetwork)
+		return;
 
 	if (timing == START)
 		startTime = timeGetTime();
@@ -152,6 +189,8 @@ void Monitor::MonitorGameLogic(MONITORING timing)
 	static int startTime;
 	static int endTime;
 
+	if (!bNetwork)
+		return;
 	
 	if (timing == START)
 		startTime = timeGetTime();
@@ -168,4 +207,31 @@ void Monitor::MonitorGameLogic(MONITORING timing)
 		
 		frame_cnt++;
 	}
+}
+
+void Monitor::MonitorSendPacket()
+{
+	if (!bPacket)
+		return;
+	sendPacketCnt++;
+}
+
+void Monitor::MonitorRecvPacket()
+{
+	if (!bPacket)
+		return;
+	recvPacketCnt++;
+}
+
+void Monitor::MonitorSend()
+{
+	if (!bPacket)
+		return;
+	sendCnt++;
+}
+void Monitor::MonitorRecv()
+{
+	if (!bPacket)
+		return;
+	recvCnt++;
 }
