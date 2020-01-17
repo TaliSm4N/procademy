@@ -28,6 +28,7 @@ bool CallSelect(DWORD *IDTable, SOCKET *sockTable, FD_SET *ReadSet, FD_SET *Writ
 
 //연결 함수
 bool ProcAccept();
+bool ProcAcceptAll();
 
 //수신 송신 함수
 //sID = 세션 ID

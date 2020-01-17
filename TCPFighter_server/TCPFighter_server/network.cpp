@@ -176,7 +176,7 @@ bool CallSelect(DWORD *IDTable, SOCKET *sockTable, FD_SET *ReadSet, FD_SET *Writ
 	return true;
 }
 
-bool ProcAccept()
+bool ProcAcceptAll()
 {
 	Session *session;
 	SOCKET sock;
@@ -209,6 +209,38 @@ bool ProcAccept()
 		g_sessionMap.insert(std::make_pair(session->sessionID, session));
 		ConnectSession(session);
 	}
+
+	return true;
+}
+
+bool ProcAccept()
+{
+	Session *session;
+	SOCKET sock;
+	SOCKADDR_IN addr;
+	int addrLen = sizeof(addr);
+	static DWORD sessionID = 1;
+
+	sock = accept(g_listenSock, (sockaddr *)&addr, &addrLen);
+
+	//accept 할 수 없을 경우 while을 빠져나감
+	if (sock == INVALID_SOCKET)
+	{
+		return false;
+	}
+
+	_LOG(dfLOG_LEVEL_DEBUG, L"ProcAccept: sessionID(%d)\n", sessionID);
+	session = new Session();
+	session->sock = sock;
+	session->sessionID = sessionID;
+	sessionID++;
+	session->recvPacketCount = 0;
+	session->recvTime = timeGetTime();
+
+	//세션 추가
+	g_sessionMap.insert(std::make_pair(session->sessionID, session));
+	ConnectSession(session);
+	
 
 	return true;
 }

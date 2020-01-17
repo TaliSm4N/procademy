@@ -16,16 +16,25 @@ void Log(WCHAR *szString, int iLogLevel,bool showTime)
 	tm cur_tm;
 
 	FILE *f;
-	fopen_s(&f,"LogText.txt", "a");
+	errno_t err;
+	err=fopen_s(&f,"./LogText.txt", "a+");
+
+	if (err != 0)
+	{
+		wprintf(L"fopen error %d\n",err);
+	}
 
 	if (showTime)
 	{
 		localtime_s(&cur_tm, &cur_time);
 		wprintf(L"[%02d/%02d/%02d %02d:%02d:%02d] ", cur_tm.tm_mon + 1, cur_tm.tm_mday, cur_tm.tm_year - 100, cur_tm.tm_hour, cur_tm.tm_min, cur_tm.tm_sec);
-		fwprintf_s(f, L"[%02d/%02d/%02d %02d:%02d:%02d] ", cur_tm.tm_mon + 1, cur_tm.tm_mday, cur_tm.tm_year - 100, cur_tm.tm_hour, cur_tm.tm_min, cur_tm.tm_sec);
+		if(f!=NULL)
+			fwprintf_s(f, L"[%02d/%02d/%02d %02d:%02d:%02d] ", cur_tm.tm_mon + 1, cur_tm.tm_mday, cur_tm.tm_year - 100, cur_tm.tm_hour, cur_tm.tm_min, cur_tm.tm_sec);
 	}
 	wprintf(L"%s\n", szString);
-	fwprintf_s(f,L"%s\n", szString);
-
-	fclose(f);
+	if (f != NULL)
+	{
+		fwprintf_s(f, L"%s\n", szString);
+		fclose(f);
+	}	
 }
