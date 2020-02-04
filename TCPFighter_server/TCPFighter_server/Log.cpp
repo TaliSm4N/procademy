@@ -17,7 +17,7 @@ void Log(WCHAR *szString, int iLogLevel,bool showTime)
 
 	FILE *f;
 	errno_t err;
-	err=fopen_s(&f,"./LogText.txt", "a+");
+	err=fopen_s(&f,"./LogText.txt", "w");
 
 	if (err != 0)
 	{

@@ -16,6 +16,7 @@ private:
 	int _rear;
 	int _capacity;
 	char *_buf;
+	SRWLOCK srwLock;
 
 private: 
 	void Initial(int iBufferSize);
@@ -62,9 +63,15 @@ public:
 	// Returns : (int)삽입 또는 삭제된 데이터의 크기
 	//////////////////////////////////////////////////////////////////////////
 	int Enqueue(char *chpData, int iSize);
-	int Enqueue(Packet &p);
 	int Dequeue(char *chpData,int size);
+#ifdef __LUMO_PACKET__
+	int Enqueue(Packet &p);
 	int Dequeue(Packet &p,int iSize);
+#endif
+#ifdef _XSTRING_
+	int Enqueue(std::wstring &str, int iSize);
+	int Dequeue(std::wstring &str, int iSize);
+#endif
 
 	//////////////////////////////////////////////////////////////////////////
 	// 버퍼에서 데이터 복제
@@ -90,6 +97,9 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	char *GetWritePos() const;
 	char *GetReadPos() const;
+
+	void Lock();
+	void UnLock();
 };
 
 #endif

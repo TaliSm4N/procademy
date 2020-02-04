@@ -13,3 +13,4 @@
 *.ipdb
 *.pdb
 TCPFighter_server/Release/LogText.txt
+TCPFighter_server/TCPFighter_server/LogText.txt
