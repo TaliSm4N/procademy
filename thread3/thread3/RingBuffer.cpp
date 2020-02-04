@@ -8,6 +8,7 @@
 RingBuffer::RingBuffer()
 	:_size(0), _front(0), _rear(0), _capacity(RINGBUF_DEFAULT_SIZE)
 {
+	srwCnt = 0;
 	_buf = new char[RINGBUF_DEFAULT_SIZE + 1];
 	InitializeSRWLock(&srwLock);
 	//_buf = new char[iBufferSize+1];
@@ -16,6 +17,7 @@ RingBuffer::RingBuffer()
 RingBuffer::RingBuffer(int iBufferSize)
 	:_size(0),_front(0),_rear(0),_capacity(iBufferSize)
 {
+	srwCnt = 0;
 	_buf = new char[iBufferSize+1];
 	InitializeSRWLock(&srwLock);
 	//_buf = new char[iBufferSize+1];
@@ -351,9 +353,11 @@ char *RingBuffer::GetReadPos() const
 void RingBuffer::Lock()
 {
 	AcquireSRWLockExclusive(&srwLock);
+	srwCnt++;//debug¿ë
 }
 
 void RingBuffer::UnLock()
 {
+	srwCnt--;//debug¿ë
 	ReleaseSRWLockExclusive(&srwLock);
 }

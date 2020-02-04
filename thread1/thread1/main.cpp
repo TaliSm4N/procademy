@@ -4,7 +4,8 @@
 #include <conio.h>
 
 
-HANDLE eventHandle[2];//threadEvent,exitEvent
+HANDLE threadEvent;
+HANDLE exitEvent;
 HANDLE workerThread[20];
 DWORD threadID[20];
 
@@ -12,8 +13,8 @@ unsigned __stdcall WorkerThreadProc(LPVOID lpThreadParameter);
 
 int main()
 {
-	eventHandle[0] = CreateEvent(NULL, FALSE, FALSE, NULL);
-	eventHandle[1] = CreateEvent(NULL, TRUE, FALSE, NULL);
+	threadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	exitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
 
 	for (int i = 0; i < 20; i++)
@@ -29,7 +30,7 @@ int main()
 
 			if (key == 'x' || key == 'X')
 			{
-				SetEvent(eventHandle[0]);
+				SetEvent(threadEvent);
 			}
 			else if(key == 'q' || key == 'Q')
 			{
@@ -39,7 +40,7 @@ int main()
 	}
 
 	std::cout << "exitEvent" << std::endl;
-	SetEvent(eventHandle[1]);
+	SetEvent(exitEvent);
 	
 
 	DWORD state = WaitForMultipleObjects(20, workerThread, TRUE, INFINITE);
@@ -60,10 +61,11 @@ int main()
 unsigned __stdcall WorkerThreadProc(LPVOID lpThreadParameter)
 {
 	DWORD state;
+	HANDLE events[2] = { threadEvent,exitEvent };
 
 	while (1)
 	{
-		state = WaitForMultipleObjects(2, eventHandle, false, INFINITE);
+		state = WaitForMultipleObjects(2, events, false, INFINITE);
 
 		if (state == WAIT_OBJECT_0)
 		{

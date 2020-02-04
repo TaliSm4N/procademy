@@ -4,11 +4,12 @@
 #include <list>
 #include <ctime>
 #include <conio.h>
+#include <intrin.h>
 #include "RingBuffer.h"
 
 
 #define DELAY_TIME 0
-#define WORKER_CNT 20
+#define WORKER_CNT 3
 
 #define dfTYPE_ADD_STR 0
 #define dfTYPE_DEL_STR 1
@@ -31,8 +32,13 @@ SRWLOCK listLock;
 RingBuffer g_msgQ(40000);
 
 HANDLE wakeEvent;
+HANDLE exitEvent;
 HANDLE threadHandle[WORKER_CNT];
 DWORD threadID[WORKER_CNT];
+
+int addCnt = 0;
+int delCnt = 0;
+int printCnt = 0;
 
 
 unsigned __stdcall WorkerThread(LPVOID lpThreadParameter);
@@ -47,6 +53,7 @@ int main()
 	InitializeSRWLock(&listLock);
 	srand(time(NULL));
 	wakeEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	exitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	for (int i = 0; i < WORKER_CNT; i++)
 	{
 		threadHandle[i]=(HANDLE)_beginthreadex(NULL, 0, WorkerThread, NULL, 0, (unsigned*)&threadID[i]);
@@ -83,8 +90,6 @@ int main()
 		default:
 			break;
 		}
-		//if (header.shStrLen == 9)
-		//	system("pause");
 
 		g_msgQ.Lock();
 		if (g_msgQ.GetFreeSize() >= sizeof(header) + header.shStrLen * sizeof(WCHAR))
@@ -97,10 +102,30 @@ int main()
 
 		Sleep(DELAY_TIME);
 	}
+	
+	//누락된 wakeEvent발생
+	//worker thread가 적으면 wakeEvent가 유실될 때가 있음 
+	while (1)
+	{
+		g_msgQ.Lock();//1
+		if (g_msgQ.GetUseSize() > 0)
+		{
+			SetEvent(wakeEvent);
+		}
+		else
+		{
+			break;
+		}
+		g_msgQ.UnLock();//1
+		Sleep(DELAY_TIME);
+	}
+	g_msgQ.UnLock();//1
+
+	
 	DWORD state = WaitForMultipleObjects(WORKER_CNT, threadHandle, TRUE, INFINITE);
 
-	printf("All Thread closed\n");
-	system("pause");
+ 	printf("All Thread closed\n");
+	printf("Add: %d Delete: %d Print: %d\n",addCnt,delCnt,printCnt);
 	return 0;
 }
 
@@ -110,77 +135,85 @@ unsigned __stdcall WorkerThread(LPVOID lpThreadParameter)
 	st_MSG_HEAD header;
 	std::wstring str;
 	DWORD state;
-	while (1)
+
+	HANDLE events[2] = { wakeEvent,exitEvent };
+
+	bool loop = true;
+
+	while (loop)
 	{
-		printf("worker\n");
-		state = WaitForSingleObject(wakeEvent,INFINITE);
-		g_msgQ.Lock();
-		if (g_msgQ.GetUseSize() < sizeof(header)) 
+		state = WaitForMultipleObjects(2,events,FALSE, INFINITE);
+		if (state == WAIT_OBJECT_0)
 		{
-			g_msgQ.UnLock();
-			continue;
+			g_msgQ.Lock();//2
+
+			if (g_msgQ.GetUseSize() >= sizeof(header))
+			{
+				g_msgQ.Dequeue((char *)&header, sizeof(header));
+				switch (header.shType)
+				{
+				case dfTYPE_ADD_STR:
+					g_msgQ.Dequeue(str, header.shStrLen * sizeof(WCHAR));
+					//g_msgQ.UnLock();//2
+					addStr(str);
+					break;
+				case dfTYPE_DEL_STR:
+					//g_msgQ.UnLock();//2
+					delStr();
+					break;
+				case dfTYPE_PRINT_LIST:
+					//g_msgQ.UnLock();//2
+					printList();
+					break;
+				case dfTYPE_QUIT:
+					//g_msgQ.UnLock();//2
+					loop = false;
+					SetEvent(exitEvent);//다른 쓰레드들을 종료하는 이벤트
+					break;
+				default:
+					//g_msgQ.UnLock();//2
+					system("pause");
+					break;
+				}
+			}
+			g_msgQ.UnLock();//2
 		}
-
-		g_msgQ.Peek((char *)&header, sizeof(header));
-
-		switch (header.shType)
+		else if (state == WAIT_OBJECT_0+1)
 		{
-		case dfTYPE_ADD_STR:
-			g_msgQ.Dequeue((char *)&header, sizeof(header));
-			g_msgQ.Dequeue(str, header.shStrLen*sizeof(WCHAR));
-			//str = str.c_str();
-			addStr(str);
-			g_msgQ.UnLock();
-			
-			break;
-		case dfTYPE_DEL_STR:
-			g_msgQ.Dequeue((char *)&header, sizeof(header));
-			g_msgQ.UnLock();
-			delStr();
-			break;
-		case dfTYPE_PRINT_LIST:
-			g_msgQ.Dequeue((char *)&header, sizeof(header));
-			g_msgQ.UnLock();
-			printList();
-			break;
-		case dfTYPE_QUIT:
-			g_msgQ.UnLock();
-			SetEvent(wakeEvent);//종료될 다음 thread를 깨움
-			//printf("worker quit");
-			return 0;
-			break;
-		default:
-			printf("fffff\n");
-			g_msgQ.UnLock();
+			loop = false;
 			break;
 		}
-		
 	}
+	return 0;
 }
 
 void addStr(std::wstring &str)
 {
-	AcquireSRWLockExclusive(&listLock);
+	//AcquireSRWLockExclusive(&listLock);//a
 	g_List.push_front(str);
-	ReleaseSRWLockExclusive(&listLock);
+	addCnt++;
+	//ReleaseSRWLockExclusive(&listLock);//a
 }
 void delStr()
 {
-	AcquireSRWLockExclusive(&listLock);
-	if(!g_List.empty())
+	//AcquireSRWLockExclusive(&listLock);//b
+	if (!g_List.empty())
+	{
 		g_List.pop_back();
-	ReleaseSRWLockExclusive(&listLock);
+		delCnt++;
+	}
+	//ReleaseSRWLockExclusive(&listLock);//b
 }
 
 void printList()
 {
-	AcquireSRWLockExclusive(&listLock);
+	//AcquireSRWLockExclusive(&listLock);//c
 	wprintf(L"List:");
 	for (auto iter = g_List.begin(); iter != g_List.end(); iter++)
 	{
 		wprintf(L"[%s] ",(*iter).c_str());
 	}
 	wprintf(L"\n");
-	ReleaseSRWLockExclusive(&listLock);
-
+	printCnt++;
+	//ReleaseSRWLockExclusive(&listLock);//c
 }

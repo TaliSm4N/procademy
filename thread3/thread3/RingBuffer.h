@@ -17,6 +17,7 @@ private:
 	int _capacity;
 	char *_buf;
 	SRWLOCK srwLock;
+	int srwCnt;
 
 private: 
 	void Initial(int iBufferSize);
