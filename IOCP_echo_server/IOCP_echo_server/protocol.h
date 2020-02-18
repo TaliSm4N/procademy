@@ -5,7 +5,7 @@
 //
 //--------------------------------------------------
 
-#define dfNETWORK_PORT		9000
+#define dfNETWORK_PORT		25000
 
 #define dfNICK_MAX_LEN		20
 #define dfPACKET_CODE		0x89
@@ -334,3 +334,4 @@ struct st_PACKET_HEADER
 //------------------------------------------------------------
 #define df_RES_STRESS_ECHO				101
 
+#pragma once

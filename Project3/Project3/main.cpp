@@ -103,13 +103,23 @@ int main()
 		if (tick + 1000 < timeGetTime())
 		{
 			tick = timeGetTime();
-			avr = allTime / RecvCount;
-			std::cout << "////////////////////////////" << std::endl;
-			std::cout << "connectTry:" << connectTry << std::endl;
-			std::cout << "connectFail:" << connectFail << std::endl;
-			std::cout << "connectSuccess:" << connectSuccess << std::endl;
-			std::cout << "echo avr Laytency:" << avr << "ms / Recv Count:" << RecvCount << " / Error Count:" << errorCount << std::endl;
-			std::cout << std::endl;
+			if (RecvCount != 0)
+			{
+				avr = allTime / RecvCount;
+				std::cout << "////////////////////////////" << std::endl;
+				std::cout << "connectTry:" << connectTry << std::endl;
+				std::cout << "connectFail:" << connectFail << std::endl;
+				std::cout << "connectSuccess:" << connectSuccess << std::endl;
+				std::cout << "echo avr Laytency:" << avr << "ms / Recv Count:" << RecvCount << " / Error Count:" << errorCount << std::endl;
+				std::cout << std::endl;
+			}
+			else
+			{
+				std::cout << "////////////////////////////" << std::endl;
+				std::cout << "connectTry:" << connectTry << std::endl;
+				std::cout << "connectFail:" << connectFail << std::endl;
+				std::cout << "connectSuccess:" << connectSuccess << std::endl;
+			}
 			avr = 0;
 			RecvCount = 0;
 			allTime = 0;
