@@ -115,12 +115,6 @@ void Accept()
 			return;
 		}
 
-		if (sock == INVALID_SOCKET)
-		{
-			printf("accept error\n");
-			return;
-		}
-
 		printf("client connect\n");
 
 		CreateIoCompletionPort((HANDLE)sock, hcp, sock, 0);

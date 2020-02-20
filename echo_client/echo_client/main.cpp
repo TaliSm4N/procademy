@@ -7,7 +7,7 @@
 #include "Packet.h"
 #include "RingBuffer.h"
 
-#define SERVERPORT 9000
+#define SERVERPORT 6000
 
 #define TEST_SIZE 81 * 3 + 1
 
@@ -289,17 +289,20 @@ int main()
 	while (1)
 	{
 		printf("send msg : ");
-		scanf("%s", buf);
-		int len = strlen(buf);
+		scanf("%s", buf+2);
+		int len = strlen(buf+2);
 		header.wPayloadSize = len;
+		buf[0] = len;
+		buf[1] = 0;
 		//send(sock, (char *)&header, sizeof(header), 0);
-		send(sock, buf,len, 0);
 
-		ZeroMemory(buf, 512);
-		recv(sock, buf, len, 0);
+		send(sock, buf,len+2, 0);
 
-		buf[len] = '\0';
+		ZeroMemory(buf+2, 512);
+		recv(sock, buf, len+2, 0);
 
-		printf("%s\n",buf);
+		buf[len+2] = '\0';
+
+		printf("%s\n",buf+2);
 	}
 }
