@@ -13,51 +13,75 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="소스 파일\Contents">
+      <UniqueIdentifier>{5c04beae-a9ca-4c74-9bbf-681610c09883}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Library">
+      <UniqueIdentifier>{cd2d57e9-b7d5-4e46-b897-2c1435a9480f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\Contents">
+      <UniqueIdentifier>{0a80971d-fe43-48d0-bf0b-31a3f2612758}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\library">
+      <UniqueIdentifier>{44fe544f-d457-43ca-9e38-ff0abf2f093f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Session.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Packet.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="RingBuffer.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="thread.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="define.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Packet.h">
+      <Filter>헤더 파일\library</Filter>
+    </ClInclude>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>헤더 파일\library</Filter>
+    </ClInclude>
     <ClInclude Include="network.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>헤더 파일\library</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>헤더 파일\library</Filter>
+    </ClInclude>
+    <ClInclude Include="thread.h">
+      <Filter>헤더 파일\library</Filter>
+    </ClInclude>
+    <ClInclude Include="networkLib.h">
+      <Filter>헤더 파일\library</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>헤더 파일\Contents</Filter>
     </ClInclude>
     <ClInclude Include="PacketProc.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>헤더 파일\Contents</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Session.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Packet.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="RingBuffer.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="thread.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="network.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Library</Filter>
+    </ClCompile>
+    <ClCompile Include="networkLib.cpp">
+      <Filter>소스 파일\Library</Filter>
+    </ClCompile>
+    <ClCompile Include="Packet.cpp">
+      <Filter>소스 파일\Library</Filter>
+    </ClCompile>
+    <ClCompile Include="RingBuffer.cpp">
+      <Filter>소스 파일\Library</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>소스 파일\Library</Filter>
+    </ClCompile>
+    <ClCompile Include="thread.cpp">
+      <Filter>소스 파일\Library</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>소스 파일\Contents</Filter>
     </ClCompile>
     <ClCompile Include="PacketProc.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Contents</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

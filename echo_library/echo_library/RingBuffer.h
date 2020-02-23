@@ -1,7 +1,7 @@
 #ifndef __LUMO_RINGBUFFER__
 #define __LUMO_RINGBUFFER__
 
-#define RINGBUF_DEFAULT_SIZE 10000
+#define RINGBUF_DEFAULT_SIZE 50000
 
 class RingBuffer
 {

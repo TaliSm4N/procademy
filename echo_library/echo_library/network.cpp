@@ -2,6 +2,7 @@
 #include <iostream>
 #include <WinSock2.h>
 #include <process.h>
+#include <map>
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"
@@ -9,7 +10,9 @@
 #include "thread.h"
 #include "network.h"
 #include "PacketProc.h"
+#include "networkLib.h"
 
+extern std::map<LONGLONG, Session *> sessionList;
 
 BOOL initNetwork()
 {
@@ -54,8 +57,9 @@ PROCRESULT CompleteRecvPacket(Session *session)
 	if (session->GetRecvQ().Dequeue(payload, header.len) != header.len)
 		return FAIL;
 
-	if (!PacketProc(session, 0, payload))
-		return FAIL;
+	//if (!PacketProc(session, 0, payload))
+		//return FAIL;
+	OnRecv(session->GetID(), payload);
 
 	return SUCCESS;
 }
@@ -65,7 +69,7 @@ bool PacketProc(Session *session, BYTE type, Packet &p)
 	switch (type)
 	{
 	case 0:
-		Echo(session, p);
+		//Echo(session, p);
 		break;
 	}
 
@@ -89,6 +93,47 @@ bool SendUnicast(Session* session, Packet& p)
 		return false;
 	}
 
+	//monitorUnit.MonitorSendPacket();
+
+	return true;
+}
+
+
+bool SendPacket(LONGLONG sessionID, Packet& p)
+{
+	AcquireSRWLockExclusive(&sessionListLock);
+	auto iter = sessionList.find(sessionID);
+	
+	
+	Header header;
+	//printf("%d %d - sendpacket\n", sessionID, (*iter).second->GetID());
+
+	//if (sessionID != (*iter).second->GetID())
+	//{
+	//	system("pause");
+	//}
+	//if (session == (*sessionList.end()).second)
+	if(iter==sessionList.end())
+	{
+		ReleaseSRWLockExclusive(&sessionListLock);
+		return false;
+	}
+	Session *session = (*iter).second;//(*sessionList.find(sessionID)).second;
+	
+	header.len = p.GetDataSize();
+
+	if (session->GetSendQ().GetFreeSize() >= p.GetDataSize()+sizeof(header))
+	{
+		session->GetSendQ().Enqueue((char *)&header,sizeof(header));
+		session->GetSendQ().Enqueue(p);
+	}
+	else
+	{
+		ReleaseSRWLockExclusive(&sessionListLock);
+		//_LOG(dfLOG_LEVEL_ERROR, L"SendQ size Lack");
+		return false;
+	}
+	ReleaseSRWLockExclusive(&sessionListLock);
 	//monitorUnit.MonitorSendPacket();
 
 	return true;

@@ -7,10 +7,11 @@
 #include "thread.h"
 #include "define.h"
 #include "network.h"
+#include "networkLib.h"
 
 std::map<LONGLONG, Session *> sessionList;
 
-SRWLOCK srwLock;
+SRWLOCK sessionListLock;
 
 
 LONGLONG num = 0;
@@ -85,9 +86,11 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 			{
 				if (CompleteRecvPacket(session) != SUCCESS)
 					break;
+				//printf("success\n");
 			}
-			session->RecvPost(TRUE);
 			session->SendPost();
+			//printf("recv->send\n");
+			session->RecvPost(TRUE);
 		}
 		else if (pOverlapped->type == TYPE::SEND)
 		{
@@ -96,6 +99,7 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 			session->GetSendQ().MoveReadPos(transferred);
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 			session->SendPost();
+			//printf("send->send\n");
 		}
 		
 		//InterlockedAdd((LONG *)&session->GetIOCount(), -1);
@@ -104,9 +108,11 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 			InterlockedAdd((LONG *)&out_check, 1);
 			printf("delete session %d\n", session->GetID());
 
-			AcquireSRWLockExclusive(&srwLock);
+			AcquireSRWLockExclusive(&sessionListLock);
 			sessionList.erase(session->GetID());
-			ReleaseSRWLockExclusive(&srwLock);
+			ReleaseSRWLockExclusive(&sessionListLock);
+
+			OnClientLeave(session->GetID());
 
 			delete session;
 		}
@@ -152,7 +158,7 @@ unsigned int WINAPI AcceptThread(LPVOID lpParam)
 	SOCKADDR_IN sockAddr;
 	int addrLen;
 
-	InitializeSRWLock(&srwLock);
+	InitializeSRWLock(&sessionListLock);
 	printf("Accept thread On\n");
 
 	while (1)
@@ -165,7 +171,7 @@ unsigned int WINAPI AcceptThread(LPVOID lpParam)
 			printf("accept error\n");
 			continue;
 		}
-
+		
 		int optval = 0;
 		retval = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
 		if (retval == SOCKET_ERROR)
@@ -177,20 +183,25 @@ unsigned int WINAPI AcceptThread(LPVOID lpParam)
 		printf("client connect %d\n",num);
 
 		session = new Session(sock, sockAddr,num);
+		OnClientJoin(session->GetID());
 		num++;
-		
 
 		CreateIoCompletionPort((HANDLE)sock, hcp, (ULONG_PTR)session, 0);
 
+		AcquireSRWLockExclusive(&sessionListLock);
+		sessionList.insert(std::make_pair(session->GetID(), session));
+		ReleaseSRWLockExclusive(&sessionListLock);
+
 		//accept 순간에 성공하지 않으면 session이 생성되지 않은거나 다름이 없음
-		if (session->RecvPost(FALSE))
+		if (!session->RecvPost(FALSE))
 		{
-			AcquireSRWLockExclusive(&srwLock);
-			sessionList.insert(std::make_pair(session->GetID(), session));
-			ReleaseSRWLockExclusive(&srwLock);
-		}
-		else
+			AcquireSRWLockExclusive(&sessionListLock);
+			sessionList.erase(session->GetID());
+			ReleaseSRWLockExclusive(&sessionListLock);
+
+			OnClientLeave(session->GetID());
 			delete session;
+		}
 
 		
 	}

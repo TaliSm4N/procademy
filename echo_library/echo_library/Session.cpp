@@ -15,9 +15,10 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,LONGLONG id)
 
 BOOL Session::RecvPost(BOOL test)
 {
-
+	
 	if (!sockActive)
 		return false;
+	//printf("---%d\n", sessionID);
 	recvQ.Lock();
 	WSABUF wsabuf[2];
 	wsabuf[0].len = recvQ.DirectEnqueueSize();
@@ -53,15 +54,26 @@ BOOL Session::RecvPost(BOOL test)
 
 BOOL Session::SendPost()
 {
+	
 	if (!sockActive)
 		return false;
 
 	if (sendQ.GetUseSize() <= 0)
+	{
+		//volatile int test;
+		//printf("use size\n");
+		//test = 1;
 		return false;
+	}
 
 	if (InterlockedExchange8(&sendFlag, 0) == 0)
+	{
+		//volatile int test;
+		//printf("flag\n");
+		//test = 1;
 		return false;
-
+	}
+	//printf("%d---\n", sessionID);
 	WSABUF wsabuf[2];
 	wsabuf[0].len = sendQ.DirectDequeueSize();
 	wsabuf[0].buf = sendQ.GetReadPos();

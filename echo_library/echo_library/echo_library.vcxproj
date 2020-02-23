@@ -117,8 +117,10 @@
   <ItemGroup>
     <ClInclude Include="define.h" />
     <ClInclude Include="network.h" />
+    <ClInclude Include="networkLib.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketProc.h" />
+    <ClInclude Include="Player.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="thread.h" />
@@ -126,8 +128,10 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="network.cpp" />
+    <ClCompile Include="networkLib.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PacketProc.cpp" />
+    <ClCompile Include="Player.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="Session.cpp" />
     <ClCompile Include="thread.cpp" />
