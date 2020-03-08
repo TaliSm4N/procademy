@@ -105,6 +105,7 @@ bool SendPacket(LONGLONG sessionID, Packet& p)
 	auto iter = sessionList.find(sessionID);
 	
 	
+	
 	Header header;
 	//printf("%d %d - sendpacket\n", sessionID, (*iter).second->GetID());
 
@@ -119,7 +120,8 @@ bool SendPacket(LONGLONG sessionID, Packet& p)
 		return false;
 	}
 	Session *session = (*iter).second;//(*sessionList.find(sessionID)).second;
-	
+	session->Lock();
+	ReleaseSRWLockExclusive(&sessionListLock);
 	header.len = p.GetDataSize();
 
 	if (session->GetSendQ().GetFreeSize() >= p.GetDataSize()+sizeof(header))
@@ -129,12 +131,12 @@ bool SendPacket(LONGLONG sessionID, Packet& p)
 	}
 	else
 	{
-		ReleaseSRWLockExclusive(&sessionListLock);
+		session->Unlock();
 		//_LOG(dfLOG_LEVEL_ERROR, L"SendQ size Lack");
 		return false;
 	}
-	ReleaseSRWLockExclusive(&sessionListLock);
+	
 	//monitorUnit.MonitorSendPacket();
-
+	session->Unlock();
 	return true;
 }

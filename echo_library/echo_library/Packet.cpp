@@ -93,6 +93,7 @@ int Packet::PutData(char *chpSrc, int iSrcSize)
 
 Packet &Packet::operator = (Packet &clSrcPacket)
 {
+	delete buf;
 	buf = new char[clSrcPacket.size];
 	size = clSrcPacket.size;
 	memcpy(buf, clSrcPacket.buf, clSrcPacket.size);

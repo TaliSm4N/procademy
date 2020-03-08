@@ -20,8 +20,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{E1159859-3399-4646-8D43-FDAFDD7F4DEC}</ProjectGuid>
-    <RootNamespace>echolibrary</RootNamespace>
+    <ProjectGuid>{FD2106A6-9CA6-47E5-8E61-016133858A22}</ProjectGuid>
+    <RootNamespace>CPUMonitor</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -29,14 +29,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -108,7 +108,6 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -116,26 +115,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="define.h" />
-    <ClInclude Include="network.h" />
-    <ClInclude Include="networkLib.h" />
-    <ClInclude Include="Packet.h" />
-    <ClInclude Include="PacketProc.h" />
-    <ClInclude Include="Player.h" />
-    <ClInclude Include="RingBuffer.h" />
-    <ClInclude Include="Session.h" />
-    <ClInclude Include="thread.h" />
+    <ClInclude Include="CPUUsage.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="network.cpp" />
-    <ClCompile Include="networkLib.cpp" />
-    <ClCompile Include="Packet.cpp" />
-    <ClCompile Include="PacketProc.cpp" />
-    <ClCompile Include="Player.cpp" />
-    <ClCompile Include="RingBuffer.cpp" />
-    <ClCompile Include="Session.cpp" />
-    <ClCompile Include="thread.cpp" />
+    <ClCompile Include="CPUUsage.cpp" />
+    <ClCompile Include="sample_code.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="sample_main.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -25,6 +25,8 @@ public:
 	BOOL RecvPost(BOOL);
 	BOOL SendPost();
 	BOOL Release();
+	void Lock();
+	void Unlock();
 
 private:
 	SOCKET sock;
@@ -37,4 +39,5 @@ private:
 	DWORD IOCount;
 	CHAR sendFlag;
 	BOOL sockActive;
+	SRWLOCK sessionLock;
 };

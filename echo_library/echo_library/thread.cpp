@@ -16,6 +16,7 @@ SRWLOCK sessionListLock;
 
 LONGLONG num = 0;
 
+
 int in_check = 0;
 int out_check = 0;
 
@@ -110,10 +111,11 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 
 			AcquireSRWLockExclusive(&sessionListLock);
 			sessionList.erase(session->GetID());
+			session->Lock();
 			ReleaseSRWLockExclusive(&sessionListLock);
 
 			OnClientLeave(session->GetID());
-
+			session->Unlock();
 			delete session;
 		}
 	}
@@ -183,7 +185,7 @@ unsigned int WINAPI AcceptThread(LPVOID lpParam)
 		printf("client connect %d\n",num);
 
 		session = new Session(sock, sockAddr,num);
-		OnClientJoin(session->GetID());
+		
 		num++;
 
 		CreateIoCompletionPort((HANDLE)sock, hcp, (ULONG_PTR)session, 0);
@@ -191,15 +193,18 @@ unsigned int WINAPI AcceptThread(LPVOID lpParam)
 		AcquireSRWLockExclusive(&sessionListLock);
 		sessionList.insert(std::make_pair(session->GetID(), session));
 		ReleaseSRWLockExclusive(&sessionListLock);
+		OnClientJoin(session->GetID());
 
 		//accept 순간에 성공하지 않으면 session이 생성되지 않은거나 다름이 없음
 		if (!session->RecvPost(FALSE))
 		{
 			AcquireSRWLockExclusive(&sessionListLock);
 			sessionList.erase(session->GetID());
+			session->Lock();
 			ReleaseSRWLockExclusive(&sessionListLock);
 
 			OnClientLeave(session->GetID());
+			session->Unlock();
 			delete session;
 		}
 

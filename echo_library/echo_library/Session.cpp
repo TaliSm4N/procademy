@@ -11,6 +11,7 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,LONGLONG id)
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
 	sendOverlap.type = TYPE::SEND;
 	recvOverlap.type = TYPE::RECV;
+	InitializeSRWLock(&sessionLock);
 }
 
 BOOL Session::RecvPost(BOOL test)
@@ -114,4 +115,13 @@ BOOL Session::Release()
 	}
 
 	return TRUE;
+}
+
+void Session::Lock()
+{
+	AcquireSRWLockExclusive(&sessionLock);
+}
+void Session::Unlock()
+{
+	ReleaseSRWLockExclusive(&sessionLock);
 }
