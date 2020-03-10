@@ -137,6 +137,7 @@ bool SendPacket(LONGLONG sessionID, Packet& p)
 	}
 	
 	//monitorUnit.MonitorSendPacket();
+	//session->SendPost();
 	session->Unlock();
 	return true;
 }
