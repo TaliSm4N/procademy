@@ -102,6 +102,7 @@ int RingBuffer::Enqueue(char *chpData, int iSize)
 {
 
 	int temp = GetFreeSize();
+
 	if (temp < iSize)
 	{
 		iSize = temp;

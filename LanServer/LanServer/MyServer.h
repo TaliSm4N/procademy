@@ -6,6 +6,7 @@ class CMyServer :public CLanServer
 {
 public:
 	CMyServer();
+	virtual bool OnConnectionRequest(WCHAR *ClientIP, int Port);
 	virtual void OnRecv(DWORD sessionID, Packet *p);
 	virtual void OnSend(DWORD sessionID, int sendsize);
 	virtual void OnClientJoin(DWORD sessionID);

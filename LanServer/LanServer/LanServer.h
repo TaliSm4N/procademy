@@ -10,10 +10,14 @@ class CLanServer
 {
 public:
 	CLanServer();
-	bool Start(int port, int workerCnt, bool nagle, int maxUser);
+	bool Start(int port, int workerCnt, bool nagle, int maxUser,bool monitoring=true);
 	void Stop();
 	int GetSessionCount() const { return _sessionCount; }
-	bool Disconnect();
+	bool Disconnect(DWORD sessionID);
+
+	bool RecvPost(Session *session);
+	bool SendPost(Session *session);
+
 	bool SendPacket(DWORD sessionID, Packet *p);
 
 	//< Accept 후 접속처리 완료 후 호출.
@@ -26,7 +30,7 @@ public:
 	//< accept 직후
 	//return false; 시 클라이언트 거부.
 	//return true; 시 접속 허용
-	//virtual bool OnConnectionRequest(ClientIP,Port) = 0; 
+	virtual bool OnConnectionRequest(WCHAR *ClientIP, int Port) = 0;
 
 	// < 패킷 수신 완료 후
 	virtual void OnRecv(DWORD sessionID, Packet *p) = 0;
@@ -39,11 +43,19 @@ public:
 
 	virtual void OnError(int errorcode, WCHAR *) = 0;
 
+public:
+	DWORD GetAcceptTotal() { return _acceptTotal; }
+	DWORD GettAcceptTPS() { return _acceptTPS; }
+	DWORD GetRecvPacketTPS() { return _recvPacketTPS; }
+	DWORD GetSendPacketTPS() { return _sendPacketTPS; }
+
 private:
 	static unsigned int WINAPI AcceptThread(LPVOID lpParam);
 	static unsigned int WINAPI WorkerThread(LPVOID lpParam);
+	static unsigned int WINAPI MonitorThread(LPVOID lpParam);
 	PROCRESULT CompleteRecvPacket(Session *session);
 private:
+	SOCKET _listenSock;
 	SOCKADDR_IN _sockAddr;
 	int _port;
 	int _workerCnt;
@@ -56,7 +68,23 @@ private:
 	HANDLE *_hWokerThreads;
 	DWORD *_dwWOrkerThreadIDs;
 
+	bool _monitoring;
+	HANDLE _hMonitorThread;
+	DWORD _dwMonitorThreadID;
+
 	std::map<DWORD,Session *>sessionList;
 	SRWLOCK sessionListLock;
 	DWORD _sessionCount;
+
+	
+	
+private://monitoring
+	LONGLONG _acceptTotal;
+	LONGLONG _acceptTPS;
+	LONGLONG _recvPacketTPS;
+	LONGLONG _sendPacketTPS;
+	LONGLONG _recvPacketCounter;
+	LONGLONG _sendPacketCounter;
+	LONGLONG _packetPoolUse;
+	LONGLONG _packetPoolAlloc;
 };

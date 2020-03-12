@@ -12,6 +12,11 @@ CMyServer::CMyServer()
 {
 }
 
+bool CMyServer::OnConnectionRequest(WCHAR *ClientIP, int Port)
+{
+	return true;
+}
+
 void CMyServer::OnRecv(DWORD sessionID, Packet *p)
 {
 	//switch (type)
@@ -33,11 +38,12 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	p << 0x7fffffffffffffff;
 	AcquireSRWLockExclusive(&playerListLock);
 	playerList.insert(std::make_pair(sessionID, player));
-
 	SendPacket(sessionID, &p);
+	//¿ä³ð ¹®Á¦
 
 	ReleaseSRWLockExclusive(&playerListLock);
-	printf("player join %lld\n", player->GetID());
+	//printf("player join %lld\n", player->GetID());
+	
 }
 void CMyServer::OnClientLeave(DWORD sessionID)
 {
@@ -46,7 +52,7 @@ void CMyServer::OnClientLeave(DWORD sessionID)
 	playerList.erase(playerList.find(sessionID));
 	player->Lock();
 	ReleaseSRWLockExclusive(&playerListLock);
-	printf("player join %d\n", player->GetID());
+	//printf("player join %d\n", player->GetID());
 	player->UnLock();
 	delete player;
 }

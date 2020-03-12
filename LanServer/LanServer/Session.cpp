@@ -5,7 +5,7 @@
 #include "Session.h"
 
 Session::Session(SOCKET s, SOCKADDR_IN &sAddr,LONGLONG id)
-	:sock(s),sockAddr(sAddr),sendFlag(1),IOCount(0), sockActive(TRUE),sessionID(id)
+	:sock(s),sockAddr(sAddr),sendFlag(1),IOCount(0), sockActive(FALSE),sessionID(id)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
@@ -14,7 +14,7 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,LONGLONG id)
 	InitializeSRWLock(&sessionLock);
 }
 
-BOOL Session::RecvPost(BOOL test)
+BOOL Session::RecvPost()
 {
 	
 	if (!sockActive)
@@ -39,10 +39,8 @@ BOOL Session::RecvPost(BOOL test)
 		//if (WSAGetLastError() != ERROR_IO_PENDING)
 		if(err!=ERROR_IO_PENDING)
 		{
-			printf("%d\n",err);
-			if (!test)
-				printf("-----");
-			printf("Not Overlapped Recv I/O %d\n", sessionID);
+			//printf("%d\n",err);
+			//printf("Not Overlapped Recv I/O %d\n", sessionID);
 			InterlockedAdd((LONG *)&IOCount, -1);
 			//check delete
 
@@ -92,9 +90,11 @@ BOOL Session::SendPost()
 	//printf("send\n");
 	if (retval == SOCKET_ERROR)
 	{
-		if (WSAGetLastError() != ERROR_IO_PENDING)
+		int err;
+		if ((err=WSAGetLastError()) != ERROR_IO_PENDING)
 		{
-			printf("Not Overlapped Send I/O %d\n",sessionID);
+			//printf("Not Overlapped Send I/O %d, %d\n",sessionID,err);
+			InterlockedExchange8(&sendFlag, 1);
 			InterlockedAdd((LONG *)&IOCount, -1);
 			//check delete
 			//sendQ.UnLock();

@@ -1,6 +1,7 @@
 #include <iostream>
-
+#pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32")
+#include <WS2tcpip.h>
 #include <WinSock2.h>
 #include <process.h>
 #include <cstring>
@@ -11,17 +12,28 @@
 #include "LanServer.h"
 
 CLanServer::CLanServer()
-	:_sessionCount(0)
+	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
 {
 	
 }
 
-bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser)
+bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monitoring)
 {
+	timeBeginPeriod(1);
 	_port = port;
 	_workerCnt = workerCnt;
 	_nagle = nagle;
 	_maxUser = maxUser;
+	_monitoring = monitoring;
+
+	//monitoring 초기화
+	_sessionCount = 0;
+	_acceptTotal = 0;
+	_acceptTPS = 0;
+	_recvPacketTPS = 0;
+	_sendPacketTPS = 0;
+	_packetPoolAlloc = 0;
+	_packetPoolUse = 0;
 
 	if (WSAStartup(MAKEWORD(2, 2), &_wsa) != 0) return false;
 
@@ -30,6 +42,48 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser)
 	if (_hcp == NULL) return false;
 
 	InitializeSRWLock(&sessionListLock);
+	
+	
+
+
+	_listenSock = socket(AF_INET, SOCK_STREAM, 0);
+	if (_listenSock == INVALID_SOCKET)
+	{
+		//printf("socket error\n");
+		return -1;
+	}
+
+	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
+	_sockAddr.sin_family = AF_INET;
+	_sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	_sockAddr.sin_port = htons(_port);
+	int retval = bind(_listenSock, (SOCKADDR *)&_sockAddr, sizeof(_sockAddr));
+
+	if (retval == SOCKET_ERROR)
+	{
+		//printf("bind error\n");
+		return -1;
+	}
+
+	retval = listen(_listenSock, SOMAXCONN);
+	if (retval == SOCKET_ERROR)
+	{
+		//printf("listen error\n");
+		return -1;
+	}
+
+	_nagle = nagle;
+
+	if (_nagle)
+	{
+		int optVal = true;
+		setsockopt(_listenSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optVal, sizeof(optVal));
+	}
+
+	if (_monitoring)
+	{
+		_hMonitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, (unsigned int *)&_dwMonitorThreadID);
+	}
 
 	_hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, this, 0, (unsigned int *)&_dwAcceptThreadID);
 
@@ -44,52 +98,69 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser)
 	}
 }
 
+void CLanServer::Stop()
+{
+	int handleCnt=_workerCnt+1;
+	if (_monitoring)
+		handleCnt++;
+	HANDLE *threadHandle = new HANDLE[handleCnt];
+
+	
+
+	for (int i = 0; i <= _workerCnt; i++)
+	{
+		threadHandle[0] = _hWokerThreads[i];
+	}
+
+	threadHandle[_workerCnt] = _hAcceptThread;
+
+	if (_monitoring)
+	{
+		threadHandle[handleCnt - 1] = _hMonitorThread;
+	}
+
+	WaitForMultipleObjects(handleCnt, threadHandle, TRUE, INFINITE);
+
+	wprintf(L"All thread closed\n");
+	delete[] threadHandle;
+
+	delete[] _hWokerThreads;
+	delete[] _dwWOrkerThreadIDs;
+
+	for (auto iter = sessionList.begin(); iter != sessionList.end();)
+	{
+		Session *session = iter->second;
+		delete session;
+	}
+	sessionList.clear();
+}
+
 unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 {
 
 	//HANDLE hcp = (HANDLE)lpParam;
-	SOCKET listenSock = socket(AF_INET, SOCK_STREAM, 0);
 
 	CLanServer *_this = (CLanServer *)lpParam;
-
-	if (listenSock == INVALID_SOCKET)
-	{
-		//printf("socket error\n");
-		return -1;
-	}
-
-	ZeroMemory(&_this->_sockAddr, sizeof(_this->_sockAddr));
-	_this->_sockAddr.sin_family = AF_INET;
-	_this->_sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	_this->_sockAddr.sin_port = htons(_this->_port);
-	int retval = bind(listenSock, (SOCKADDR *)&_this->_sockAddr, sizeof(_this->_sockAddr));
-
-	if (retval == SOCKET_ERROR)
-	{
-		//printf("bind error\n");
-		return -1;
-	}
-
-	retval = listen(listenSock, SOMAXCONN);
-	if (retval == SOCKET_ERROR)
-	{
-		//printf("listen error\n");
-		return -1;
-	}
 
 	Session *session;
 	SOCKET sock;
 	SOCKADDR_IN sockAddr;
 	int addrLen;
 
+	int retval;
 
-	printf("Accept thread On\n");
+	int id = 0;
+
+	WCHAR IP[16];
+
+
+	wprintf(L"Accept thread On\n");
 
 	while (1)
 	{
 		addrLen = sizeof(sockAddr);
-		sock = accept(listenSock, (SOCKADDR *)&(sockAddr), &addrLen);
-		//InterlockedAdd((LONG *)&in_check, 1);
+		sock = accept(_this->_listenSock, (SOCKADDR *)&(sockAddr), &addrLen);
+		InterlockedIncrement((LONG *)&_this->_acceptTotal);
 		if (sock == INVALID_SOCKET)
 		{
 			printf("accept error\n");
@@ -103,15 +174,23 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 			printf("SO_RCVBUF error\n");
 			return -1;
 		}
+		
+		InetNtopW(AF_INET, &sockAddr.sin_addr, IP, 16);
+		if (!_this->OnConnectionRequest(IP, ntohs(sockAddr.sin_port)))
+		{
+			closesocket(sock);
+			continue;
+		}
 
-		//_this->OnConnectionRequest()
 
+		//printf("client connect %d\n", _this->GetSessionCount());
 
-		printf("client connect %d\n", _this->GetSessionCount());
+		session = new Session(sock, sockAddr, id++);
 
-		session = new Session(sock, sockAddr, _this->_sessionCount);
+		//session->recvOn = false;
+		//session->sendOn = false;
 
-		_this->_sessionCount++;
+		InterlockedIncrement(&_this->_sessionCount);
 
 		CreateIoCompletionPort((HANDLE)sock, _this->_hcp, (ULONG_PTR)session, 0);
 
@@ -120,17 +199,21 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 		ReleaseSRWLockExclusive(&_this->sessionListLock);
 		_this->OnClientJoin(session->GetID());
 
+		InterlockedExchange8((CHAR *)&session->GetSocketActive(), TRUE);
 		//accept 순간에 성공하지 않으면 session이 생성되지 않은거나 다름이 없음
-		if (!session->RecvPost(FALSE))
-		{
-			AcquireSRWLockExclusive(&_this->sessionListLock);
-			_this->sessionList.erase(session->GetID());
-			session->Lock();
-			ReleaseSRWLockExclusive(&_this->sessionListLock);
-
-			_this->OnClientLeave(session->GetID());
-			session->Unlock();
-			delete session;
+		//if (!session->RecvPost())
+		if (!_this->RecvPost(session))
+		{ 
+			_this->Disconnect(session->GetID());
+			//AcquireSRWLockExclusive(&_this->sessionListLock);
+			//_this->sessionList.erase(session->GetID());
+			//InterlockedDecrement(&_this->_sessionCount);
+			//session->Lock();
+			//ReleaseSRWLockExclusive(&_this->sessionListLock);
+			//
+			//_this->OnClientLeave(session->GetID());
+			//session->Unlock();
+			//delete session;
 		}
 
 
@@ -149,7 +232,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 	MyOverlapped *pOverlapped;
 	DWORD transferred;
 
-	printf("Worker thread On\n");
+	wprintf(L"Worker thread On\n");
 	int test = 10;
 	while (1)
 	{
@@ -164,22 +247,22 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 
 
 		int ret = GetQueuedCompletionStatus(_this->_hcp, &transferred, (PULONG_PTR)&session, (LPOVERLAPPED *)&pOverlapped, INFINITE);
-		InterlockedAdd((LONG *)&session->GetIOCount(), 1);
+		//InterlockedIncrement((LONG *)&session->GetIOCount());
 
-
+		
 		if (transferred == 0 && session == 0 && pOverlapped == 0)
 		{
-			InterlockedAdd((LONG *)&session->GetIOCount(), -1);
+			InterlockedDecrement((LONG *)&session->GetIOCount());
 			//일반적으로 post를 통해 worker스레드를 종료시키는 목적으로 사용
-			printf("000\n");
+			//printf("000\n");
 			break;
 		}
 
 		if (ret == false && pOverlapped == NULL)
 		{
-			InterlockedAdd((LONG *)&session->GetIOCount(), -1);
+			InterlockedIncrement((LONG *)&session->GetIOCount());
 
-			printf("ret error\n");
+			//printf("ret error\n");
 			//iocp 오류
 			continue;
 		}
@@ -194,12 +277,14 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE);
 			closesocket(session->GetSocket());
 			//InterlockedAdd((LONG *)&session->GetIOCount(), -1);
-			printf("transffer 0 %d\n", session->GetSocket());
+			//printf("transffer 0 %d\n", session->GetSocket());
 		}
 
 		if (pOverlapped->type == TYPE::RECV)
 		{
-			InterlockedAdd((LONG *)&session->GetIOCount(), -1);
+			//InterlockedDecrement((LONG *)&session->GetIOCount());
+			//InterlockedExchange8((char *)&session->recvOn, false);
+			printf("recv Off\n");
 			session->GetRecvQ().MoveWritePos(transferred);
 			session->GetRecvQ().UnLock();
 			while (1)
@@ -208,39 +293,99 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 					break;
 				//printf("success\n");
 			}
-			session->SendPost();
+			printf("CRP end\n");
+			//session->SendPost();
 			////printf("recv->send\n");
-			session->RecvPost(TRUE);
+			//printf("recv end %d\n", session->GetID());
+			//session->RecvPost();
+			_this->RecvPost(session);
 		}
 		else if (pOverlapped->type == TYPE::SEND)
 		{
+			//InterlockedExchange8((char *)&session->sendOn, false);
+			printf("send off-----------------------------------\n");
 			//SendFlag = false;
-			InterlockedAdd((LONG *)&session->GetIOCount(), -1);
+			//InterlockedDecrement((LONG *)&session->GetIOCount());
+
+			//static int check=0;
+			//static int before = 0;
+			//InterlockedExchange((LONG *)&before, check);
+			//if (InterlockedExchange((LONG *)&check, session->GetSendQ().GetReadPos() - session->GetSendQ().GetBufPtr())!=before)
+			//{
+			//	printf("---??\n");
+			//}
+			
+			//wprintf(L"%10d ", session->GetSendQ().GetReadPos()- session->GetSendQ().GetBufPtr());
 			session->GetSendQ().MoveReadPos(transferred);
+			//wprintf(L"%10d\n", session->GetSendQ().GetReadPos() - session->GetSendQ().GetBufPtr());
 			InterlockedExchange8(&session->GetSendFlag(), 1);
-			session->SendPost();
+
+			_this->SendPost(session);
+			printf("lunlun|||||||||||||||||||||||||||||||||||||||||||||\n");
 
 			_this->OnSend(session->GetID(),transferred);
-			//printf("send->send\n");
+			//printf("send end %d\n",session->GetID());
 		}
 
 		//InterlockedAdd((LONG *)&session->GetIOCount(), -1);
-		if (InterlockedAdd((LONG *)&session->GetIOCount(), -1) == 0)//&& !session->GetSocketActive())
+		if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)//&& !session->GetSocketActive())
 		{
-			//InterlockedAdd((LONG *)&out_check, 1);
-			printf("delete session %d\n", session->GetID());
-
-			AcquireSRWLockExclusive(&_this->sessionListLock);
-			_this->sessionList.erase(session->GetID());
-			session->Lock();
-			ReleaseSRWLockExclusive(&_this->sessionListLock);
-
-			_this->OnClientLeave(session->GetID());
-			session->Unlock();
-			delete session;
+			_this->Disconnect(session->GetID());
 		}
 	}
 
+
+	return 0;
+}
+
+bool CLanServer::Disconnect(DWORD sessionID)
+{
+	AcquireSRWLockExclusive(&sessionListLock);
+	auto iter = sessionList.find(sessionID);
+	if (iter == sessionList.end())
+	{
+		ReleaseSRWLockExclusive(&sessionListLock);
+		return false;
+	}
+	Session *session = iter->second;
+	sessionList.erase(sessionID);
+	InterlockedDecrement(&_sessionCount);
+	session->Lock();
+	ReleaseSRWLockExclusive(&sessionListLock);
+
+	OnClientLeave(session->GetID());
+	session->Unlock();
+	delete session;
+
+	return true;
+}
+
+unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
+{
+	CLanServer *_this = (CLanServer *)lpParam;
+	int tick = timeGetTime();
+	DWORD acceptBefore = 0;
+	DWORD recvBefore = 0;
+	DWORD sendBefore = 0;
+	wprintf(L"Monitoring Thread On\n");
+	while (1)
+	{
+		if (timeGetTime() - tick >= 1000)
+		{
+			tick += 1000;
+			InterlockedExchange64(&_this->_acceptTPS, _this->_acceptTotal - acceptBefore);
+			acceptBefore += _this->_acceptTPS;
+
+			recvBefore = _this->_recvPacketCounter;
+			InterlockedExchange64(&_this->_recvPacketCounter, 0);
+			sendBefore = _this->_sendPacketCounter;
+			InterlockedExchange64(&_this->_sendPacketCounter, 0);
+
+			
+			InterlockedExchange64((LONG64 *)&_this->_recvPacketTPS, recvBefore);
+			InterlockedExchange64((LONG64 *)&_this->_sendPacketTPS, sendBefore);
+		}
+	}
 
 	return 0;
 }
@@ -268,7 +413,7 @@ PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 	//if (!PacketProc(session, 0, payload))
 		//return FAIL;
 	OnRecv(session->GetID(), &payload);
-
+	InterlockedIncrement64((LONG64 *)&_recvPacketCounter);
 	return SUCCESS;
 }
 
@@ -302,7 +447,112 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	}
 
 	//session->SendPost();
-
+	SendPost(session);
+	InterlockedIncrement64((LONG64 *)&_sendPacketCounter);
 	session->Unlock();
+	return true;
+}
+
+bool CLanServer::RecvPost(Session *session)
+{
+	if (!session->GetSocketActive())
+		return false;
+	//printf("---%d\n", sessionID);
+	session->GetRecvQ().Lock();
+	WSABUF wsabuf[2];
+	wsabuf[0].len = session->GetRecvQ().DirectEnqueueSize();
+	wsabuf[0].buf = session->GetRecvQ().GetWritePos();
+	wsabuf[1].len = session->GetRecvQ().GetFreeSize() - session->GetRecvQ().DirectEnqueueSize();
+	wsabuf[1].buf = session->GetRecvQ().GetBufPtr();
+
+
+	DWORD flags = 0;
+
+	InterlockedAdd((LONG *)&session->GetIOCount(), 1);
+
+	//InterlockedExchange8((char *)&session->recvOn, true);
+	printf("recv On\n");
+
+	int retval = WSARecv(session->GetSocket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->GetRecvOverlap(), NULL);
+	//printf("recv\n");
+	if (retval == SOCKET_ERROR)
+	{
+		int err = WSAGetLastError();
+		//if (WSAGetLastError() != ERROR_IO_PENDING)
+		if (err != ERROR_IO_PENDING)
+		{
+			//printf("%d\n",err);
+			//printf("Not Overlapped Recv I/O %d\n", sessionID);
+			if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)//&& !session->GetSocketActive())
+			{
+				Disconnect(session->GetID());
+			}
+			//InterlockedExchange8((char *)&session->recvOn, false);
+			printf("recv Off\n");
+			//check delete
+
+			return false;
+		}
+	}
+
+	return true;
+}
+bool CLanServer::SendPost(Session *session)
+{
+	if (!session->GetSocketActive())
+		return false;
+	//sendQ.Lock();
+	
+	if (session->GetSendQ().GetUseSize() <= 0)
+	{
+		//volatile int test;
+		//printf("use size\n");
+		//test = 1;
+		//sendQ.UnLock();
+		return false;
+	}
+
+	if (InterlockedExchange8(&session->GetSendFlag(), 0) == 0)
+	{
+		//volatile int test;
+		//printf("flag\n");
+		//test = 1;
+		return false;
+	}
+	//printf("%d---\n", sessionID);
+	WSABUF wsabuf[2];
+
+	wsabuf[0].len = session->GetSendQ().DirectDequeueSize();
+	wsabuf[0].buf = session->GetSendQ().GetReadPos();
+	wsabuf[1].len = session->GetSendQ().GetUseSize() - session->GetSendQ().DirectDequeueSize();
+	wsabuf[1].buf = session->GetSendQ().GetBufPtr();
+
+
+	DWORD flags = 0;
+	InterlockedAdd((LONG *)&session->GetIOCount(), 1);
+
+	//InterlockedExchange8((char *)&session->sendOn, true);
+	printf("send On\n");
+	int retval = WSASend(session->GetSocket(), wsabuf, 2, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
+	//printf("send\n");
+	if (retval == SOCKET_ERROR)
+	{
+		int err;
+		if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
+		{
+			//printf("Not Overlapped Send I/O %d, %d\n",session->GetID(),err);
+			printf("send Off %d\n",err);
+			InterlockedExchange8(&session->GetSendFlag(), 1);
+			if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)//&& !session->GetSocketActive())
+			{
+				Disconnect(session->GetID());
+			}
+			//InterlockedExchange8((char *)&session->sendOn, false);
+			//check delete
+			//sendQ.UnLock();
+			return false;
+		}
+	}
+	//sendQ.UnLock();
 	return true;
 }

@@ -21,12 +21,19 @@ public:
 	SOCKET GetSocket() { return sock; }
 	BOOL &GetSocketActive() { return sockActive; }
 	LONGLONG GetID() { return sessionID; }
+	MyOverlapped &GetSendOverlap() { return sendOverlap; }
+	MyOverlapped &GetRecvOverlap() { return recvOverlap; }
 
-	BOOL RecvPost(BOOL);
+	BOOL RecvPost();
 	BOOL SendPost();
 	BOOL Release();
 	void Lock();
 	void Unlock();
+
+public:
+	//test¿ë
+	bool recvOn;
+	bool sendOn;
 
 private:
 	SOCKET sock;
