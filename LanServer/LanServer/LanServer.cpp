@@ -121,7 +121,7 @@ void CLanServer::Stop()
 
 	WaitForMultipleObjects(handleCnt, threadHandle, TRUE, INFINITE);
 
-	wprintf(L"All thread closed\n");
+	//wprintf(L"All thread closed\n");
 	delete[] threadHandle;
 
 	delete[] _hWokerThreads;
@@ -232,7 +232,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 	MyOverlapped *pOverlapped;
 	DWORD transferred;
 
-	wprintf(L"Worker thread On\n");
+	//wprintf(L"Worker thread On\n");
 	int test = 10;
 	while (1)
 	{
@@ -284,7 +284,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 		{
 			//InterlockedDecrement((LONG *)&session->GetIOCount());
 			//InterlockedExchange8((char *)&session->recvOn, false);
-			printf("recv Off\n");
+			//printf("recv Off\n");
 			session->GetRecvQ().MoveWritePos(transferred);
 			session->GetRecvQ().UnLock();
 			while (1)
@@ -293,17 +293,19 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 					break;
 				//printf("success\n");
 			}
-			printf("CRP end\n");
+			//printf("CRP end\n");
 			//session->SendPost();
 			////printf("recv->send\n");
 			//printf("recv end %d\n", session->GetID());
 			//session->RecvPost();
+			session->Lock();
 			_this->RecvPost(session);
+			session->Unlock();
 		}
 		else if (pOverlapped->type == TYPE::SEND)
 		{
 			//InterlockedExchange8((char *)&session->sendOn, false);
-			printf("send off-----------------------------------\n");
+			//printf("send off (%d) %d %d\n", session->GetSocket(),session->GetSendQ().GetReadPos()- session->GetSendQ().GetBufPtr(),transferred);
 			//SendFlag = false;
 			//InterlockedDecrement((LONG *)&session->GetIOCount());
 
@@ -320,8 +322,10 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			//wprintf(L"%10d\n", session->GetSendQ().GetReadPos() - session->GetSendQ().GetBufPtr());
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 
+			session->Lock();
 			_this->SendPost(session);
-			printf("lunlun|||||||||||||||||||||||||||||||||||||||||||||\n");
+			session->Unlock();
+			//printf("lunlun|||||||||||||||||||||||||||||||||||||||||||||\n");
 
 			_this->OnSend(session->GetID(),transferred);
 			//printf("send end %d\n",session->GetID());
@@ -367,7 +371,7 @@ unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 	DWORD acceptBefore = 0;
 	DWORD recvBefore = 0;
 	DWORD sendBefore = 0;
-	wprintf(L"Monitoring Thread On\n");
+	//wprintf(L"Monitoring Thread On\n");
 	while (1)
 	{
 		if (timeGetTime() - tick >= 1000)
@@ -471,24 +475,24 @@ bool CLanServer::RecvPost(Session *session)
 	InterlockedAdd((LONG *)&session->GetIOCount(), 1);
 
 	//InterlockedExchange8((char *)&session->recvOn, true);
-	printf("recv On\n");
+	//printf("recv On\n");
 
 	int retval = WSARecv(session->GetSocket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->GetRecvOverlap(), NULL);
-	//printf("recv\n");
+	////printf("recv\n");
 	if (retval == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
 		//if (WSAGetLastError() != ERROR_IO_PENDING)
 		if (err != ERROR_IO_PENDING)
 		{
-			//printf("%d\n",err);
-			//printf("Not Overlapped Recv I/O %d\n", sessionID);
+			////printf("%d\n",err);
+			////printf("Not Overlapped Recv I/O %d\n", sessionID);
 			if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)//&& !session->GetSocketActive())
 			{
 				Disconnect(session->GetID());
 			}
 			//InterlockedExchange8((char *)&session->recvOn, false);
-			printf("recv Off\n");
+			//printf("recv Off\n");
 			//check delete
 
 			return false;
@@ -499,19 +503,6 @@ bool CLanServer::RecvPost(Session *session)
 }
 bool CLanServer::SendPost(Session *session)
 {
-	if (!session->GetSocketActive())
-		return false;
-	//sendQ.Lock();
-	
-	if (session->GetSendQ().GetUseSize() <= 0)
-	{
-		//volatile int test;
-		//printf("use size\n");
-		//test = 1;
-		//sendQ.UnLock();
-		return false;
-	}
-
 	if (InterlockedExchange8(&session->GetSendFlag(), 0) == 0)
 	{
 		//volatile int test;
@@ -519,6 +510,25 @@ bool CLanServer::SendPost(Session *session)
 		//test = 1;
 		return false;
 	}
+
+	if (!session->GetSocketActive())
+	{
+		InterlockedExchange8(&session->GetSendFlag(), 1);
+		return false;
+	}
+	//sendQ.Lock();
+	
+	if (session->GetSendQ().GetUseSize() <= 0)
+	{
+		InterlockedExchange8(&session->GetSendFlag(), 1);
+		//volatile int test;
+		//printf("use size\n");
+		//test = 1;
+		//sendQ.UnLock();
+		return false;
+	}
+
+	
 	//printf("%d---\n", sessionID);
 	WSABUF wsabuf[2];
 
@@ -532,7 +542,7 @@ bool CLanServer::SendPost(Session *session)
 	InterlockedAdd((LONG *)&session->GetIOCount(), 1);
 
 	//InterlockedExchange8((char *)&session->sendOn, true);
-	printf("send On\n");
+	//printf("send On (%d) <%d> %d %d %d\n",session->GetSocket(),session->GetID(), session->GetSendQ().GetReadPos()- session->GetSendQ().GetBufPtr(), session->GetSendQ().GetUseSize(),wsabuf[0].len+wsabuf[1].len);
 	int retval = WSASend(session->GetSocket(), wsabuf, 2, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
 	//printf("send\n");
 	if (retval == SOCKET_ERROR)
@@ -541,7 +551,7 @@ bool CLanServer::SendPost(Session *session)
 		if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
 		{
 			//printf("Not Overlapped Send I/O %d, %d\n",session->GetID(),err);
-			printf("send Off %d\n",err);
+			//printf("send Off %d\n",err);
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 			if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)//&& !session->GetSocketActive())
 			{

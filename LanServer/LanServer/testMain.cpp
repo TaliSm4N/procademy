@@ -20,14 +20,14 @@ int main()
 
 	while (1)
 	{
-		//system("cls");
-		//wprintf(L"----------------------------------\n");
-		//wprintf(L"sessionCount  : %8d\n",test.GetSessionCount());
-		//wprintf(L"acceptTotal   : %8d\n",test.GetAcceptTotal());
-		//wprintf(L"acceptTPS     : %8d\n",test.GettAcceptTPS());
-		//wprintf(L"recvPacketTPS : %8d\n", test.GetRecvPacketTPS());
-		//wprintf(L"sendPacketTPS : %8d\n", test.GetSendPacketTPS());
-		//wprintf(L"----------------------------------\n");
+		system("cls");
+		wprintf(L"----------------------------------\n");
+		wprintf(L"sessionCount  : %8d\n",test.GetSessionCount());
+		wprintf(L"acceptTotal   : %8d\n",test.GetAcceptTotal());
+		wprintf(L"acceptTPS     : %8d\n",test.GettAcceptTPS());
+		wprintf(L"recvPacketTPS : %8d\n", test.GetRecvPacketTPS());
+		wprintf(L"sendPacketTPS : %8d\n", test.GetSendPacketTPS());
+		wprintf(L"----------------------------------\n");
 		Sleep(1000);
 	}
 

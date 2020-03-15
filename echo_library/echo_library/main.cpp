@@ -12,7 +12,7 @@
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	initNetwork();
+	initNetwork(); 
 	InitContents();
 
 	while (1)
