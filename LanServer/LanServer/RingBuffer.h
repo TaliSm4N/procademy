@@ -66,12 +66,12 @@ public:
 	int Enqueue(char *chpData, int iSize);
 	int Dequeue(char *chpData,int size);
 #ifdef __LUMO_PACKET__
-	int Enqueue(Packet &p);
-	int Dequeue(Packet &p,int iSize);
+	int Enqueue(Packet *p);
+	int Dequeue(Packet *p,int iSize);
 #endif
 #ifdef _XSTRING_
-	int Enqueue(std::wstring &str, int iSize);
-	int Dequeue(std::wstring &str, int iSize);
+	int Enqueue(std::wstring *str, int iSize);
+	int Dequeue(std::wstring *str, int iSize);
 #endif
 
 	//////////////////////////////////////////////////////////////////////////

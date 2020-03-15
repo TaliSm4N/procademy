@@ -22,7 +22,7 @@ void CMyServer::OnRecv(DWORD sessionID, Packet *p)
 	//switch (type)
 	//{
 	//case 0:
-		Echo(sessionID, *p);
+		Echo(sessionID, p);
 		//break;
 	//}
 }
@@ -33,12 +33,15 @@ void CMyServer::OnSend(DWORD sessionID, int sendsize)
 }
 void CMyServer::OnClientJoin(DWORD sessionID)
 {
+	LanServerHeader header;
 	Player *player = new Player(sessionID);
-	Packet p;
-	p << 0x7fffffffffffffff;
+	Packet *p = new Packet;
+	header.len = 8;
+	p->PutData((char *)&header, sizeof(header));
+	*p << 0x7fffffffffffffff;
 	AcquireSRWLockExclusive(&playerListLock);
 	playerList.insert(std::make_pair(sessionID, player));
-	SendPacket(sessionID, &p);
+	SendPacket(sessionID, p);
 	//¿ä³ð ¹®Á¦
 
 	ReleaseSRWLockExclusive(&playerListLock);
@@ -60,24 +63,25 @@ void CMyServer::OnError(int errorcode, WCHAR *)
 {}
 
 
-bool CMyServer::Echo(LONGLONG sessionID, Packet &p)
+bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 {
+	Packet *sendPacket = new Packet;
 	AcquireSRWLockExclusive(&playerListLock);
 	Player *player = (*playerList.find(sessionID)).second;
 	ReleaseSRWLockExclusive(&playerListLock);
-	//Header header;
+	LanServerHeader header;
 	//
 	//header.len = 8;
 
 	LONGLONG data;
 
-	p >> data;
+	*p >> data;
 
-	p.Clear();
-	//p.PutData((char *)&header, sizeof(header));
-	p << data;
+	header.len = sizeof(data);
+	sendPacket->PutData((char *)&header, sizeof(header));
+	*sendPacket << data;
 
-	SendPacket(sessionID, &p);
+	SendPacket(sessionID, sendPacket);
 	//SendUnicast(session, p);
 
 	return TRUE;

@@ -304,21 +304,15 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 		}
 		else if (pOverlapped->type == TYPE::SEND)
 		{
-			//InterlockedExchange8((char *)&session->sendOn, false);
-			//printf("send off (%d) %d %d\n", session->GetSocket(),session->GetSendQ().GetReadPos()- session->GetSendQ().GetBufPtr(),transferred);
-			//SendFlag = false;
-			//InterlockedDecrement((LONG *)&session->GetIOCount());
-
-			//static int check=0;
-			//static int before = 0;
-			//InterlockedExchange((LONG *)&before, check);
-			//if (InterlockedExchange((LONG *)&check, session->GetSendQ().GetReadPos() - session->GetSendQ().GetBufPtr())!=before)
-			//{
-			//	printf("---??\n");
-			//}
-			
 			//wprintf(L"%10d ", session->GetSendQ().GetReadPos()- session->GetSendQ().GetBufPtr());
-			session->GetSendQ().MoveReadPos(transferred);
+			//session->GetSendQ().MoveReadPos(transferred);
+			for (int i = 0; i < transferred/10; i++)
+			{
+				Packet *temp;
+				session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
+				temp->Release();
+			}
+			//session->GetSendQ().MoveReadPos(sizeof(Packet *)*session->GetSendPacketCnt());
 			//wprintf(L"%10d\n", session->GetSendQ().GetReadPos() - session->GetSendQ().GetBufPtr());
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 
@@ -398,7 +392,7 @@ PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 {
 	LanServerHeader header;
 	int recvQSize = session->GetRecvQ().GetUseSize();
-
+	//수정중
 	Packet payload;
 
 	if (sizeof(header) > recvQSize)
@@ -411,7 +405,7 @@ PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 
 	session->GetRecvQ().MoveReadPos(sizeof(LanServerHeader));
 
-	if (session->GetRecvQ().Dequeue(payload, header.len) != header.len)
+	if (session->GetRecvQ().Dequeue(&payload, header.len) != header.len)
 		return FAIL;
 
 	//if (!PacketProc(session, 0, payload))
@@ -439,15 +433,20 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	ReleaseSRWLockExclusive(&sessionListLock);
 	header.len = p->GetDataSize();
 
-	if (session->GetSendQ().GetFreeSize() >= p->GetDataSize() + sizeof(header))
+	//if (session->GetSendQ().GetFreeSize() >= p->GetDataSize() + sizeof(header))
+	//{
+	//	session->GetSendQ().Enqueue((char *)&header, sizeof(header));
+	//	session->GetSendQ().Enqueue(p);
+	//}
+	//else
+	//{
+	//	session->Unlock();
+	//	return false;
+	//}
+
+	if (session->GetSendQ().GetFreeSize() >= sizeof(p))
 	{
-		session->GetSendQ().Enqueue((char *)&header, sizeof(header));
-		session->GetSendQ().Enqueue(*p);
-	}
-	else
-	{
-		session->Unlock();
-		return false;
+		session->GetSendQ().Enqueue((char *)&p,sizeof(p));
 	}
 
 	//session->SendPost();
@@ -530,20 +529,48 @@ bool CLanServer::SendPost(Session *session)
 
 	
 	//printf("%d---\n", sessionID);
-	WSABUF wsabuf[2];
+	//WSABUF wsabuf[2];
+	//
+	//wsabuf[0].len = session->GetSendQ().DirectDequeueSize();
+	//wsabuf[0].buf = session->GetSendQ().GetReadPos();
+	//wsabuf[1].len = session->GetSendQ().GetUseSize() - session->GetSendQ().DirectDequeueSize();
+	//wsabuf[1].buf = session->GetSendQ().GetBufPtr();
+	int sendQsize = session->GetSendQ().GetUseSize();
+	int peekCnt = sendQsize / sizeof(Packet *);
+	WSABUF wsabuf[1024];
 
-	wsabuf[0].len = session->GetSendQ().DirectDequeueSize();
-	wsabuf[0].buf = session->GetSendQ().GetReadPos();
-	wsabuf[1].len = session->GetSendQ().GetUseSize() - session->GetSendQ().DirectDequeueSize();
-	wsabuf[1].buf = session->GetSendQ().GetBufPtr();
+	Packet *peekData[1024];
 
+	session->GetSendQ().Peek((char *)peekData, peekCnt * sizeof(Packet *));
+
+	
+	//문제 체크
+	//if (session->GetSendQ().GetReadPos() - session->testPos == 0)
+	//{
+	//	
+	//	if(session->sendOn)
+	//		printf("%d %d\n", session->GetID(), session->GetSendQ().GetReadPos() - session->GetSendQ().GetBufPtr());
+	//	session->sendOn = true;
+	//}
+	//else
+	//{
+	//	session->sendOn = false;
+	//}
+	//session->testPos = session->GetSendQ().GetReadPos();
+	//문제 체크
+	for (int i = 0; i < peekCnt; i++)
+	{
+		wsabuf[i].buf = peekData[i]->GetBufferPtr();
+		wsabuf[i].len = peekData[i]->GetDataSize();
+		peekData[i]->Ref();
+	}
 
 	DWORD flags = 0;
 	InterlockedAdd((LONG *)&session->GetIOCount(), 1);
 
 	//InterlockedExchange8((char *)&session->sendOn, true);
 	//printf("send On (%d) <%d> %d %d %d\n",session->GetSocket(),session->GetID(), session->GetSendQ().GetReadPos()- session->GetSendQ().GetBufPtr(), session->GetSendQ().GetUseSize(),wsabuf[0].len+wsabuf[1].len);
-	int retval = WSASend(session->GetSocket(), wsabuf, 2, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
+	int retval = WSASend(session->GetSocket(), wsabuf, peekCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
 	//printf("send\n");
 	if (retval == SOCKET_ERROR)
 	{
@@ -563,6 +590,8 @@ bool CLanServer::SendPost(Session *session)
 			return false;
 		}
 	}
+
+	session->SetSendPacketCnt(peekCnt);
 	//sendQ.UnLock();
 	return true;
 }

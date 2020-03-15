@@ -28,9 +28,16 @@ Packet::~Packet()
 
 void Packet::Release(void)
 {
-	front = 0;
-	rear = 0;
+	if (InterlockedDecrement((LONG *)&refCnt) == 0)
+	{
+		delete this;
+	}
 }
+void Packet::Ref()
+{
+	InterlockedIncrement((LONG *)&refCnt);
+}
+
 
 void Packet::Clear()
 {

@@ -13,7 +13,7 @@ public:
 	virtual void OnClientLeave(DWORD sessionID);
 	virtual void OnError(int errorcode, WCHAR *);
 
-	bool Echo(LONGLONG sessionID, Packet &p);
+	bool Echo(LONGLONG sessionID, Packet *p);
 private:
 	std::map < DWORD, Player *> playerList;
 	SRWLOCK playerListLock;

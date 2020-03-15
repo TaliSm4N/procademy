@@ -1,7 +1,7 @@
 #ifndef __LUMO_PACKET__
 #define __LUMO_PACKET__
 
-#define DEFAULT_PACKET_SIZE 5000
+#define DEFAULT_PACKET_SIZE 500
 
 enum PacketMode {ERROR_MODE=0, THROW_MODE};
 
@@ -18,6 +18,7 @@ public:
 	virtual ~Packet();
 
 
+	void Ref();
 	//////////////////////////////////////////////////////////////////////////
 	// ÆÐÅ¶  ÆÄ±«.
 	//
@@ -154,7 +155,7 @@ protected:
 	int size;
 	int front;
 	int rear;
-
+	int refCnt;
 };
 
 #endif
