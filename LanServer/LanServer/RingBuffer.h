@@ -17,7 +17,6 @@ private:
 	int _capacity;
 	char *_buf;
 	SRWLOCK srwLock;
-	int srwCnt;
 
 private: 
 	void Initial(int iBufferSize);
@@ -28,6 +27,8 @@ private:
 public:
 	void Resize(int size);
 	int GetBufferSize(void) const;
+
+	void Reset();
 
 	/////////////////////////////////////////////////////////////////////////
 	// 현재 사용중인 용량 얻기.

@@ -72,19 +72,22 @@ private:
 	HANDLE _hMonitorThread;
 	DWORD _dwMonitorThreadID;
 
-	std::map<DWORD,Session *>sessionList;
 	SRWLOCK sessionListLock;
 	DWORD _sessionCount;
 
-	
+	Session *_sessionList;
+	std::stack<DWORD> _unUsedSessionStack;
+	SRWLOCK _usedSessionLock;
+
 	
 private://monitoring
-	LONGLONG _acceptTotal;
-	LONGLONG _acceptTPS;
-	LONGLONG _recvPacketTPS;
-	LONGLONG _sendPacketTPS;
-	LONGLONG _recvPacketCounter;
-	LONGLONG _sendPacketCounter;
-	LONGLONG _packetPoolUse;
-	LONGLONG _packetPoolAlloc;
+	LONG64 _acceptTotal;
+	LONG64 _acceptTPS;
+	LONG64 _recvPacketTPS;
+	LONG64 _sendPacketTPS;
+	LONG64 _recvPacketCounter;
+	LONG64 _sendPacketCounter;
+	LONG64 _packetPoolUse;
+	LONG64 _packetPoolAlloc;
+
 };

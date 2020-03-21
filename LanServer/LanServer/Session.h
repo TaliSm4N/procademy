@@ -11,7 +11,10 @@ struct MyOverlapped
 class Session
 {
 public:
-	Session(SOCKET s, SOCKADDR_IN &sAddr,LONGLONG ID);
+	Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD ID);
+	Session();
+
+	void SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID);
 	~Session();
 
 	DWORD &GetIOCount() { return IOCount; }
@@ -20,7 +23,7 @@ public:
 	CHAR &GetSendFlag() { return sendFlag; }
 	SOCKET GetSocket() { return sock; }
 	BOOL &GetSocketActive() { return sockActive; }
-	LONGLONG GetID() { return sessionID; }
+	DWORD GetID() { return sessionID; }
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }
 	MyOverlapped &GetRecvOverlap() { return recvOverlap; }
 
@@ -33,14 +36,9 @@ public:
 	void SetSendPacketCnt(int cnt) { sendPacketCnt = cnt; }
 	int GetSendPacketCnt() { return sendPacketCnt; }
 
-public:
-	//test¿ë
-	char *testPos;
-	bool sendOn;
-
 private:
 	SOCKET sock;
-	LONGLONG sessionID;
+	DWORD sessionID;
 	SOCKADDR_IN sockAddr;
 	MyOverlapped sendOverlap;
 	MyOverlapped recvOverlap;

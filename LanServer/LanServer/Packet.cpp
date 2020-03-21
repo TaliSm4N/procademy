@@ -6,24 +6,20 @@
 Packet::Packet()
 	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE)
 {
-	buf = new char[DEFAULT_PACKET_SIZE];
 }
 
 Packet::Packet(int iBufferSize)
 	:mode(ERROR_MODE),err(E_NOERROR),front(0),rear(0),size(iBufferSize)
 {
-	buf = new char[iBufferSize];
 }
 
 Packet::Packet(int iBufferSize,int Mode)
 	: mode(Mode), err(E_NOERROR), front(0), rear(0),size(iBufferSize)
 {
-	buf = new char[iBufferSize];
 }
 
 Packet::~Packet()
 {
-	delete buf;
 }
 
 void Packet::Release(void)
@@ -100,8 +96,6 @@ int Packet::PutData(char *chpSrc, int iSrcSize)
 
 Packet &Packet::operator = (Packet &clSrcPacket)
 {
-	delete buf;
-	buf = new char[clSrcPacket.size];
 	size = clSrcPacket.size;
 	memcpy(buf, clSrcPacket.buf, clSrcPacket.size);
 	err = clSrcPacket.err;

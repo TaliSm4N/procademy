@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <map>
+#include <stack>
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"
@@ -19,12 +20,7 @@ bool CMyServer::OnConnectionRequest(WCHAR *ClientIP, int Port)
 
 void CMyServer::OnRecv(DWORD sessionID, Packet *p)
 {
-	//switch (type)
-	//{
-	//case 0:
-		Echo(sessionID, p);
-		//break;
-	//}
+	Echo(sessionID, p);
 }
 
 void CMyServer::OnSend(DWORD sessionID, int sendsize)
@@ -42,20 +38,24 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	AcquireSRWLockExclusive(&playerListLock);
 	playerList.insert(std::make_pair(sessionID, player));
 	SendPacket(sessionID, p);
-	//요놈 문제
 
 	ReleaseSRWLockExclusive(&playerListLock);
-	//printf("player join %lld\n", player->GetID());
 	
 }
 void CMyServer::OnClientLeave(DWORD sessionID)
 {
 	AcquireSRWLockExclusive(&playerListLock);
-	Player *player = (*playerList.find(sessionID)).second;
+	auto iter = playerList.find(sessionID);
+
+	if (iter == playerList.end())
+	{
+		ReleaseSRWLockExclusive(&playerListLock);
+		return;
+	}
+	Player *player = iter->second;
 	playerList.erase(playerList.find(sessionID));
 	player->Lock();
 	ReleaseSRWLockExclusive(&playerListLock);
-	//printf("player join %d\n", player->GetID());
 	player->UnLock();
 	delete player;
 }
@@ -65,13 +65,20 @@ void CMyServer::OnError(int errorcode, WCHAR *)
 
 bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 {
-	Packet *sendPacket = new Packet;
+	//echo하기 전에 player에 삭제되면 echo할 이유가 없음
 	AcquireSRWLockExclusive(&playerListLock);
-	Player *player = (*playerList.find(sessionID)).second;
+	auto iter = playerList.find(sessionID);
+
+	if (iter == playerList.end())
+	{
+		ReleaseSRWLockExclusive(&playerListLock);
+		return FALSE;
+	}
+	Player *player = iter->second;
 	ReleaseSRWLockExclusive(&playerListLock);
+
+	Packet *sendPacket = new Packet;
 	LanServerHeader header;
-	//
-	//header.len = 8;
 
 	LONGLONG data;
 
@@ -82,7 +89,6 @@ bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 	*sendPacket << data;
 
 	SendPacket(sessionID, sendPacket);
-	//SendUnicast(session, p);
 
 	return TRUE;
 }

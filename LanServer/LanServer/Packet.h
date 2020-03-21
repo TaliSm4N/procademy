@@ -151,7 +151,7 @@ public:
 protected:
 	BYTE mode;
 	int err;
-	char *buf;
+	char buf[DEFAULT_PACKET_SIZE];
 	int size;
 	int front;
 	int rear;

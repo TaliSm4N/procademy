@@ -5,6 +5,7 @@
 #include <process.h>
 #include <cstring>
 #include <map>
+#include <stack>
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"

@@ -4,7 +4,7 @@
 #include "RingBuffer.h"
 #include "Session.h"
 
-Session::Session(SOCKET s, SOCKADDR_IN &sAddr,LONGLONG id)
+Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	:sock(s),sockAddr(sAddr),sendFlag(1),IOCount(0), sockActive(FALSE),sessionID(id)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
@@ -14,95 +14,28 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,LONGLONG id)
 	InitializeSRWLock(&sessionLock);
 }
 
-BOOL Session::RecvPost()
+Session::Session()
+	:sendFlag(1), IOCount(0), sockActive(FALSE)
 {
-	
-	if (!sockActive)
-		return false;
-	//printf("---%d\n", sessionID);
-	recvQ.Lock();
-	WSABUF wsabuf[2];
-	wsabuf[0].len = recvQ.DirectEnqueueSize();
-	wsabuf[0].buf = recvQ.GetWritePos();
-	wsabuf[1].len = recvQ.GetFreeSize() - recvQ.DirectEnqueueSize();
-	wsabuf[1].buf = recvQ.GetBufPtr();
-
-
-	DWORD flags = 0;
-
-	InterlockedAdd((LONG *)&IOCount, 1);
-	int retval = WSARecv(sock, wsabuf, 2, NULL, &flags, (OVERLAPPED *)&recvOverlap, NULL);
-	//printf("recv\n");
-	if (retval == SOCKET_ERROR)
-	{
-		int err = WSAGetLastError();
-		//if (WSAGetLastError() != ERROR_IO_PENDING)
-		if(err!=ERROR_IO_PENDING)
-		{
-			//printf("%d\n",err);
-			//printf("Not Overlapped Recv I/O %d\n", sessionID);
-			InterlockedAdd((LONG *)&IOCount, -1);
-			//check delete
-
-			return false;
-		}
-	}
-
-	return true;
 }
 
-BOOL Session::SendPost()
+void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 {
-	
-	if (!sockActive)
-		return false;
-	//sendQ.Lock();
+	sock = s;
+	sockAddr = sAddr;
+	sessionID = ID;
+	sendFlag = 1;
+	IOCount = 0;
+	sockActive = FALSE;
+	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
+	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
+	sendOverlap.type = TYPE::SEND;
+	recvOverlap.type = TYPE::RECV;
 
-	if (sendQ.GetUseSize() <= 0)
-	{
-		//volatile int test;
-		//printf("use size\n");
-		//test = 1;
-		//sendQ.UnLock();
-		return false;
-	}
+	sendQ.Reset();
+	recvQ.Reset();
 
-	if (InterlockedExchange8(&sendFlag, 0) == 0)
-	{
-		//volatile int test;
-		//printf("flag\n");
-		//test = 1;
-		return false;
-	}
-	//printf("%d---\n", sessionID);
-	WSABUF wsabuf[2];
-	
-	wsabuf[0].len = sendQ.DirectDequeueSize();
-	wsabuf[0].buf = sendQ.GetReadPos();
-	wsabuf[1].len = sendQ.GetUseSize() - sendQ.DirectDequeueSize();
-	wsabuf[1].buf = sendQ.GetBufPtr();
-
-
-	DWORD flags = 0;
-
-	InterlockedAdd((LONG *)&IOCount, 1);
-	int retval = WSASend(sock, wsabuf, 2, NULL, flags, (OVERLAPPED *)&sendOverlap, NULL);
-	//printf("send\n");
-	if (retval == SOCKET_ERROR)
-	{
-		int err;
-		if ((err=WSAGetLastError()) != ERROR_IO_PENDING)
-		{
-			//printf("Not Overlapped Send I/O %d, %d\n",sessionID,err);
-			InterlockedExchange8(&sendFlag, 1);
-			InterlockedAdd((LONG *)&IOCount, -1);
-			//check delete
-			//sendQ.UnLock();
-			return false;
-		}
-	}
-	//sendQ.UnLock();
-	return true;
+	InitializeSRWLock(&sessionLock);
 }
 
 Session::~Session()

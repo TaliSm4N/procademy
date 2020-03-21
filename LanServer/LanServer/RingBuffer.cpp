@@ -8,19 +8,15 @@
 RingBuffer::RingBuffer()
 	:_size(0), _front(0), _rear(0), _capacity(RINGBUF_DEFAULT_SIZE)
 {
-	srwCnt = 0;
 	_buf = new char[RINGBUF_DEFAULT_SIZE + 1];
 	InitializeSRWLock(&srwLock);
-	//_buf = new char[iBufferSize+1];
 }
 
 RingBuffer::RingBuffer(int iBufferSize)
 	:_size(0),_front(0),_rear(0),_capacity(iBufferSize)
 {
-	srwCnt = 0;
 	_buf = new char[iBufferSize+1];
 	InitializeSRWLock(&srwLock);
-	//_buf = new char[iBufferSize+1];
 }
 
 RingBuffer::~RingBuffer()
@@ -35,22 +31,16 @@ void RingBuffer::Resize(int size)
 int RingBuffer::GetBufferSize() const
 {
 	return _capacity;
-	//return _capacity;
 }
 
 int RingBuffer::GetUseSize() const
 {
 	return (_rear - _front + _capacity + 1) % (_capacity + 1);
-	//return (_rear - _front + _capacity) % (_capacity + 1);
-
-	//return _size;
 }
 
 int RingBuffer::GetFreeSize() const
 {
 	return _capacity - GetUseSize();
-	//return (_capacity - (_rear - _front + _capacity) % (_capacity + 1));
-	//return _capacity - _size;
 }
 
 int RingBuffer::DirectEnqueueSize() const
@@ -71,8 +61,6 @@ int RingBuffer::DirectEnqueueSize() const
 		}
 		
 	}
-
-	//return _capacity - _rear;
 }
 
 int RingBuffer::DirectDequeueSize() const
@@ -86,15 +74,6 @@ int RingBuffer::DirectDequeueSize() const
 	{
 		return _capacity + 1 - _front;
 	}
-
-	/*
-	if (_capacity - _front<_size)
-	{
-		return _capacity - _front;
-	}
-
-	return _size;
-	*/
 }
 
 
@@ -144,18 +123,15 @@ int RingBuffer::Enqueue(std::wstring *str, int iSize)
 	if (temp < iSize)
 	{
 		str->copy((wchar_t *)(_buf + _rear), temp);
-		//memcpy(_buf + _rear, chpData, temp);
 		_rear += temp;
 		_rear %= _capacity + 1;
 		str->copy((wchar_t *)(_buf + _rear), iSize - temp, temp);
-		//memcpy(_buf + _rear, chpData + temp, iSize - temp);
 		_rear += iSize - temp;
 		_rear %= _capacity + 1;
 	}
 	else
 	{
 		str->copy((wchar_t *)(_buf + _rear), temp);
-		//memcpy(_buf + _rear, chpData, iSize);
 		_rear += iSize;
 		_rear %= _capacity + 1;
 	}
@@ -240,16 +216,13 @@ int  RingBuffer::Dequeue(Packet *p,int iSize)
 	if (temp < iSize)
 	{
 		p->PutData(_buf + _front, temp);
-		//memcpy_s(chpData, temp, _buf + _front, temp);
 		MoveFront(temp);
 		p->PutData(_buf + _front, iSize - temp);
-		//memcpy_s(chpData + temp, iSize - temp, _buf + _front, iSize - temp);
 		MoveFront(iSize - temp);
 	}
 	else
 	{
 		p->PutData(_buf + _front, iSize);
-		//memcpy_s(chpData, iSize, _buf + _front, iSize);
 		MoveFront(iSize);
 	}
 
@@ -273,21 +246,15 @@ int RingBuffer::Dequeue(std::wstring *str, int iSize)
 	temp = DirectDequeueSize();
 	if (temp < iSize)
 	{
-		//str.copy((wchar_t *)_buf + _front, temp);
 		str->resize(iSize);
 		str->insert(0, (wchar_t *)(_buf + _front),0 ,temp/sizeof(WCHAR));
-		//memcpy(chpData, _buf + _front, temp);
 		MoveFront(temp);
 		str->insert(temp / sizeof(WCHAR)+1, (wchar_t *)(_buf + _front),0 ,(iSize-temp) / sizeof(WCHAR));
-		//str.append((wchar_t *)_buf + _front, temp);
-		//memcpy(chpData + temp, _buf + _front, iSize - temp);
 		MoveFront(iSize - temp);
 	}
 	else
 	{
 		str->insert(0, (wchar_t *)(_buf + _front), iSize / sizeof(WCHAR));
-		//str.copy((wchar_t *)_buf + _front, temp);
-		//memcpy(chpData, _buf + _front, iSize);
 		MoveFront(iSize);
 	}
 
@@ -328,19 +295,6 @@ bool RingBuffer::MoveFront(int size)
 	_front += size;
 	_front %= _capacity + 1;
 	return true;
-	/*
-	if (_size < size)
-	{
-		return false;
-	}
-	
-	_size -= size;
-	_front += size;
-	_front %= _capacity + 1;
-
-
-	return true;
-	*/
 }
 
 bool RingBuffer::MoveRear(int size)
@@ -368,11 +322,16 @@ char *RingBuffer::GetBufPtr() const
 void RingBuffer::Lock()
 {
 	AcquireSRWLockExclusive(&srwLock);
-	srwCnt++;//debug¿ë
 }
 
 void RingBuffer::UnLock()
 {
-	srwCnt--;//debug¿ë
 	ReleaseSRWLockExclusive(&srwLock);
+}
+
+void RingBuffer::Reset() 
+{ 
+	_front = 0; 
+	_rear = 0; 
+	InitializeSRWLock(&srwLock);
 }
