@@ -10,7 +10,9 @@
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"
+#include "PacketPtr.h"
 #include "LanServer.h"
+
 
 CLanServer::CLanServer()
 	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
@@ -40,6 +42,7 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	_sendPacketTPS = 0;
 	_packetPoolAlloc = 0;
 	_packetPoolUse = 0;
+	_acceptFail = 0;
 
 
 	//sessionList설정
@@ -133,18 +136,11 @@ void CLanServer::Stop()
 
 	WaitForMultipleObjects(handleCnt, threadHandle, TRUE, INFINITE);
 
-	//wprintf(L"All thread closed\n");
 	delete[] threadHandle;
 
 	delete[] _hWokerThreads;
 	delete[] _dwWOrkerThreadIDs;
 
-	//for (auto iter = sessionList.begin(); iter != sessionList.end();)
-	//{
-	//	Session *session = iter->second;
-	//	delete session;
-	//}
-	//sessionList.clear();
 }
 
 unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
@@ -173,7 +169,7 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 		InterlockedIncrement((LONG *)&_this->_acceptTotal);
 		if (sock == INVALID_SOCKET)
 		{
-			printf("accept error\n");
+			InterlockedIncrement((LONG *)&_this->_acceptFail);
 			continue;
 		}
 
@@ -181,13 +177,15 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 		retval = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
 		if (retval == SOCKET_ERROR)
 		{
-			printf("SO_RCVBUF error\n");
+			InterlockedIncrement((LONG *)&_this->_acceptFail);
+			closesocket(sock);
 			return -1;
 		}
 		
 		InetNtopW(AF_INET, &sockAddr.sin_addr, IP, 16);
 		if (!_this->OnConnectionRequest(IP, ntohs(sockAddr.sin_port)))
 		{
+			InterlockedIncrement((LONG *)&_this->_connectionRequestFail);
 			closesocket(sock);
 			continue;
 		}
@@ -289,6 +287,16 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 		}
 		else if (pOverlapped->type == TYPE::SEND)
 		{
+			//자동화 테스트
+			//session->GetAutoSendQ().Lock();
+			//for (int i = 0; i < session->GetSendPacketCnt(); i++)
+			//{
+			//	PacketPtr *temp;
+			//	session->GetAutoSendQ().Dequeue((char *)&temp, sizeof(PacketPtr *));
+			//	delete temp;
+			//}
+			//session->GetAutoSendQ().UnLock();
+			//자동화 테스트
 			session->GetSendQ().Lock();
 			for (int i = 0; i < session->GetSendPacketCnt(); i++)
 			{
@@ -478,15 +486,42 @@ bool CLanServer::SendPost(Session *session)
 		session->GetSendQ().UnLock();
 		return false;
 	}
+
+	//자동화 테스트
+	//session->GetAutoSendQ().Lock();
+	//
+	//if (session->GetAutoSendQ().GetUseSize() <= 0)
+	//{
+	//	InterlockedExchange8(&session->GetSendFlag(), 1);
+	//	session->GetAutoSendQ().UnLock();
+	//	return false;
+	//}
+	//
+	//int autoSendQsize = session->GetAutoSendQ().GetUseSize();
+	//int peekAutoCnt = autoSendQsize / sizeof(PacketPtr *);
+	//PacketPtr *peekAutoData[1024];
+	//WSABUF wsaAutobuf[1024];
+	//
+	//session->GetAutoSendQ().Peek((char *)peekAutoData, peekAutoCnt * sizeof(PacketPtr *));
+	//
+	//for (int i = 0; i < peekAutoCnt; i++)
+	//{
+	//	wsaAutobuf[i].buf = peekAutoData[i]->GetPacket()->GetBufferPtr();
+	//	wsaAutobuf[i].len = peekAutoData[i]->GetPacket()->GetDataSize();
+	//}
+	//
+	//session->SetSendPacketCnt(peekAutoCnt);
+	//session->GetAutoSendQ().UnLock();
+	//자동화 테스트
 	
 	int sendQsize = session->GetSendQ().GetUseSize();
 	int peekCnt = sendQsize / sizeof(Packet *);
 	WSABUF wsabuf[1024];
 	Packet *peekData[1024];
-
+	
 	
 	session->GetSendQ().Peek((char *)peekData, peekCnt * sizeof(Packet *));
-
+	
 	for (int i = 0; i < peekCnt; i++)
 	{
 		wsabuf[i].buf = peekData[i]->GetBufferPtr();
@@ -496,12 +531,11 @@ bool CLanServer::SendPost(Session *session)
 	session->SetSendPacketCnt(peekCnt);
 	session->GetSendQ().UnLock();
 	DWORD flags = 0;
-	if (InterlockedIncrement((LONG *)&session->GetIOCount()) == 1)
-	{
-		volatile int test = 1;
-	}
+	InterlockedIncrement((LONG *)&session->GetIOCount());
+
 	
 	int retval = WSASend(session->GetSocket(), wsabuf, peekCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
+	//int retval = WSASend(session->GetSocket(), wsaAutobuf, peekAutoCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
 
 	if (retval == SOCKET_ERROR)
 	{
@@ -519,3 +553,25 @@ bool CLanServer::SendPost(Session *session)
 
 	return true;
 }
+
+//bool CLanServer::AutoSendPacket(DWORD sessionID, PacketPtr *p)
+//{
+//	LanServerHeader header;
+//
+//	int idMask = 0xffff;
+//	sessionID &= idMask;
+//	Session *session = &_sessionList[sessionID];
+//	InterlockedIncrement64((LONG64 *)&_sendPacketCounter);
+//
+//	header.len = p->GetPacket()->GetDataSize();
+//
+//	session->GetAutoSendQ().Lock();
+//	if (session->GetAutoSendQ().GetFreeSize() >= sizeof(p))
+//	{
+//		session->GetAutoSendQ().Enqueue((char *)&p, sizeof(p));
+//	}
+//	session->GetAutoSendQ().UnLock();
+//	SendPost(session);
+//
+//	return true;
+//}

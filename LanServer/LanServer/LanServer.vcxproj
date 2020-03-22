@@ -177,6 +177,7 @@
     <ClInclude Include="LanServer.h" />
     <ClInclude Include="MyServer.h" />
     <ClInclude Include="Packet.h" />
+    <ClInclude Include="PacketPtr.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="Session.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="LanServer.cpp" />
     <ClCompile Include="MyServer.cpp" />
     <ClCompile Include="Packet.cpp" />
+    <ClCompile Include="PacketPtr.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="Session.cpp" />

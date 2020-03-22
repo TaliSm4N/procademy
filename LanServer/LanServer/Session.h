@@ -49,4 +49,11 @@ private:
 	BOOL sockActive;
 	SRWLOCK sessionLock;
 	int sendPacketCnt;
+
+	//자동화 테스트용
+//public:
+//	RingBuffer &GetAutoSendQ() { return autoSendQ; }
+//private:
+//	RingBuffer autoSendQ;
+
 };

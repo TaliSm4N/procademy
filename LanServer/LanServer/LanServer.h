@@ -12,7 +12,7 @@ public:
 	CLanServer();
 	bool Start(int port, int workerCnt, bool nagle, int maxUser,bool monitoring=true);
 	void Stop();
-	int GetSessionCount() const { return _sessionCount; }
+	
 	bool Disconnect(DWORD sessionID);
 
 	bool RecvPost(Session *session);
@@ -43,11 +43,7 @@ public:
 
 	virtual void OnError(int errorcode, WCHAR *) = 0;
 
-public:
-	DWORD GetAcceptTotal() { return _acceptTotal; }
-	DWORD GettAcceptTPS() { return _acceptTPS; }
-	DWORD GetRecvPacketTPS() { return _recvPacketTPS; }
-	DWORD GetSendPacketTPS() { return _sendPacketTPS; }
+
 
 private:
 	static unsigned int WINAPI AcceptThread(LPVOID lpParam);
@@ -79,6 +75,19 @@ private:
 	std::stack<DWORD> _unUsedSessionStack;
 	SRWLOCK _usedSessionLock;
 
+	//getSettingInfo
+public:
+	DWORD GetSessionCount() const { return _sessionCount; }
+	DWORD GetWorkerThreadCount() const { return _workerCnt; }
+	DWORD GetMaxUser() const { return _maxUser; }
+	//monitoring
+public:
+	LONG64 GetAcceptTotal() const { return _acceptTotal; }
+	LONG64 GettAcceptTPS() const { return _acceptTPS; }
+	LONG64 GetRecvPacketTPS() const { return _recvPacketTPS; }
+	LONG64 GetSendPacketTPS() const { return _sendPacketTPS; }
+	LONG64 GetAcceptFail() const { return _acceptFail; }
+	LONG64 GetConnectionRequestFail() const { return _connectionRequestFail; }
 	
 private://monitoring
 	LONG64 _acceptTotal;
@@ -89,5 +98,9 @@ private://monitoring
 	LONG64 _sendPacketCounter;
 	LONG64 _packetPoolUse;
 	LONG64 _packetPoolAlloc;
+	LONG64 _acceptFail;
+	LONG64 _connectionRequestFail;
 
+public:
+	bool AutoSendPacket(DWORD sessionID, PacketPtr *p);
 };

@@ -4,6 +4,7 @@
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"
+#include "PacketPtr.h"
 #include "LanServer.h"
 #include "Player.h"
 #include "MyServer.h"
@@ -31,13 +32,27 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 {
 	LanServerHeader header;
 	Player *player = new Player(sessionID);
+
+	
+
 	Packet *p = new Packet;
 	header.len = 8;
 	p->PutData((char *)&header, sizeof(header));
 	*p << 0x7fffffffffffffff;
+
+	//자동화 테스트
+	//PacketPtr *pPtr =new PacketPtr;
+	//pPtr->GetPacket()->PutData((char *)&header, sizeof(header));
+	//*pPtr << 0x7fffffffffffffff;
+	//자동화 테스트
+
 	AcquireSRWLockExclusive(&playerListLock);
 	playerList.insert(std::make_pair(sessionID, player));
 	SendPacket(sessionID, p);
+
+	//자동화 테스트
+	//AutoSendPacket(sessionID, pPtr);
+	//자동화 테스트
 
 	ReleaseSRWLockExclusive(&playerListLock);
 	
@@ -89,6 +104,15 @@ bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 	*sendPacket << data;
 
 	SendPacket(sessionID, sendPacket);
+
+
+	//자동화 테스트
+	//PacketPtr *pPtr = new PacketPtr;
+	//pPtr->GetPacket()->PutData((char *)&header, sizeof(header));
+	//*pPtr << data;
+	//
+	//AutoSendPacket(sessionID, pPtr);
+	//자동화 테스트
 
 	return TRUE;
 }
