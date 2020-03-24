@@ -1,12 +1,17 @@
 #ifndef __LUM0_CRASH_DUMP__
 #define __LUM0_CRASH_DUMP__
 
+
+
 #include <Windows.h>// 환인 후 삭제
 #pragma comment(lib, "DbgHelp.Lib")
 #include <dbghelp.h>
+
 #include <Psapi.h>
 #include <iostream>
+
 #include <signal.h>
+
 
 class CrashDump
 {

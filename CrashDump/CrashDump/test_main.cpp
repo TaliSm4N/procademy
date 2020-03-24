@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include "CrashDump.h"
 
 int main()
