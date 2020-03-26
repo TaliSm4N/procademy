@@ -5,6 +5,8 @@
 
 #include <Windows.h>// 환인 후 삭제
 #pragma comment(lib, "DbgHelp.Lib")
+#pragma comment(lib, "ImageHlp")
+#pragma comment(lib, "psapi")
 #include <dbghelp.h>
 
 #include <Psapi.h>

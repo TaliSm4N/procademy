@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <process.h>
 #include <ctime>
+#include <map>
 #include "LockFreeStack.h"
 #include "CrashDump.h"
 
@@ -16,27 +17,46 @@ struct st_TEST_DATA
 
 LockFreeStack<st_TEST_DATA *> stack;
 
-CrashDump *Dump;
+//CrashDump *Dump;
+
+
+
+///////////////////////////////////////////////////////////
+//모니터링
+///////////////////////////////////////////////////////////
+int spinTotal = 0;
+int popTotal = 0;
+int pushTotal = 0;
 
 int main()
 {
-	Dump = new CrashDump();
+	CrashDump();
 	SYSTEM_INFO sysInfo;
-
 	//timeBeginPeriod(1);
 	GetSystemInfo(&sysInfo);
-	srand(time(NULL));
+
+	int threadCnt = sysInfo.dwNumberOfProcessors;
+	
 	DWORD id;
-	for (int i = 0; i < sysInfo.dwNumberOfProcessors*2; i++)
+	for (int i = 0; i < threadCnt; i++)
 	{
 		_beginthreadex(NULL, 0, WorkerThread, NULL, 0, (unsigned int *)&id);
 	}
 
+	int spinbefore = 0;
+	int popBefore = 0;
+	int pushBefore = 0;
+
+	
 	while (1)
 	{
 		printf("--------------------------------------------------\n");
-		printf("thread Count   : %d\n", sysInfo.dwNumberOfProcessors*2);
-		printf("test Use Count : %d\n",stack.GetUseCount());
+		printf("thread Count     : %d\n", threadCnt);
+		printf("test Use Count   : %d\n",stack.GetUseCount());
+		printf("test Push TPS    : %d\n", pushTotal - pushBefore);
+		printf("test Push Total  : %d\n",pushBefore=pushTotal);
+		printf("test Pop  TPS    : %d\n",popTotal-popBefore);
+		printf("test Pop  Total  : %d\n", popBefore = popTotal);
 		printf("--------------------------------------------------\n");
 		Sleep(1000);
 	}
@@ -46,7 +66,7 @@ int main()
 unsigned int WINAPI WorkerThread(LPVOID lpParam)
 {
 	
-
+	srand(time(NULL));
 	for (int i = 0; i < 1000; i++)
 	{
 		st_TEST_DATA *temp = new st_TEST_DATA;
@@ -54,53 +74,69 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 		temp->lData = 0x0000000055555555;
 
 		stack.Push(temp);
+
+		InterlockedIncrement((LONG *)&pushTotal);
 	}
-	Sleep(10);
+	Sleep(100);
 
 	st_TEST_DATA *data[1000];
 
 	while (1)
 	{
 		//200개는 꺼내기
-		int count = rand() % 800 + 201;
+		//int count = rand() % 300 + 701;
+		int count = 1000;
 
 		for (int i = 0; i < count; i++)
 		{
-			stack.Pop(&data[i]);
-
-			if (data[i]->lData != 0x0000000055555555)
+			if (!stack.Pop(&data[i]))
 			{
-				Dump->Crash();
+				CrashDump::Crash();
 			}
+			InterlockedIncrement((LONG *)&popTotal);
 
-			if (data[i]->lCount != 0)
+			if (data[i]->lData != 0x0000000055555555|| data[i]->lCount != 0)
 			{
-				Dump->Crash();
+				CrashDump::Crash();
 			}
+		}
 
+		for (int i = 0; i < count; i++)
+		{
 			InterlockedIncrement((LONG *)&data[i]->lData);
 			InterlockedIncrement((LONG *)&data[i]->lCount);
 		}
 
-		Sleep(5);
+		for (int i = 0; i < count; i++)
+		{
+			if (data[i]->lData != 0x0000000055555556|| data[i]->lCount != 1)
+			{
+				CrashDump::Crash();
+			}
+		}
 
 		for (int i = 0; i < count; i++)
 		{
-			if (data[i]->lData != 0x0000000055555556)
-			{
-				Dump->Crash();
-			}
-
-			if (data[i]->lCount != 1)
-			{
-				Dump->Crash();
-			}
-
 			InterlockedDecrement((LONG *)&data[i]->lData);
 			InterlockedDecrement((LONG *)&data[i]->lCount);
-
-			stack.Push(data[i]);
 		}
+
+		Sleep(20);
+
+		for (int i = 0; i < count; i++)
+		{
+			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
+			{
+				CrashDump::Crash();
+			}
+		}
+		for (int i = 0; i < count; i++)
+		{
+			stack.Push(data[i]);
+			InterlockedIncrement((LONG *)&pushTotal);
+
+		}
+		
 	}
 
 	return 0;
