@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include "MemoryPool.h"
 
 //최근 50000개만 기록한다
 //맨앞 숫자(16진수) 1일때 free
@@ -54,8 +55,9 @@ public:
 	int GetUseCount() { return _useCount; }
 
 private:
-	TOP *_TopNode;
+	TOP * volatile _TopNode;
 	unsigned long long _checkNum;
+	MemoryPool<NODE> stackPool;
 
 	int _useCount;
 };
@@ -89,15 +91,19 @@ template<class T>
 bool LockFreeStack<T>::Push(T data)
 {
 	//int temp = InterlockedIncrement64(&_checkNum);
-	NODE *newNode = new NODE(data);
-
-	
+	//NODE *newNode = new NODE(data);
+	NODE *newNode = stackPool.Alloc();
 
 	if (newNode == NULL)
 		return false;
 
-	InterlockedExchange64((LONG64 *)&track[trackCur % TRACK_MAX], (LONG64)newNode);
-	InterlockedIncrement((LONG *)&trackCur);
+	newNode->item = data;
+
+	//추적용
+	ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
+	InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)newNode);
+	//InterlockedIncrement((LONG *)&trackCur);
+	//추적용
 
 	TOP t;
 	
@@ -167,8 +173,6 @@ bool LockFreeStack<T>::Pop(T *data)
 		//	data = NULL;
 		//	return false;
 		//}
-		//isEmpty를 확인한 이후 stack이 비어버리게 되면 밑에 코드 작살남
-		//현 상태에서는 push한 것보다 pop을 더 많게하면 실패가 아니라 crash가 날 확률이 존재함
 
 		newTop = (NODE *)_TopNode->node->next;
 
@@ -176,10 +180,13 @@ bool LockFreeStack<T>::Pop(T *data)
 		
 	} 
 
-	InterlockedExchange64((LONG64 *)&track[trackCur % TRACK_MAX], (LONG64)t.node | 0x1000000000000000);
-	InterlockedIncrement((LONG *)&trackCur);
+	//추적용
+	ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
+	InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)t.node | 0x1000000000000000);
+	//추적용
 	
-	delete t.node;
+	//delete t.node;
+	stackPool.Free(t.node);
 
 	//top -> next가 자기 자신인 경우는 최초 생성시 만들어진 top뿐이다.
 

@@ -119,7 +119,8 @@ ObjectFreeList<DATA>::ObjectFreeList(int iBlockNum, bool bPlacementNew)
 		NODE *temp;
 		for (int i = 0; i < iBlockNum; i++)
 		{
-			temp = new NODE();
+			//temp = new NODE();
+			temp = (NODE *)malloc(sizeof(NODE));
 
 			if (_TopNode == nullptr)
 			{
@@ -148,7 +149,8 @@ ObjectFreeList<DATA>::~ObjectFreeList()
 	{
 		if (_placeMentNew)
 		{
-			delete (&(_TopNode->item))
+			_TopNode->item.~DATA();
+			//delete (&(_TopNode->item));
 		}
 		temp = _TopNode;
 		_TopNode = temp->NextBlock;
@@ -170,10 +172,11 @@ DATA *ObjectFreeList<DATA>::Alloc(void)
 	else
 	{
 		ret = new NODE();
-		if (_placeMentNew)
-		{
-			new (&(ret->item)) DATA();
-		}
+	}
+
+	if (_placeMentNew)
+	{
+		new (&(ret->item)) DATA();
 	}
 
 	return &(ret->item);
@@ -187,6 +190,11 @@ bool ObjectFreeList<DATA>::Free(DATA *pData)
 	if (temp->_topBump != TOP_BUMP || temp->_bottomBump != BOTTOM_BUMP)
 	{
 		return false;
+	}
+
+	if (_placeMentNew)
+	{
+		_TopNode->item.~DATA();
 	}
 
 	temp->NextBlock = _TopNode;

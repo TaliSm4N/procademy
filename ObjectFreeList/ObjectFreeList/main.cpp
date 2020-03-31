@@ -9,11 +9,16 @@ private:
 public:
 	int get() const { return test; }
 	void set(int t) { test = t; }
+
+	~MyClass()
+	{
+		std::cout << "test" << std::endl;
+	}
 };
 
 int main()
 {
-	ObjectFreeList<MyClass> *test = new ObjectFreeList<MyClass>(0);
+	ObjectFreeList<MyClass> *test = new ObjectFreeList<MyClass>(0,true);
 	printf("%d\n",sizeof(void *));
 
 	MyClass *it1 = test->Alloc();
@@ -45,11 +50,13 @@ int main()
 	it2 = test->Alloc();
 	it3 = test->Alloc();
 	it4 = test->Alloc();
-	it5 = test->Alloc();
-	it6 = test->Alloc();
+	//it5 = test->Alloc();
+	//it6 = test->Alloc();
 
 
 	printf("%d %d %d %d %d %d %d\n", it1->get(), it2->get(), it3->get(), it4->get(), it5->get(), it6->get(),it7->get());
+
+	delete test;
 
 	system("pause");
 

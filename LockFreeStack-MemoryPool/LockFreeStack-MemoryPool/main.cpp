@@ -35,8 +35,10 @@ int main()
 	//timeBeginPeriod(1);
 	GetSystemInfo(&sysInfo);
 
-	int threadCnt = sysInfo.dwNumberOfProcessors*2;
-	
+	//int threadCnt = 1;
+	int threadCnt = sysInfo.dwNumberOfProcessors;
+	//int threadCnt = sysInfo.dwNumberOfProcessors*2;
+
 	DWORD id;
 	for (int i = 0; i < threadCnt; i++)
 	{

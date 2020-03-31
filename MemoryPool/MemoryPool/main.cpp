@@ -3,19 +3,31 @@
 #include <process.h>
 #include <ctime>
 #include <map>
-#include "LockFreeStack.h"
+#include "MemoryPool.h"
 #include "CrashDump.h"
 
 unsigned int WINAPI WorkerThread(LPVOID lpParam);
+
+
+//최근 50000개만 기록한다
+//맨앞 숫자(16진수) 1일때 alloc
+//맨앞 숫자(16진수) 0일때 free
+#define TRACK_MAX 100000
+
+void *track[TRACK_MAX];
+unsigned long long trackCur = 0;
+
+
 
 struct st_TEST_DATA
 {
 	volatile LONG64 lData;
 	volatile LONG64 lCount;
+
 };
 
 
-LockFreeStack<st_TEST_DATA *> stack;
+MemoryPool<st_TEST_DATA> stack(0,false);
 
 //CrashDump *Dump;
 
@@ -35,8 +47,9 @@ int main()
 	//timeBeginPeriod(1);
 	GetSystemInfo(&sysInfo);
 
+	//int threadCnt = 1;
 	int threadCnt = sysInfo.dwNumberOfProcessors*2;
-	
+
 	DWORD id;
 	for (int i = 0; i < threadCnt; i++)
 	{
@@ -47,15 +60,15 @@ int main()
 	int popBefore = 0;
 	int pushBefore = 0;
 
-	
+
 	while (1)
 	{
 		printf("--------------------------------------------------\n");
 		printf("thread Count     : %d\n", threadCnt);
-		printf("test Use Count   : %d\n",stack.GetUseCount());
+		printf("test Use Count   : %d\n", stack.GetUseCount());
 		printf("test Push TPS    : %d\n", pushTotal - pushBefore);
-		printf("test Push Total  : %d\n",pushBefore=pushTotal);
-		printf("test Pop  TPS    : %d\n",popTotal-popBefore);
+		printf("test Push Total  : %d\n", pushBefore = pushTotal);
+		printf("test Pop  TPS    : %d\n", popTotal - popBefore);
 		printf("test Pop  Total  : %d\n", popBefore = popTotal);
 		printf("--------------------------------------------------\n");
 		Sleep(1000);
@@ -65,21 +78,43 @@ int main()
 
 unsigned int WINAPI WorkerThread(LPVOID lpParam)
 {
-	
+
 	srand(time(NULL));
+	st_TEST_DATA *data[1000];
 	for (int i = 0; i < 1000; i++)
 	{
-		st_TEST_DATA *temp = new st_TEST_DATA;
-		temp->lCount = 0;
-		temp->lData = 0x0000000055555555;
+		//st_TEST_DATA *temp;// = new st_TEST_DATA;
+		data[i] = stack.Alloc();
 
-		stack.Push(temp);
+		InterlockedExchange64((LONG64 *)&track[trackCur%TRACK_MAX], (LONG64)data[i]|0x1000000000000000);
+		InterlockedIncrement((LONG *)&trackCur);
+
+		if(data[i]==NULL)
+			CrashDump::Crash();
+		data[i]->lCount = 0;
+		data[i]->lData = 0x0000000055555555;
 
 		InterlockedIncrement((LONG *)&pushTotal);
 	}
+
+	Sleep(5000);
+
+	for (int i = 0; i < 1000; i++)
+	{
+		InterlockedExchange64((LONG64 *)&track[trackCur % TRACK_MAX], (LONG64)data[i]);
+		InterlockedIncrement((LONG *)&trackCur);
+		if (!stack.Free(data[i]))
+		{
+			CrashDump::Crash();
+		}
+
+		InterlockedExchange64((LONG64 *)&track[trackCur % TRACK_MAX], (LONG64)data[i]);
+		InterlockedIncrement((LONG *)&trackCur);
+	}
+
 	Sleep(100);
 
-	st_TEST_DATA *data[1000];
+	
 
 	while (1)
 	{
@@ -89,13 +124,21 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 
 		for (int i = 0; i < count; i++)
 		{
-			if (!stack.Pop(&data[i]))
+			data[i] = stack.Alloc(false);
+
+
+			//추적용
+			ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
+			InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)data[i] | 0x1000000000000000);
+			//추적용
+
+			if(data[i] ==NULL)
 			{
 				CrashDump::Crash();
 			}
 			InterlockedIncrement((LONG *)&popTotal);
 
-			if (data[i]->lData != 0x0000000055555555|| data[i]->lCount != 0)
+			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
 			{
 				CrashDump::Crash();
 			}
@@ -109,7 +152,7 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 
 		for (int i = 0; i < count; i++)
 		{
-			if (data[i]->lData != 0x0000000055555556|| data[i]->lCount != 1)
+			if (data[i]->lData != 0x0000000055555556 || data[i]->lCount != 1)
 			{
 				CrashDump::Crash();
 			}
@@ -125,7 +168,6 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 
 		for (int i = 0; i < count; i++)
 		{
-
 			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
 			{
 				CrashDump::Crash();
@@ -133,11 +175,17 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 		}
 		for (int i = 0; i < count; i++)
 		{
-			stack.Push(data[i]);
+
+			//추적용
+			ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
+			InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)data[i]);
+			//추적용
+			stack.Free(data[i]);
+			//stack.Push(data[i]);
 			InterlockedIncrement((LONG *)&pushTotal);
 
 		}
-		
+
 	}
 
 	return 0;

@@ -3,7 +3,7 @@
 #include <process.h>
 #include <ctime>
 #include <map>
-#include "LockFreeStack.h"
+#include "LockFreeQueue.h"
 #include "CrashDump.h"
 
 unsigned int WINAPI WorkerThread(LPVOID lpParam);
@@ -15,7 +15,7 @@ struct st_TEST_DATA
 };
 
 
-LockFreeStack<st_TEST_DATA *> stack;
+LockFreeQueue<st_TEST_DATA *> queue;
 
 //CrashDump *Dump;
 
@@ -35,8 +35,10 @@ int main()
 	//timeBeginPeriod(1);
 	GetSystemInfo(&sysInfo);
 
-	int threadCnt = sysInfo.dwNumberOfProcessors*2;
-	
+	//int threadCnt = 1;
+	int threadCnt = sysInfo.dwNumberOfProcessors;
+	//int threadCnt = sysInfo.dwNumberOfProcessors*2;
+
 	DWORD id;
 	for (int i = 0; i < threadCnt; i++)
 	{
@@ -47,16 +49,16 @@ int main()
 	int popBefore = 0;
 	int pushBefore = 0;
 
-	
+
 	while (1)
 	{
 		printf("--------------------------------------------------\n");
 		printf("thread Count     : %d\n", threadCnt);
-		printf("test Use Count   : %d\n",stack.GetUseCount());
-		printf("test Push TPS    : %d\n", pushTotal - pushBefore);
-		printf("test Push Total  : %d\n",pushBefore=pushTotal);
-		printf("test Pop  TPS    : %d\n",popTotal-popBefore);
-		printf("test Pop  Total  : %d\n", popBefore = popTotal);
+		printf("test Use Count   : %d\n", queue.GetUseCount());
+		printf("test Enq  TPS    : %d\n", pushTotal - pushBefore);
+		printf("test Enq  Total  : %d\n", pushBefore = pushTotal);
+		printf("test Deq  TPS    : %d\n", popTotal - popBefore);
+		printf("test Deq  Total  : %d\n", popBefore = popTotal);
 		printf("--------------------------------------------------\n");
 		Sleep(1000);
 	}
@@ -65,7 +67,7 @@ int main()
 
 unsigned int WINAPI WorkerThread(LPVOID lpParam)
 {
-	
+
 	srand(time(NULL));
 	for (int i = 0; i < 1000; i++)
 	{
@@ -73,9 +75,9 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 		temp->lCount = 0;
 		temp->lData = 0x0000000055555555;
 
-		stack.Push(temp);
-
+		queue.Enqueue(temp);
 		InterlockedIncrement((LONG *)&pushTotal);
+		//stack.Push(temp);
 	}
 	Sleep(100);
 
@@ -89,13 +91,14 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 
 		for (int i = 0; i < count; i++)
 		{
-			if (!stack.Pop(&data[i]))
+			//if (!stack.Pop(&data[i]))
+			if(!queue.Dequeue(&data[i]))
 			{
 				CrashDump::Crash();
 			}
 			InterlockedIncrement((LONG *)&popTotal);
 
-			if (data[i]->lData != 0x0000000055555555|| data[i]->lCount != 0)
+			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
 			{
 				CrashDump::Crash();
 			}
@@ -109,7 +112,7 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 
 		for (int i = 0; i < count; i++)
 		{
-			if (data[i]->lData != 0x0000000055555556|| data[i]->lCount != 1)
+			if (data[i]->lData != 0x0000000055555556 || data[i]->lCount != 1)
 			{
 				CrashDump::Crash();
 			}
@@ -133,11 +136,12 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 		}
 		for (int i = 0; i < count; i++)
 		{
-			stack.Push(data[i]);
+			queue.Enqueue(data[i]);
 			InterlockedIncrement((LONG *)&pushTotal);
+			//stack.Push(data[i]);
 
 		}
-		
+
 	}
 
 	return 0;
