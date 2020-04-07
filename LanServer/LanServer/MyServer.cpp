@@ -5,6 +5,7 @@
 #include "RingBuffer.h"
 #include "Session.h"
 #include "PacketPtr.h"
+#include "MemoryPool.h"
 #include "LanServer.h"
 #include "Player.h"
 #include "MyServer.h"
@@ -35,7 +36,8 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 
 	
 
-	Packet *p = new Packet;
+	//Packet *p = new Packet;
+	Packet *p = PacketAlloc();
 	header.len = 8;
 	p->PutData((char *)&header, sizeof(header));
 	*p << 0x7fffffffffffffff;
@@ -92,7 +94,8 @@ bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 	Player *player = iter->second;
 	ReleaseSRWLockExclusive(&playerListLock);
 
-	Packet *sendPacket = new Packet;
+	Packet *sendPacket = PacketAlloc();
+	//Packet *sendPacket = new Packet;
 	LanServerHeader header;
 
 	LONGLONG data;

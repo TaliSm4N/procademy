@@ -7,6 +7,7 @@
 #include <map>
 #include <stack>
 #include <thread>
+#include "MemoryPool.h"
 #include "Packet.h"
 #include "PacketPtr.h"
 #include "RingBuffer.h"

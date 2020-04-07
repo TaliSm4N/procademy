@@ -34,6 +34,17 @@ void Packet::Ref()
 	InterlockedIncrement((LONG *)&refCnt);
 }
 
+bool Packet::UnRef(void)
+{
+	if (InterlockedDecrement((LONG *)&refCnt) == 0)
+	{
+		return true;
+		//delete this;
+	}
+
+	return false;
+}
+
 
 void Packet::Clear()
 {

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <map>
 #include <stack>
+#include "MemoryPool.h"
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"
@@ -17,7 +18,7 @@
 CLanServer::CLanServer()
 	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
 {
-	
+	packetPool = new MemoryPool<Packet>(10000, true);
 }
 
 bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monitoring)
@@ -25,7 +26,7 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	////////////////DEBUG
 
 	////////////////DEBUG
-
+	
 
 	timeBeginPeriod(1);
 	_port = port;
@@ -302,7 +303,11 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			{
 				Packet *temp;
 				session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
-				temp->Release();
+				//temp->Release();
+				if (temp->UnRef())
+				{
+					_this->PacketFree(temp);
+				}
 			}
 			session->GetSendQ().UnLock();
 			InterlockedExchange8(&session->GetSendFlag(), 1);
@@ -337,7 +342,11 @@ bool CLanServer::Disconnect(DWORD sessionID)
 	{
 		Packet *temp;
 		session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
-		temp->Release();
+		//temp->Release();
+		if (temp->UnRef())
+		{
+			PacketFree(temp);
+		}
 	}
 
 	session->GetSendQ().UnLock();

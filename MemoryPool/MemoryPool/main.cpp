@@ -1,12 +1,16 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <Windows.h>
 #include <process.h>
 #include <ctime>
 #include <map>
 #include "MemoryPool.h"
+#include "MemoryPoolTLS.h"
 #include "CrashDump.h"
 
-unsigned int WINAPI WorkerThread(LPVOID lpParam);
+
+unsigned int WINAPI MemoryPoolThread(LPVOID lpParam);
+unsigned int WINAPI NewDeleteThread(LPVOID lpParam);
 
 
 //최근 50000개만 기록한다
@@ -21,13 +25,11 @@ unsigned long long trackCur = 0;
 
 struct st_TEST_DATA
 {
-	volatile LONG64 lData;
-	volatile LONG64 lCount;
-
+	char data[112];
 };
 
 
-MemoryPool<st_TEST_DATA> stack(0,false);
+MemoryPool<st_TEST_DATA> memory;
 
 //CrashDump *Dump;
 
@@ -40,6 +42,9 @@ int spinTotal = 0;
 int popTotal = 0;
 int pushTotal = 0;
 
+int testCnt;
+int testAmount;
+
 int main()
 {
 	CrashDump();
@@ -48,144 +53,65 @@ int main()
 	GetSystemInfo(&sysInfo);
 
 	//int threadCnt = 1;
-	int threadCnt = sysInfo.dwNumberOfProcessors*2;
+	int threadCnt;
 
 	DWORD id;
+
+	printf("set Test Thread Count\n>> ");
+	scanf("%d", &threadCnt);
+	printf("set Test Amount\n>> ");
+	scanf("%d", &testAmount);
+	printf("set Test Count\n>> ");
+	scanf("%d",&testCnt);
+
+
 	for (int i = 0; i < threadCnt; i++)
 	{
-		_beginthreadex(NULL, 0, WorkerThread, NULL, 0, (unsigned int *)&id);
+		_beginthreadex(NULL, 0, MemoryPoolThread, NULL, 0, (unsigned int *)&id);
+		_beginthreadex(NULL, 0, NewDeleteThread, NULL, 0, (unsigned int *)&id);
 	}
 
-	int spinbefore = 0;
-	int popBefore = 0;
-	int pushBefore = 0;
-
-
-	while (1)
-	{
-		printf("--------------------------------------------------\n");
-		printf("thread Count     : %d\n", threadCnt);
-		printf("test Use Count   : %d\n", stack.GetUseCount());
-		printf("test Push TPS    : %d\n", pushTotal - pushBefore);
-		printf("test Push Total  : %d\n", pushBefore = pushTotal);
-		printf("test Pop  TPS    : %d\n", popTotal - popBefore);
-		printf("test Pop  Total  : %d\n", popBefore = popTotal);
-		printf("--------------------------------------------------\n");
-		Sleep(1000);
-	}
+	while (1);
 }
 
 
-unsigned int WINAPI WorkerThread(LPVOID lpParam)
+unsigned int WINAPI MemoryPoolThread(LPVOID lpParam)
 {
-
-	srand(time(NULL));
-	st_TEST_DATA *data[1000];
-	for (int i = 0; i < 1000; i++)
+	st_TEST_DATA *p;
+	for (int i = 0; i < testCnt;i++)
 	{
-		//st_TEST_DATA *temp;// = new st_TEST_DATA;
-		data[i] = stack.Alloc();
+		for (int j = 0; j < testAmount; j++)
+		{
+			p = memory.Alloc();
 
-		InterlockedExchange64((LONG64 *)&track[trackCur%TRACK_MAX], (LONG64)data[i]|0x1000000000000000);
-		InterlockedIncrement((LONG *)&trackCur);
+			for (int index = 0; index < 100; index++)
+			{
+				p->data[index] = index;
+			}
 
-		if(data[i]==NULL)
-			CrashDump::Crash();
-		data[i]->lCount = 0;
-		data[i]->lData = 0x0000000055555555;
-
-		InterlockedIncrement((LONG *)&pushTotal);
+			memory.Free(p);
+		}
 	}
 
-	Sleep(5000);
+	return 0;
+}
 
-	for (int i = 0; i < 1000; i++)
+unsigned int WINAPI NewDeleteThread(LPVOID lpParam)
+{
+	st_TEST_DATA *p;
+	for (int i = 0; i < testCnt; i++)
 	{
-		InterlockedExchange64((LONG64 *)&track[trackCur % TRACK_MAX], (LONG64)data[i]);
-		InterlockedIncrement((LONG *)&trackCur);
-		if (!stack.Free(data[i]))
+		for (int j = 0; j < testAmount; j++)
 		{
-			CrashDump::Crash();
-		}
+			p = new st_TEST_DATA;
 
-		InterlockedExchange64((LONG64 *)&track[trackCur % TRACK_MAX], (LONG64)data[i]);
-		InterlockedIncrement((LONG *)&trackCur);
-	}
-
-	Sleep(100);
-
-	
-
-	while (1)
-	{
-		//200개는 꺼내기
-		//int count = rand() % 300 + 701;
-		int count = 1000;
-
-		for (int i = 0; i < count; i++)
-		{
-			data[i] = stack.Alloc(false);
-
-
-			//추적용
-			ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
-			InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)data[i] | 0x1000000000000000);
-			//추적용
-
-			if(data[i] ==NULL)
+			for (int index = 0; index < 100; index++)
 			{
-				CrashDump::Crash();
+				p->data[index] = index;
 			}
-			InterlockedIncrement((LONG *)&popTotal);
 
-			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
-			{
-				CrashDump::Crash();
-			}
+			delete p;
 		}
-
-		for (int i = 0; i < count; i++)
-		{
-			InterlockedIncrement((LONG *)&data[i]->lData);
-			InterlockedIncrement((LONG *)&data[i]->lCount);
-		}
-
-		for (int i = 0; i < count; i++)
-		{
-			if (data[i]->lData != 0x0000000055555556 || data[i]->lCount != 1)
-			{
-				CrashDump::Crash();
-			}
-		}
-
-		for (int i = 0; i < count; i++)
-		{
-			InterlockedDecrement((LONG *)&data[i]->lData);
-			InterlockedDecrement((LONG *)&data[i]->lCount);
-		}
-
-		Sleep(20);
-
-		for (int i = 0; i < count; i++)
-		{
-			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
-			{
-				CrashDump::Crash();
-			}
-		}
-		for (int i = 0; i < count; i++)
-		{
-
-			//추적용
-			ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
-			InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)data[i]);
-			//추적용
-			stack.Free(data[i]);
-			//stack.Push(data[i]);
-			InterlockedIncrement((LONG *)&pushTotal);
-
-		}
-
 	}
 
 	return 0;

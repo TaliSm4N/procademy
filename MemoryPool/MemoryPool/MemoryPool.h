@@ -10,22 +10,20 @@ template <class T>
 class MemoryPool
 {
 private:
-#pragma pack(push,1)
+//#pragma pack(push,1)
 	struct NODE
 	{
 		NODE()
 		{
 			NextBlock = NULL;
-			_topBump = TOP_BUMP;
 			_bottomBump = BOTTOM_BUMP;
 		}
 
 		NODE *NextBlock;
-		int _topBump;
 		T item;
 		int _bottomBump;
 	};
-#pragma pack(pop)
+//#pragma pack(pop)
 
 	struct TOP
 	{
@@ -81,7 +79,7 @@ MemoryPool<T>::MemoryPool(int blockNum,bool maxLimit)
 	for (int i = 0; i < blockNum; i++)
 	{
 		temp = (NODE *)malloc(sizeof(NODE));
-		temp->_topBump = TOP_BUMP;
+		//temp->_topBump = TOP_BUMP;
 		temp->_bottomBump = BOTTOM_BUMP;
 		//temp = new NODE();
 
@@ -143,7 +141,7 @@ T *MemoryPool<T>::Alloc(bool placement)
 			InterlockedIncrement((LONG *)&_freeCount);
 			//ret = new NODE();
 			ret = (NODE *)malloc(sizeof(NODE));
-			ret->_topBump = TOP_BUMP;
+			//ret->_topBump = TOP_BUMP;
 			ret->_bottomBump = BOTTOM_BUMP;
 			
 			if (placement)
@@ -178,9 +176,9 @@ bool MemoryPool<T>::Free(T *data)
 {
 	//InterlockedIncrement((LONG *)&test);
 
-	NODE *temp = (NODE *)((LONG64)data - sizeof(int)-sizeof(NODE *));
+	NODE *temp = (NODE *)((LONG64)data-sizeof(NODE *));
 
-	if (temp->_topBump != TOP_BUMP || temp->_bottomBump != BOTTOM_BUMP)
+	if (temp->_bottomBump != BOTTOM_BUMP)
 	{
 		return false;
 	}

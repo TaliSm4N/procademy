@@ -36,8 +36,8 @@ int main()
 	GetSystemInfo(&sysInfo);
 
 	//int threadCnt = 1;
-	int threadCnt = sysInfo.dwNumberOfProcessors;
-	//int threadCnt = sysInfo.dwNumberOfProcessors*2;
+	//int threadCnt = sysInfo.dwNumberOfProcessors;
+	int threadCnt = sysInfo.dwNumberOfProcessors*2;
 
 	DWORD id;
 	for (int i = 0; i < threadCnt; i++)
@@ -69,7 +69,7 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 {
 
 	srand(time(NULL));
-	for (int i = 0; i < 1000; i++)
+	for (int i = 0; i < 3; i++)
 	{
 		st_TEST_DATA *temp = new st_TEST_DATA;
 		temp->lCount = 0;
@@ -87,7 +87,7 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 	{
 		//200°³´Â ²¨³»±â
 		//int count = rand() % 300 + 701;
-		int count = 1000;
+		int count = 3;
 
 		for (int i = 0; i < count; i++)
 		{

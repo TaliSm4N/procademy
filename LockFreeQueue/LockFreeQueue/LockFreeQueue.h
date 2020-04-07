@@ -228,5 +228,8 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 	if (data != NULL)
 		*data = popData;
 
+	if (popData == NULL)
+		CrashDump::Crash();
+
 	return true;
 }

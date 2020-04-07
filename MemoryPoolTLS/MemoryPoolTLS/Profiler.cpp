@@ -14,7 +14,7 @@ THREAD_SAMPLE threadSample[PRO_THREAD_MAX];
 
 int sampleCur = -1;
 
-DWORD g_tlsIndex=NULL;
+DWORD g_tlsIndex = NULL;
 
 void ProfileInit()
 {
@@ -25,7 +25,7 @@ void ProfileInit()
 	}
 }
 
-PROFILE_SAMPLE *GetSample(THREAD_SAMPLE *t_sample,const WCHAR *szName,bool create=true)
+PROFILE_SAMPLE *GetSample(THREAD_SAMPLE *t_sample, const WCHAR *szName, bool create = true)
 {
 	for (int i = 0; i < PRO_SAMPLE_MAX; i++)
 	{
@@ -70,13 +70,13 @@ void ProfileBegin(const WCHAR *szName)
 	PROFILE_SAMPLE *sample;
 
 	//최초 실행시 초기화
-	if(t_sample==NULL)
+	if (t_sample == NULL)
 	{
 		int index = InterlockedIncrement((LONG *)&sampleCur);
 		t_sample = &threadSample[index];
 		t_sample->threadID = GetCurrentThreadId();
 		TlsSetValue(g_tlsIndex, t_sample);
-		
+
 		for (int i = 0; i < PRO_SAMPLE_MAX; i++)
 		{
 			t_sample->profileSample[i].lFlag = false;
@@ -87,7 +87,7 @@ void ProfileBegin(const WCHAR *szName)
 			t_sample->profileSample[i].iMax[1] = 0;
 			t_sample->profileSample[i].iCall = 0;
 		}
-		
+
 	}
 
 	sample = GetSample(t_sample, szName);
@@ -105,12 +105,12 @@ void ProfileEnd(const WCHAR *szName)
 	if (t_sample == NULL)
 		return;
 
-	sample = GetSample(t_sample, szName,false);
+	sample = GetSample(t_sample, szName, false);
 
 	if (sample == NULL)
 		return;
 
-	
+
 	profileTime.QuadPart = endTime.QuadPart - sample->lStartTime.QuadPart;
 	sample->iTotalTime += profileTime.QuadPart;
 
@@ -136,7 +136,7 @@ void ProfileDataOutText(const WCHAR *szFileName)
 	SYSTEMTIME nowTime;
 	errno_t err;
 	GetLocalTime(&nowTime);
-	swprintf_s(path, L"%4d-%02d-%02d %02d-%02d %s.txt",nowTime.wYear, nowTime.wMonth, nowTime.wDay, nowTime.wHour, nowTime.wMinute,szFileName);
+	swprintf_s(path, L"%4d-%02d-%02d %02d-%02d %s.txt", nowTime.wYear, nowTime.wMonth, nowTime.wDay, nowTime.wHour, nowTime.wMinute, szFileName);
 	//swprintf_s(path, L"t.txt", path);
 
 	err = _wfopen_s(&f, path, L"w");
@@ -220,13 +220,13 @@ void ProfileDataSumOutText(const WCHAR *szFileName)
 					temp[index].iCall = cur->iCall;
 					wcscpy_s(temp[index].szName, (WCHAR *)cur->szName);
 					break;
-					
+
 				}
 				else if (wcscmp(cur->szName, temp[index].szName) == 0)
 				{
-					if(temp[index].iMax[1] < cur->iMax[1])
+					if (temp[index].iMax[1] < cur->iMax[1])
 						temp[index].iMax[1] = cur->iMax[1];
-					if(temp[index].iMin[1] > cur->iMin[1])
+					if (temp[index].iMin[1] > cur->iMin[1])
 						temp[index].iMin[1] = cur->iMin[1];
 					temp[index].iTotalTime += cur->iTotalTime;
 					temp[index].iCall += cur->iCall;

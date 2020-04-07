@@ -175,6 +175,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LanServer.h" />
+    <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="MyServer.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketPtr.h" />

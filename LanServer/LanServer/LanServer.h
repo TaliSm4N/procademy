@@ -43,7 +43,8 @@ public:
 
 	virtual void OnError(int errorcode, WCHAR *) = 0;
 
-
+	Packet *PacketAlloc() { return packetPool->Alloc(); }
+	bool PacketFree(Packet *p) { return packetPool->Free(p); }
 
 private:
 	static unsigned int WINAPI AcceptThread(LPVOID lpParam);
@@ -74,6 +75,8 @@ private:
 	Session *_sessionList;
 	std::stack<DWORD> _unUsedSessionStack;
 	SRWLOCK _usedSessionLock;
+
+	MemoryPool<Packet> *packetPool;
 
 	//getSettingInfo
 public:

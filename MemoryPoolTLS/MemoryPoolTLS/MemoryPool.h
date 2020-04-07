@@ -5,32 +5,25 @@
 #define TOP_BUMP 0xffffffff
 #define BOTTOM_BUMP 0xfefefefe
 
-#define TRACK_MAX 100000
-
-void *trackMemoryPool[TRACK_MAX];
-unsigned long long trackMCur = 0;
-
 
 template <class T>
 class MemoryPool
 {
 private:
-#pragma pack(push,1)
+//#pragma pack(push,1)
 	struct NODE
 	{
 		NODE()
 		{
 			NextBlock = NULL;
-			_topBump = TOP_BUMP;
 			_bottomBump = BOTTOM_BUMP;
 		}
 
 		NODE *NextBlock;
-		int _topBump;
 		T item;
 		int _bottomBump;
 	};
-#pragma pack(pop)
+//#pragma pack(pop)
 
 	struct TOP
 	{
@@ -45,7 +38,7 @@ private:
 	};
 
 public:
-	MemoryPool(int blockNum = 0, bool maxLimit = false);
+	MemoryPool(int blockNum=0,bool maxLimit=false);
 	~MemoryPool();
 
 	T *Alloc(bool placeMent = true);
@@ -68,9 +61,10 @@ public:
 
 
 template <class T>
-MemoryPool<T>::MemoryPool(int blockNum, bool maxLimit)
-	:_maxCapacity(blockNum), _checkNum(0), test(0), _freeCount(blockNum)
+MemoryPool<T>::MemoryPool(int blockNum,bool maxLimit)
+	:_maxCapacity(blockNum),_checkNum(0),test(0),_freeCount(blockNum)
 {
+	NODE *temp;
 	if (blockNum == 0)
 	{
 		_maxLimit = false;
@@ -82,11 +76,9 @@ MemoryPool<T>::MemoryPool(int blockNum, bool maxLimit)
 
 	_topNode = new TOP();
 
-	NODE *temp;
 	for (int i = 0; i < blockNum; i++)
 	{
 		temp = (NODE *)malloc(sizeof(NODE));
-		temp->_topBump = TOP_BUMP;
 		temp->_bottomBump = BOTTOM_BUMP;
 		//temp = new NODE();
 
@@ -125,15 +117,16 @@ template<class T>
 T *MemoryPool<T>::Alloc(bool placement)
 {
 	NODE *ret = NULL;
-	NODE *newTop = NULL;
+	NODE *newTop=NULL;
 	TOP t;
+	unsigned long long checkNum;
 
 
 
 	InterlockedIncrement((LONG *)&test);
 
 	//if (_maxCapacity < InterlockedIncrement((LONG *)&_useCount))
-	if (InterlockedDecrement((LONG *)&_freeCount) < 0)
+	if(InterlockedDecrement((LONG *)&_freeCount)<0)
 	{
 		//maxLimit가 true인 경우 새로운 node를 생성하지 않음
 		if (_maxLimit)
@@ -144,13 +137,12 @@ T *MemoryPool<T>::Alloc(bool placement)
 		else // maxLimit가 true가 아닌 경우 새로운 node를 생성해서 전달
 		{
 
-			InterlockedIncrement((LONG *)&_maxCapacity);
+			InterlockedIncrement((LONG *) &_maxCapacity);
 			InterlockedIncrement((LONG *)&_freeCount);
 			//ret = new NODE();
 			ret = (NODE *)malloc(sizeof(NODE));
-			ret->_topBump = TOP_BUMP;
 			ret->_bottomBump = BOTTOM_BUMP;
-
+			
 			if (placement)
 				new (&(ret->item)) T();
 
@@ -160,7 +152,7 @@ T *MemoryPool<T>::Alloc(bool placement)
 		volatile int test = 1;
 	}
 
-	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
+	checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
 
 	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)newTop, (LONG64 *)&t))
 	{
@@ -168,11 +160,6 @@ T *MemoryPool<T>::Alloc(bool placement)
 
 		ret = _topNode->node;
 	}
-
-	//추적용
-	ULONG trackTemp = InterlockedIncrement((LONG *)&trackMCur);
-	InterlockedExchange64((LONG64 *)&trackMemoryPool[trackTemp % TRACK_MAX], (LONG64)newTop | 0x1000000000000000);
-	//추적용
 
 	if (ret == NULL)
 		return NULL;
@@ -188,21 +175,17 @@ bool MemoryPool<T>::Free(T *data)
 {
 	//InterlockedIncrement((LONG *)&test);
 
-	NODE *temp = (NODE *)((LONG64)data - sizeof(int) - sizeof(NODE *));
+	NODE *temp = (NODE *)((LONG64)data-sizeof(NODE *));
+	TOP t;
+	unsigned long long checkNum;
 
-	if (temp->_topBump != TOP_BUMP || temp->_bottomBump != BOTTOM_BUMP)
+	if (temp->_bottomBump != BOTTOM_BUMP)
 	{
 		return false;
 	}
 
-	//추적용
-	ULONG trackTemp = InterlockedIncrement((LONG *)&trackMCur);
-	InterlockedExchange64((LONG64 *)&trackMemoryPool[trackTemp % TRACK_MAX], (LONG64)temp);
-	//추적용
-
-	TOP t;
-	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 push행위의 checkNum은 함수 시작 시에 결정
-
+	checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 push행위의 checkNum은 함수 시작 시에 결정
+	
 	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)temp, (LONG64 *)&t))
 	{
 		temp->NextBlock = t.node;

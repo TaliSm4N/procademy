@@ -48,6 +48,9 @@
     <ClInclude Include="PacketPtr.h">
       <Filter>헤더 파일\lib</Filter>
     </ClInclude>
+    <ClInclude Include="MemoryPool.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Session.cpp">
