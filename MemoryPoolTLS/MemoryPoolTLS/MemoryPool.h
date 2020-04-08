@@ -145,6 +145,10 @@ T *MemoryPool<T>::Alloc(bool placement)
 			
 			if (placement)
 				new (&(ret->item)) T();
+			else
+			{
+				volatile int test = 1;
+			}
 
 			return &(ret->item);
 		}
@@ -156,9 +160,9 @@ T *MemoryPool<T>::Alloc(bool placement)
 
 	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)newTop, (LONG64 *)&t))
 	{
-		newTop = (NODE *)_topNode->node->NextBlock;
-
 		ret = _topNode->node;
+		newTop = ret->NextBlock;
+
 	}
 
 	if (ret == NULL)

@@ -10,22 +10,20 @@ template <class T>
 class MemoryPool
 {
 private:
-#pragma pack(push,1)
+	//#pragma pack(push,1)
 	struct NODE
 	{
 		NODE()
 		{
 			NextBlock = NULL;
-			_topBump = TOP_BUMP;
 			_bottomBump = BOTTOM_BUMP;
 		}
 
 		NODE *NextBlock;
-		int _topBump;
 		T item;
 		int _bottomBump;
 	};
-#pragma pack(pop)
+	//#pragma pack(pop)
 
 	struct TOP
 	{
@@ -66,6 +64,7 @@ template <class T>
 MemoryPool<T>::MemoryPool(int blockNum, bool maxLimit)
 	:_maxCapacity(blockNum), _checkNum(0), test(0), _freeCount(blockNum)
 {
+	NODE *temp;
 	if (blockNum == 0)
 	{
 		_maxLimit = false;
@@ -77,11 +76,9 @@ MemoryPool<T>::MemoryPool(int blockNum, bool maxLimit)
 
 	_topNode = new TOP();
 
-	NODE *temp;
 	for (int i = 0; i < blockNum; i++)
 	{
 		temp = (NODE *)malloc(sizeof(NODE));
-		temp->_topBump = TOP_BUMP;
 		temp->_bottomBump = BOTTOM_BUMP;
 		//temp = new NODE();
 
@@ -122,6 +119,7 @@ T *MemoryPool<T>::Alloc(bool placement)
 	NODE *ret = NULL;
 	NODE *newTop = NULL;
 	TOP t;
+	unsigned long long checkNum;
 
 
 
@@ -143,11 +141,14 @@ T *MemoryPool<T>::Alloc(bool placement)
 			InterlockedIncrement((LONG *)&_freeCount);
 			//ret = new NODE();
 			ret = (NODE *)malloc(sizeof(NODE));
-			ret->_topBump = TOP_BUMP;
 			ret->_bottomBump = BOTTOM_BUMP;
 
 			if (placement)
 				new (&(ret->item)) T();
+			else
+			{
+				volatile int test = 1;
+			}
 
 			return &(ret->item);
 		}
@@ -155,13 +156,13 @@ T *MemoryPool<T>::Alloc(bool placement)
 		volatile int test = 1;
 	}
 
-	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
+	checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
 
 	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)newTop, (LONG64 *)&t))
 	{
-		newTop = (NODE *)_topNode->node->NextBlock;
-
 		ret = _topNode->node;
+		newTop = ret->NextBlock;
+
 	}
 
 	if (ret == NULL)
@@ -178,15 +179,16 @@ bool MemoryPool<T>::Free(T *data)
 {
 	//InterlockedIncrement((LONG *)&test);
 
-	NODE *temp = (NODE *)((LONG64)data - sizeof(int) - sizeof(NODE *));
+	NODE *temp = (NODE *)((LONG64)data - sizeof(NODE *));
+	TOP t;
+	unsigned long long checkNum;
 
-	if (temp->_topBump != TOP_BUMP || temp->_bottomBump != BOTTOM_BUMP)
+	if (temp->_bottomBump != BOTTOM_BUMP)
 	{
 		return false;
 	}
 
-	TOP t;
-	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 push행위의 checkNum은 함수 시작 시에 결정
+	checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 push행위의 checkNum은 함수 시작 시에 결정
 
 	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)temp, (LONG64 *)&t))
 	{

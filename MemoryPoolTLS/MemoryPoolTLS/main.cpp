@@ -214,6 +214,7 @@ unsigned int WINAPI MemoryPoolThread(LPVOID lpParam)
 unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam)
 {
 	st_TEST_DATA *p[AMOUNT_MAX];
+
 	for (int i = 0; i < testCnt; i++)
 	{
 		PRO_BEGIN(L"MemoryPoolTLS");
@@ -222,6 +223,7 @@ unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam)
 		for (int j = 0; j < testAmount; j++)
 		{
 			p[j] = memoryTLS->Alloc();
+
 		}
 		PRO_END(L"MemTLS_ALLOC");
 
