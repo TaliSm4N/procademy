@@ -1,7 +1,11 @@
 #define _WINSOCKAPI_
 #include <Windows.h>
 
+#include "MemoryPool.h"
+#include "MemoryPoolTLS.h"
 #include "Packet.h"
+
+MemoryPoolTLS<Packet> *Packet::packetPool = NULL;
 
 Packet::Packet()
 	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE)
@@ -442,4 +446,27 @@ Packet &Packet::operator >> (UINT &iValue)
 	}
 
 	return *this;
+}
+
+void Packet::Init()
+{
+	packetPool = new MemoryPoolTLS<Packet>(10000, true);
+}
+
+Packet *Packet::Alloc()
+{
+	Packet *ret = packetPool->Alloc();
+	ret->Ref();
+
+	return ret;
+}
+
+bool Packet::Free(Packet *p)
+{
+	if (p->UnRef())
+	{
+		return packetPool->Free(p);
+	}
+
+	return true;
 }

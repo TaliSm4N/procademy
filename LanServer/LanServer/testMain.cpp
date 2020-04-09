@@ -8,6 +8,8 @@
 #include <stack>
 #include <thread>
 #include "MemoryPool.h"
+#include "MemoryPoolTLS.h"
+#include "LockFreeStack.h"
 #include "Packet.h"
 #include "PacketPtr.h"
 #include "RingBuffer.h"
@@ -15,11 +17,14 @@
 #include "LanServer.h"
 #include "Player.h"
 #include "MyServer.h"
+#include "CrashDump.h"
 
 int main()
 {
 	SYSTEM_INFO sysInfo;
 
+	CrashDump();
+	
 	GetSystemInfo(&sysInfo);
 
 	CMyServer test;

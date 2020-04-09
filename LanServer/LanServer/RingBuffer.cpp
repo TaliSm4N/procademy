@@ -2,6 +2,8 @@
 #include <Windows.h>
 #include <string>
 
+#include "MemoryPool.h"
+#include "MemoryPoolTLS.h"
 #include "Packet.h"
 #include "RingBuffer.h"
 

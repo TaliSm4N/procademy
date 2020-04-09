@@ -51,6 +51,15 @@
     <ClInclude Include="MemoryPool.h">
       <Filter>헤더 파일\lib</Filter>
     </ClInclude>
+    <ClInclude Include="MemoryPoolTLS.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeStack.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="CrashDump.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Session.cpp">
@@ -75,6 +84,9 @@
       <Filter>소스 파일\Contents</Filter>
     </ClCompile>
     <ClCompile Include="PacketPtr.cpp">
+      <Filter>소스 파일\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="CrashDump.cpp">
       <Filter>소스 파일\lib</Filter>
     </ClCompile>
   </ItemGroup>

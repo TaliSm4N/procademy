@@ -1,5 +1,7 @@
 #include <WinSock2.h>
 #include <iostream>
+#include "MemoryPool.h"
+#include "MemoryPoolTLS.h"
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"

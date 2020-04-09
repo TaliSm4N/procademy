@@ -73,10 +73,11 @@ private:
 	DWORD _sessionCount;
 
 	Session *_sessionList;
-	std::stack<DWORD> _unUsedSessionStack;
-	SRWLOCK _usedSessionLock;
+	//std::stack<DWORD> _unUsedSessionStack;
+	//SRWLOCK _usedSessionLock;
+	LockFreeStack<int> *_sessionIndexStack;
 
-	MemoryPool<Packet> *packetPool;
+	MemoryPoolTLS<Packet> *packetPool;
 
 	//getSettingInfo
 public:

@@ -8,6 +8,8 @@
 #include <map>
 #include <stack>
 #include "MemoryPool.h"
+#include "MemoryPoolTLS.h"
+#include "LockFreeStack.h"
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"
@@ -18,7 +20,8 @@
 CLanServer::CLanServer()
 	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
 {
-	packetPool = new MemoryPool<Packet>(10000, true);
+	//packetPool = new MemoryPoolTLS<Packet>(10000, true);
+	Packet::Init();
 }
 
 bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monitoring)
@@ -49,9 +52,12 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	//sessionList¼³Á¤
 	_sessionList = new Session[_maxUser];
 
+	_sessionIndexStack = new LockFreeStack<int>();
+
 	for (int i = _maxUser - 1; i >= 0; i--)
 	{
-		_unUsedSessionStack.push(i);
+		//_unUsedSessionStack.push(i);
+		_sessionIndexStack->Push(i);
 	}
 
 
@@ -61,7 +67,7 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 
 	if (_hcp == NULL) return false;
 
-	InitializeSRWLock(&_usedSessionLock);
+	//InitializeSRWLock(&_usedSessionLock);
 	
 
 
@@ -192,10 +198,11 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 		}
 
 		uniqueID = idCount;
-		AcquireSRWLockExclusive(&_this->_usedSessionLock);
-		sessionPos = _this->_unUsedSessionStack.top();
-		_this->_unUsedSessionStack.pop();
-		ReleaseSRWLockExclusive(&_this->_usedSessionLock);
+		//AcquireSRWLockExclusive(&_this->_usedSessionLock);
+		_this->_sessionIndexStack->Pop(&sessionPos);
+		//sessionPos = _this->_unUsedSessionStack.top();
+		//_this->_unUsedSessionStack.pop();
+		//ReleaseSRWLockExclusive(&_this->_usedSessionLock);
 		uniqueID <<= 16;
 		uniqueID += sessionPos;
 		session = &_this->_sessionList[sessionPos];
@@ -304,10 +311,11 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 				Packet *temp;
 				session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
 				//temp->Release();
-				if (temp->UnRef())
-				{
-					_this->PacketFree(temp);
-				}
+				//if (temp->UnRef())
+				//{
+					//_this->PacketFree(temp);
+				Packet::Free(temp);
+				//}
 			}
 			session->GetSendQ().UnLock();
 			InterlockedExchange8(&session->GetSendFlag(), 1);
@@ -343,21 +351,22 @@ bool CLanServer::Disconnect(DWORD sessionID)
 		Packet *temp;
 		session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
 		//temp->Release();
-		if (temp->UnRef())
-		{
-			PacketFree(temp);
-		}
+		//if (temp->UnRef())
+		//{
+			//PacketFree(temp);
+		Packet::Free(temp);
+		//}
 	}
 
 	session->GetSendQ().UnLock();
 
 	InterlockedDecrement(&_sessionCount);
 
-	AcquireSRWLockExclusive(&_usedSessionLock);
-	_unUsedSessionStack.push(sessionID);
-
+	//AcquireSRWLockExclusive(&_usedSessionLock);
+	//_unUsedSessionStack.push(sessionID);
+	_sessionIndexStack->Push(sessionID);
 	
-	ReleaseSRWLockExclusive(&_usedSessionLock);
+	//ReleaseSRWLockExclusive(&_usedSessionLock);
 	
 	
 	return true;
@@ -535,7 +544,7 @@ bool CLanServer::SendPost(Session *session)
 	{
 		wsabuf[i].buf = peekData[i]->GetBufferPtr();
 		wsabuf[i].len = peekData[i]->GetDataSize();
-		peekData[i]->Ref();
+		//peekData[i]->Ref();
 	}
 	session->SetSendPacketCnt(peekCnt);
 	session->GetSendQ().UnLock();

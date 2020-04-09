@@ -77,7 +77,7 @@ MemoryPoolTLS<T>::MemoryPoolTLS(int ChunkNum,bool placement)
 	:_useChunkCount(0),_placementNew(placement)
 {
 	_tlsIndex = TlsAlloc();
-	_pool = new MemoryPool<Chunk>(ChunkNum);
+	_pool = new MemoryPool<Chunk>(ChunkNum/200 + 1);//chunk °¹¼ö ÁöÁ¤
 }
 
 template<class T>

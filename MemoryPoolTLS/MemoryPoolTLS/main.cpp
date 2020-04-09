@@ -12,7 +12,7 @@
 #define AMOUNT_MAX 100000
 #define THREAD_MAX 30
 
-#define DATA_SIZE 2000
+#define DATA_SIZE 4000
 
 unsigned int WINAPI MemoryPoolThread(LPVOID lpParam);
 unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam);
@@ -41,6 +41,7 @@ MemoryPoolTLS<st_TEST_DATA> *memoryTLS;
 int spinTotal = 0;
 int popTotal = 0;
 int pushTotal = 0;
+int testMode = 0;
 
 int testCnt;
 int testAmount;
@@ -69,6 +70,16 @@ int main()
 	//scanf("%d", &testAmount);
 	//printf("set Test Count\n>> ");
 	//scanf("%d", &testCnt);
+	//do
+	//{
+	//	printf("set Test Mode(0:all alloc - all free 1:one alloc - one free)\n>>");
+	//	scanf("%d", &testMode);
+	//	if (testMode == 0 || testMode == 1)
+	//	{
+	//		break;
+	//	}
+	//}
+	//while (1);
 	//
 	//if (threadCnt > THREAD_MAX)
 	//	threadCnt = THREAD_MAX;
@@ -76,23 +87,26 @@ int main()
 	//if (testAmount > AMOUNT_MAX)
 	//	testAmount = AMOUNT_MAX;
 
-	threadCnt = 12;
+	
+
+	threadCnt = 4;
 	testAmount = AMOUNT_MAX;
 	testCnt = 10;
+	testMode = 0;
 	
 
 	//test
-	//memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200);
-	//for (int i = 0; i < threadCnt; i++)
-	//{
-	//	threadHandle[i] = (HANDLE)_beginthreadex(NULL, 0, testThread, NULL, 0, (unsigned int *)&id);
-	//}
-	//
-	//while (1) 
-	//{
-	//	printf("Use Chunk Count %d\n",memoryTLS->GetChunkCount());
-	//	Sleep(1000); 
-	//}
+	memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200);
+	for (int i = 0; i < threadCnt; i++)
+	{
+		threadHandle[i] = (HANDLE)_beginthreadex(NULL, 0, testThread, NULL, 0, (unsigned int *)&id);
+	}
+	
+	while (1) 
+	{
+		printf("Use Chunk Count %d\n",memoryTLS->GetChunkCount());
+		Sleep(1000); 
+	}
 	//test
 
 
@@ -101,14 +115,14 @@ int main()
 		threadHandle[i] = (HANDLE)_beginthreadex(NULL, 0, NewDeleteThread, NULL, 0, (unsigned int *)&id);
 	}
 	
-	DWORD state = WaitForMultipleObjects(threadCnt, threadHandle, TRUE, INFINITE);
+	DWORD state1 = WaitForMultipleObjects(threadCnt, threadHandle, TRUE, INFINITE);
 	
-	if (state != WAIT_OBJECT_0)
+	if (state1 != WAIT_OBJECT_0)
 	{
 		printf("NewDeleteThread close error\n");
 		return -1;
 	}
-
+	
 	memory = new MemoryPool<st_TEST_DATA>(AMOUNT_MAX*threadCnt);
 	
 	
@@ -117,14 +131,14 @@ int main()
 		threadHandle[i] = (HANDLE)_beginthreadex(NULL, 0, MemoryPoolThread, NULL, 0, (unsigned int *)&id);
 	}
 	
-	state = WaitForMultipleObjects(threadCnt, threadHandle, TRUE, INFINITE);
+	DWORD state2 = WaitForMultipleObjects(threadCnt, threadHandle, TRUE, INFINITE);
 	
-	if (state != WAIT_OBJECT_0)
+	if (state2 != WAIT_OBJECT_0)
 	{
 		printf("MemoryPoolThread close error\n");
 		return -1;
 	}
-
+	
 	delete memory;
 	memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200);
 
@@ -133,9 +147,9 @@ int main()
 		threadHandle[i] = (HANDLE)_beginthreadex(NULL, 0, MemoryPoolTLSThread, NULL, 0, (unsigned int *)&id);
 	}
 	
-	state = WaitForMultipleObjects(threadCnt, threadHandle, TRUE, INFINITE);
+	DWORD state3 = WaitForMultipleObjects(threadCnt, threadHandle, TRUE, INFINITE);
 	
-	if (state != WAIT_OBJECT_0)
+	if (state3 != WAIT_OBJECT_0)
 	{
 		printf("MemoryPoolTLSThread close error\n");
 		return -1;
@@ -176,35 +190,65 @@ unsigned int WINAPI MemoryPoolThread(LPVOID lpParam)
 {
 	st_TEST_DATA *p[AMOUNT_MAX];
 	
-	for (int i = 0; i < testCnt; i++)
+	if (testMode == 0)
 	{
-		PRO_BEGIN(L"MemoryPool");
-
-		PRO_BEGIN(L"Mem_ALLOC");
-		for (int j = 0; j < testAmount; j++)
+		for (int i = 0; i < testCnt; i++)
 		{
-			p[j] = memory->Alloc(false);
-		}
-		PRO_END(L"Mem_ALLOC");
+			PRO_BEGIN(L"MemoryPool");
 
-		PRO_BEGIN(L"MEM_DAT_SET");
-		for (int j = 0; j < testAmount; j++)
-		{
-			for (int index = 0; index < DATA_SIZE; index++)
+			//PRO_BEGIN(L"Mem_ALLOC");
+			for (int j = 0; j < testAmount; j++)
 			{
-				p[j]->data[index] = index % sizeof(unsigned char);
+				p[j] = memory->Alloc(false);
 			}
-		}
-		PRO_END(L"MEM_DAT_SET");
-		
-		PRO_BEGIN(L"Mem_FREE");
-		for (int j = 0; j < testAmount; j++)
-		{
-			memory->Free(p[j]);
-		}
-		PRO_END(L"Mem_FREE");
+			//PRO_END(L"Mem_ALLOC");
 
-		PRO_END(L"MemoryPool");
+			//p[0]->data[0] = 1;
+			//PRO_BEGIN(L"MEM_DAT_SET");
+			//for (int j = 0; j < testAmount; j++)
+			//{
+			//	for (int index = 0; index < DATA_SIZE; index++)
+			//	{
+			//		p[j]->data[index] = index % sizeof(unsigned char);
+			//	}
+			//}
+			//PRO_END(L"MEM_DAT_SET");
+
+			//PRO_BEGIN(L"Mem_FREE");
+			for (int j = 0; j < testAmount; j++)
+			{
+				memory->Free(p[j]);
+			}
+			//PRO_END(L"Mem_FREE");
+
+			PRO_END(L"MemoryPool");
+		}
+	}
+	else if (testMode == 1)
+	{
+		for (int i = 0; i < testCnt; i++)
+		{
+			PRO_BEGIN(L"MemoryPool");			
+			for (int j = 0; j < testAmount; j++)
+			{
+				//PRO_BEGIN(L"Mem_ALLOC");
+				p[j] = memory->Alloc(false);
+				//PRO_END(L"Mem_ALLOC");
+
+				PRO_BEGIN(L"MEM_DAT_SET");
+				for (int index = 0; index < DATA_SIZE; index++)
+				{
+					p[j]->data[index] = index % sizeof(unsigned char);
+				}
+				PRO_END(L"MEM_DAT_SET");
+
+				//PRO_BEGIN(L"Mem_FREE");
+				memory->Free(p[j]);
+				//PRO_END(L"Mem_FREE");
+				
+			}
+			PRO_END(L"MemoryPool");
+		}
 	}
 	
 
@@ -214,37 +258,64 @@ unsigned int WINAPI MemoryPoolThread(LPVOID lpParam)
 unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam)
 {
 	st_TEST_DATA *p[AMOUNT_MAX];
-
-	for (int i = 0; i < testCnt; i++)
+	if (testMode == 0)
 	{
-		PRO_BEGIN(L"MemoryPoolTLS");
-
-		PRO_BEGIN(L"MemTLS_ALLOC");
-		for (int j = 0; j < testAmount; j++)
+		for (int i = 0; i < testCnt; i++)
 		{
-			p[j] = memoryTLS->Alloc();
+			PRO_BEGIN(L"MemoryPoolTLS");
 
-		}
-		PRO_END(L"MemTLS_ALLOC");
-
-		PRO_BEGIN(L"MEMTLS_DAT_SET");
-		for (int j = 0; j < testAmount; j++)
-		{
-			for (int index = 0; index < DATA_SIZE; index++)
+			//PRO_BEGIN(L"MemTLS_ALLOC");
+			for (int j = 0; j < testAmount; j++)
 			{
-				p[j]->data[index] = index % sizeof(unsigned char);
+				p[j] = memoryTLS->Alloc();
 			}
-		}
-		PRO_END(L"MEMTLS_DAT_SET");
+			//PRO_END(L"MemTLS_ALLOC");
 
-		PRO_BEGIN(L"MemTLS_FREE");
-		for (int j = 0; j < testAmount; j++)
+			//p[0]->data[0] = 1;
+			//PRO_BEGIN(L"MEMTLS_DAT_SET");
+			//for (int j = 0; j < testAmount; j++)
+			//{
+			//	for (int index = 0; index < DATA_SIZE; index++)
+			//	{
+			//		p[j]->data[index] = index % sizeof(unsigned char);
+			//	}
+			//}
+			//PRO_END(L"MEMTLS_DAT_SET");
+
+			//PRO_BEGIN(L"MemTLS_FREE");
+			for (int j = 0; j < testAmount; j++)
+			{
+				memoryTLS->Free(p[j]);
+			}
+			//PRO_END(L"MemTLS_FREE");
+
+			PRO_END(L"MemoryPoolTLS");
+		}
+	}
+	else if (testMode == 1)
+	{
+		for (int i = 0; i < testCnt; i++)
 		{
-			memoryTLS->Free(p[j]);
-		}
-		PRO_END(L"MemTLS_FREE");
+			PRO_BEGIN(L"MemoryPoolTLS");
+			for (int j = 0; j < testAmount; j++)
+			{
+				//PRO_BEGIN(L"MemTLS_ALLOC");
+				p[j] = memoryTLS->Alloc();
+				//PRO_END(L"MemTLS_ALLOC");
 
-		PRO_END(L"MemoryPoolTLS");
+				PRO_BEGIN(L"MEMTLS_DAT_SET");
+				for (int index = 0; index < DATA_SIZE; index++)
+				{
+					p[j]->data[index] = index % sizeof(unsigned char);
+				}
+				PRO_END(L"MEMTLS_DAT_SET");
+
+				//PRO_BEGIN(L"MemTLS_FREE");
+				memoryTLS->Free(p[j]);
+				//PRO_END(L"MemTLS_FREE");
+			}
+			PRO_END(L"MemoryPoolTLS");
+		}
 	}
 	
 	
@@ -255,34 +326,64 @@ unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam)
 unsigned int WINAPI NewDeleteThread(LPVOID lpParam)
 {
 	st_TEST_DATA *p[AMOUNT_MAX];
-	for (int i = 0; i < testCnt; i++)
+	if (testMode == 0)
 	{
-		PRO_BEGIN(L"NewDelete");
-		PRO_BEGIN(L"New");
-		for (int j = 0; j < testAmount; j++)
+		for (int i = 0; i < testCnt; i++)
 		{
-			p[j] = new st_TEST_DATA;
-		}
-		PRO_END(L"New");
+			PRO_BEGIN(L"NewDelete");
 
-		PRO_BEGIN(L"NEWDEL_DAT_SET");
-		for (int j = 0; j < testAmount; j++)
-		{
-			for (int index = 0; index < DATA_SIZE; index++)
+			//PRO_BEGIN(L"New");
+			for (int j = 0; j < testAmount; j++)
 			{
-				p[j]->data[index] = index % sizeof(unsigned char);
+				p[j] = new st_TEST_DATA;
 			}
-		}
-		PRO_END(L"NEWDEL_DAT_SET");
+			//PRO_END(L"New");
 
-		PRO_BEGIN(L"Delete");
-		for (int j = 0; j < testAmount; j++)
+			//p[0]->data[0] = 1;
+			//PRO_BEGIN(L"NEWDEL_DAT_SET");
+			//for (int j = 0; j < testAmount; j++)
+			//{
+			//	for (int index = 0; index < DATA_SIZE; index++)
+			//	{
+			//		p[j]->data[index] = index % sizeof(unsigned char);
+			//	}
+			//}
+			//PRO_END(L"NEWDEL_DAT_SET");
+
+			//PRO_BEGIN(L"Delete");
+			for (int j = 0; j < testAmount; j++)
+			{
+				delete p[j];
+			}
+			//PRO_END(L"Delete");
+
+			PRO_END(L"NewDelete");
+		}
+	}
+	else if (testMode == 1)
+	{
+		for (int i = 0; i < testCnt; i++)
 		{
-			delete p[j];
-		}
-		PRO_END(L"Delete");
+			PRO_BEGIN(L"NewDelete");
+			for (int j = 0; j < testAmount; j++)
+			{
+				//PRO_BEGIN(L"New");
+				p[j] = new st_TEST_DATA;
+				//PRO_END(L"New");
 
-		PRO_END(L"NewDelete");
+				PRO_BEGIN(L"NEWDEL_DAT_SET");
+				for (int index = 0; index < DATA_SIZE; index++)
+				{
+					p[j]->data[index] = index % sizeof(unsigned char);
+				}
+				PRO_END(L"NEWDEL_DAT_SET");
+
+				//PRO_BEGIN(L"Delete");
+				delete p[j];
+				//PRO_END(L"Delete");				
+			}
+			PRO_END(L"NewDelete");
+		}
 	}
 	
 
@@ -293,8 +394,16 @@ unsigned int WINAPI NewDeleteThread(LPVOID lpParam)
 unsigned int WINAPI testThread(LPVOID lpParam)
 {
 	st_TEST_DATA *p[1000];
+	MemoryPoolTLS<st_TEST_DATA> test;
+	st_TEST_DATA *tt;
 	while (1)
 	{
+		//for (int i = 0; i < 200; i++)
+		//{
+		//	tt = test.Alloc();
+		//	memoryTLS->Free(tt);
+		//	volatile int test = 1;
+		//}
 		for (int i = 0; i < 1000; i++)
 		{
 			p[i]=memoryTLS->Alloc();
@@ -310,7 +419,7 @@ unsigned int WINAPI testThread(LPVOID lpParam)
 			}
 		}
 
-		Sleep(10);
+		Sleep(100);
 
 		for (int i = 0; i < 1000; i++)
 		{
@@ -319,5 +428,7 @@ unsigned int WINAPI testThread(LPVOID lpParam)
 				CrashDump::Crash();
 			}
 		}
+
+		
 	}
 }

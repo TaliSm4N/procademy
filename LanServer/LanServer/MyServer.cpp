@@ -1,11 +1,13 @@
 #include <Windows.h>
 #include <map>
 #include <stack>
+#include "MemoryPool.h"
+#include "MemoryPoolTLS.h"
+#include "LockFreeStack.h"
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "Session.h"
 #include "PacketPtr.h"
-#include "MemoryPool.h"
 #include "LanServer.h"
 #include "Player.h"
 #include "MyServer.h"
@@ -37,7 +39,8 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	
 
 	//Packet *p = new Packet;
-	Packet *p = PacketAlloc();
+	//Packet *p = PacketAlloc();
+	Packet *p = Packet::Alloc();
 	header.len = 8;
 	p->PutData((char *)&header, sizeof(header));
 	*p << 0x7fffffffffffffff;
@@ -94,8 +97,9 @@ bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 	Player *player = iter->second;
 	ReleaseSRWLockExclusive(&playerListLock);
 
-	Packet *sendPacket = PacketAlloc();
+	//Packet *sendPacket = PacketAlloc();
 	//Packet *sendPacket = new Packet;
+	Packet *sendPacket = Packet::Alloc();
 	LanServerHeader header;
 
 	LONGLONG data;

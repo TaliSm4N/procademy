@@ -149,14 +149,20 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	int GetLastError() const { return err; }
 
-protected:
+	static void Init();
+	static Packet *Alloc();
+	static bool Free(Packet *);
+
+private:
 	BYTE mode;
 	int err;
-	char buf[DEFAULT_PACKET_SIZE];
 	int size;
 	int front;
 	int rear;
 	int refCnt;
+	char buf[DEFAULT_PACKET_SIZE];
+
+	static MemoryPoolTLS<Packet> *packetPool;
 };
 
 #endif

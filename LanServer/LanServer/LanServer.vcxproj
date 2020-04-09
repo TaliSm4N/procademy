@@ -174,8 +174,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CrashDump.h" />
     <ClInclude Include="LanServer.h" />
+    <ClInclude Include="LockFreeStack.h" />
     <ClInclude Include="MemoryPool.h" />
+    <ClInclude Include="MemoryPoolTLS.h" />
     <ClInclude Include="MyServer.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketPtr.h" />
@@ -184,6 +187,7 @@
     <ClInclude Include="Session.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CrashDump.cpp" />
     <ClCompile Include="LanServer.cpp" />
     <ClCompile Include="MyServer.cpp" />
     <ClCompile Include="Packet.cpp" />
