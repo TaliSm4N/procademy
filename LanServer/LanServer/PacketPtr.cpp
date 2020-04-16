@@ -1,5 +1,6 @@
 #include <Windows.h>
 
+#include "header.h"
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
 #include "Packet.h"

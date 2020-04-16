@@ -1,16 +1,7 @@
-#include <Windows.h>
-#include <map>
-#include <stack>
-#include "MemoryPool.h"
-#include "MemoryPoolTLS.h"
-#include "LockFreeStack.h"
-#include "Packet.h"
-#include "RingBuffer.h"
-#include "Session.h"
-#include "PacketPtr.h"
-#include "LanServer.h"
+#include "LanServerLib.h"
 #include "Player.h"
 #include "MyServer.h"
+
 
 
 CMyServer::CMyServer()
@@ -33,16 +24,17 @@ void CMyServer::OnSend(DWORD sessionID, int sendsize)
 }
 void CMyServer::OnClientJoin(DWORD sessionID)
 {
-	LanServerHeader header;
+	//HEADER header;
 	Player *player = new Player(sessionID);
 
-	
+
 
 	//Packet *p = new Packet;
 	//Packet *p = PacketAlloc();
 	Packet *p = Packet::Alloc();
-	header.len = 8;
-	p->PutData((char *)&header, sizeof(header));
+	//header.len = 8;
+	//p->PutHeader(&header);
+	//p->PutData((char *)&header, sizeof(header));
 	*p << 0x7fffffffffffffff;
 
 	//자동화 테스트
@@ -60,7 +52,7 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	//자동화 테스트
 
 	ReleaseSRWLockExclusive(&playerListLock);
-	
+
 }
 void CMyServer::OnClientLeave(DWORD sessionID)
 {
@@ -100,14 +92,14 @@ bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 	//Packet *sendPacket = PacketAlloc();
 	//Packet *sendPacket = new Packet;
 	Packet *sendPacket = Packet::Alloc();
-	LanServerHeader header;
+	//LanServerHeader header;
 
 	LONGLONG data;
 
 	*p >> data;
 
-	header.len = sizeof(data);
-	sendPacket->PutData((char *)&header, sizeof(header));
+	//header.len = sizeof(data);
+	//sendPacket->PutData((char *)&header, sizeof(header));
 	*sendPacket << data;
 
 	SendPacket(sessionID, sendPacket);

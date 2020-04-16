@@ -1,20 +1,5 @@
 #include <iostream>
-#pragma comment(lib, "winmm.lib")
-#pragma comment(lib, "ws2_32")
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#include <process.h>
-#include <cstring>
-#include <map>
-#include <stack>
-#include "MemoryPool.h"
-#include "MemoryPoolTLS.h"
-#include "LockFreeStack.h"
-#include "Packet.h"
-#include "RingBuffer.h"
-#include "Session.h"
-#include "PacketPtr.h"
-#include "LanServer.h"
+#include "LanServerLib.h"
 
 
 CLanServer::CLanServer()
@@ -305,11 +290,24 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			//}
 			//session->GetAutoSendQ().UnLock();
 			//자동화 테스트
-			session->GetSendQ().Lock();
+			//session->GetSendQ().Lock();
+			//for (int i = 0; i < session->GetSendPacketCnt(); i++)
+			//{
+			//	Packet *temp;
+			//	session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
+			//	//temp->Release();
+			//	//if (temp->UnRef())
+			//	//{
+			//		//_this->PacketFree(temp);
+			//	Packet::Free(temp);
+			//	//}
+			//}
+			//session->GetSendQ().UnLock();
+
 			for (int i = 0; i < session->GetSendPacketCnt(); i++)
 			{
 				Packet *temp;
-				session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
+				session->GetSendQ()->Dequeue(&temp);
 				//temp->Release();
 				//if (temp->UnRef())
 				//{
@@ -317,7 +315,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 				Packet::Free(temp);
 				//}
 			}
-			session->GetSendQ().UnLock();
+
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 
 			_this->SendPost(session);
@@ -343,13 +341,11 @@ bool CLanServer::Disconnect(DWORD sessionID)
 
 	OnClientLeave(session->GetID());
 
-	session->GetSendQ().Lock();
-
 	//남은 send Packet 제거
-	while(session->GetSendQ().GetUseSize()!=0)
+	while (session->GetSendQ()->GetUseCount() != 0)
 	{
 		Packet *temp;
-		session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
+		session->GetSendQ()->Dequeue(&temp);
 		//temp->Release();
 		//if (temp->UnRef())
 		//{
@@ -358,7 +354,22 @@ bool CLanServer::Disconnect(DWORD sessionID)
 		//}
 	}
 
-	session->GetSendQ().UnLock();
+	//session->GetSendQ().Lock();
+	//
+	////남은 send Packet 제거
+	//while(session->GetSendQ().GetUseSize()!=0)
+	//{
+	//	Packet *temp;
+	//	session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
+	//	//temp->Release();
+	//	//if (temp->UnRef())
+	//	//{
+	//		//PacketFree(temp);
+	//	Packet::Free(temp);
+	//	//}
+	//}
+	//
+	//session->GetSendQ().UnLock();
 
 	InterlockedDecrement(&_sessionCount);
 
@@ -400,22 +411,22 @@ unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 
 PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 {
-	LanServerHeader header;
 	int recvQSize = session->GetRecvQ().GetUseSize();
 
 	Packet payload;
+	HEADER *header = payload.GetHeaderPtr();
 
-	if (sizeof(header) > recvQSize)
+	if (sizeof(HEADER) > recvQSize)
 		return NONE;
 
-	session->GetRecvQ().Peek((char *)&header, sizeof(LanServerHeader));
+	session->GetRecvQ().Peek((char *)header, sizeof(HEADER));
 
-	if (recvQSize < header.len + sizeof(header))
+	if (recvQSize < header->len + sizeof(HEADER))
 		return NONE;
 
-	session->GetRecvQ().MoveReadPos(sizeof(LanServerHeader));
+	session->GetRecvQ().MoveReadPos(sizeof(HEADER));
 
-	if (session->GetRecvQ().Dequeue(&payload, header.len) != header.len)
+	if (session->GetRecvQ().Dequeue(&payload, header->len) != header->len)
 		return FAIL;
 
 	OnRecv(session->GetID(), &payload);
@@ -433,13 +444,20 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	InterlockedIncrement64((LONG64 *)&_sendPacketCounter);
 
 	header.len = p->GetDataSize();
+	p->PutHeader(&header);
 
-	session->GetSendQ().Lock();
-	if (session->GetSendQ().GetFreeSize() >= sizeof(p))
+	//session->GetSendQ().Lock();
+	//if (session->GetSendQ().GetFreeSize() >= sizeof(p))
+	//{
+	//	session->GetSendQ().Enqueue((char *)&p,sizeof(p));
+	//}
+	//session->GetSendQ().UnLock();
+
+	if (session->GetSendQ()->GetFreeCount() >= sizeof(p))
 	{
-		session->GetSendQ().Enqueue((char *)&p,sizeof(p));
+		session->GetSendQ()->Enqueue(p);
 	}
-	session->GetSendQ().UnLock();
+
 	SendPost(session);
 
 	return true;
@@ -497,13 +515,19 @@ bool CLanServer::SendPost(Session *session)
 		return false;
 	}
 
-	session->GetSendQ().Lock();
-	if (session->GetSendQ().GetUseSize() <= 0)
+	if (session->GetSendQ()->GetUseCount() <= 0)
 	{
 		InterlockedExchange8(&session->GetSendFlag(), 1);
-		session->GetSendQ().UnLock();
 		return false;
 	}
+
+	//session->GetSendQ().Lock();
+	//if (session->GetSendQ().GetUseSize() <= 0)
+	//{
+	//	InterlockedExchange8(&session->GetSendFlag(), 1);
+	//	session->GetSendQ().UnLock();
+	//	return false;
+	//}
 
 	//자동화 테스트
 	//session->GetAutoSendQ().Lock();
@@ -532,22 +556,23 @@ bool CLanServer::SendPost(Session *session)
 	//session->GetAutoSendQ().UnLock();
 	//자동화 테스트
 	
-	int sendQsize = session->GetSendQ().GetUseSize();
-	int peekCnt = sendQsize / sizeof(Packet *);
+	//int sendQsize = session->GetSendQ().GetUseSize();
+	//int peekCnt = sendQsize / sizeof(Packet *);
+	int peekCnt = session->GetSendQ()->GetUseCount();
 	WSABUF wsabuf[1024];
 	Packet *peekData[1024];
 	
 	
-	session->GetSendQ().Peek((char *)peekData, peekCnt * sizeof(Packet *));
+	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
 	
 	for (int i = 0; i < peekCnt; i++)
 	{
-		wsabuf[i].buf = peekData[i]->GetBufferPtr();
-		wsabuf[i].len = peekData[i]->GetDataSize();
+		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
+		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
 		//peekData[i]->Ref();
 	}
 	session->SetSendPacketCnt(peekCnt);
-	session->GetSendQ().UnLock();
+	//session->GetSendQ().UnLock();
 	DWORD flags = 0;
 	InterlockedIncrement((LONG *)&session->GetIOCount());
 

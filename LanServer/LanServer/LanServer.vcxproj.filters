@@ -60,6 +60,15 @@
     <ClInclude Include="CrashDump.h">
       <Filter>헤더 파일\lib</Filter>
     </ClInclude>
+    <ClInclude Include="LockFreeQueue.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="LanServerLib.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="header.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Session.cpp">

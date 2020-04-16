@@ -1,10 +1,6 @@
 #pragma once
 
 enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
-struct LanServerHeader
-{
-	WORD len;
-};
 
 class CLanServer
 {

@@ -1,6 +1,7 @@
 #define _WINSOCKAPI_
 #include <Windows.h>
 
+#include "header.h"
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
 #include "Packet.h"
@@ -13,12 +14,12 @@ Packet::Packet()
 }
 
 Packet::Packet(int iBufferSize)
-	:mode(ERROR_MODE),err(E_NOERROR),front(0),rear(0),size(iBufferSize)
+	: mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
 {
 }
 
-Packet::Packet(int iBufferSize,int Mode)
-	: mode(Mode), err(E_NOERROR), front(0), rear(0),size(iBufferSize)
+Packet::Packet(int iBufferSize, int Mode)
+	: mode(Mode), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
 {
 }
 
@@ -70,7 +71,7 @@ int Packet::MoveWritePos(int iSize)
 }
 int Packet::MoveReadPos(int iSize)
 {
-	if(front+iSize<=rear)
+	if (front + iSize <= rear)
 		front += iSize;
 	else
 	{
@@ -83,7 +84,7 @@ int Packet::MoveReadPos(int iSize)
 
 int Packet::GetData(char *chpDest, int iSize)
 {
-	int useSize=GetDataSize();
+	int useSize = GetDataSize();
 	if (useSize >= iSize)
 		useSize = iSize;
 
@@ -103,7 +104,7 @@ int Packet::PutData(char *chpSrc, int iSrcSize)
 		return -1;
 	}
 
-	memcpy(GetBufferPtr()+rear, chpSrc, iSrcSize);
+	memcpy(GetBufferPtr() + rear, chpSrc, iSrcSize);
 	rear += iSrcSize;
 
 	return iSrcSize;
@@ -284,7 +285,6 @@ Packet &Packet::operator << (UINT iValue)
 	return *this;
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 // 빼기. 각 변수 타입마다 모두 만듬.
 //////////////////////////////////////////////////////////////////////////
@@ -446,6 +446,18 @@ Packet &Packet::operator >> (UINT &iValue)
 	}
 
 	return *this;
+}
+
+void Packet::GetHeader(HEADER *desheader)
+{
+	//헤더 종류에 따라 코드 수정필요
+	desheader->len = header.len;
+}
+
+void Packet::PutHeader(HEADER *srcheader)
+{
+	//헤더 종류에 따라 코드 수정필요
+	header.len = srcheader->len;
 }
 
 void Packet::Init()

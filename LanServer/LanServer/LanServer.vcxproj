@@ -175,7 +175,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CrashDump.h" />
+    <ClInclude Include="header.h" />
     <ClInclude Include="LanServer.h" />
+    <ClInclude Include="LanServerLib.h" />
+    <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="LockFreeStack.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="MemoryPoolTLS.h" />

@@ -1,23 +1,8 @@
 #include <iostream>
 
-#pragma comment(lib, "ws2_32")
-#include <WinSock2.h>
-#include <process.h>
-#include <cstring>
-#include <map>
-#include <stack>
-#include <thread>
-#include "MemoryPool.h"
-#include "MemoryPoolTLS.h"
-#include "LockFreeStack.h"
-#include "Packet.h"
-#include "PacketPtr.h"
-#include "RingBuffer.h"
-#include "Session.h"
-#include "LanServer.h"
+#include "LanServerLib.h"
 #include "Player.h"
 #include "MyServer.h"
-#include "CrashDump.h"
 
 int main()
 {

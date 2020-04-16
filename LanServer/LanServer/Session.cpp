@@ -1,10 +1,6 @@
-#include <WinSock2.h>
 #include <iostream>
-#include "MemoryPool.h"
-#include "MemoryPoolTLS.h"
-#include "Packet.h"
-#include "RingBuffer.h"
-#include "Session.h"
+
+#include "LanServerLib.h"
 
 Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	:sock(s),sockAddr(sAddr),sendFlag(1),IOCount(0), sockActive(FALSE),sessionID(id)
@@ -13,12 +9,14 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
 	sendOverlap.type = TYPE::SEND;
 	recvOverlap.type = TYPE::RECV;
+	sendQ = new LockFreeQueue<Packet *>(1000);
 	InitializeSRWLock(&sessionLock);
 }
 
 Session::Session()
 	:sendFlag(1), IOCount(0), sockActive(FALSE)
 {
+	sendQ = new LockFreeQueue<Packet *>(1000);
 }
 
 void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
@@ -34,7 +32,7 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	sendOverlap.type = TYPE::SEND;
 	recvOverlap.type = TYPE::RECV;
 
-	sendQ.Reset();
+	//sendQ.Reset();
 	recvQ.Reset();
 
 	InitializeSRWLock(&sessionLock);

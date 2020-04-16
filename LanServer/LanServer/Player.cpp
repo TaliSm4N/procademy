@@ -1,9 +1,6 @@
-#include <map>
-#include <Windows.h>
-#include "MemoryPool.h"
-#include "MemoryPoolTLS.h"
-#include "Packet.h"
+#include "LanServerLib.h"
 #include "Player.h"
+
 
 
 Player::Player(LONGLONG id)

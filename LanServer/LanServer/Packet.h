@@ -3,17 +3,19 @@
 
 #define DEFAULT_PACKET_SIZE 500
 
-enum PacketMode {ERROR_MODE=0, THROW_MODE};
 
 
-enum PacketError {E_NOERROR=0,E_PUTDATA_ERROR, E_GETDATA_ERROR};
+enum PacketMode { ERROR_MODE = 0, THROW_MODE };
+
+
+enum PacketError { E_NOERROR = 0, E_PUTDATA_ERROR, E_GETDATA_ERROR };
 
 class Packet
 {
 public:
 	Packet();
 	Packet(int iBufferSize);
-	Packet(int iBufferSize,int Mode);
+	Packet(int iBufferSize, int Mode);
 
 	virtual ~Packet();
 
@@ -51,7 +53,7 @@ public:
 	// Parameters: 없음.
 	// Return: (int)사용중인 데이타 사이즈.
 	//////////////////////////////////////////////////////////////////////////
-	int GetDataSize(void) { return rear-front; }
+	int GetDataSize(void) { return rear - front; }
 
 
 
@@ -61,7 +63,12 @@ public:
 	// Parameters: 없음.
 	// Return: (char *)버퍼 포인터.
 	//////////////////////////////////////////////////////////////////////////
-	char *GetBufferPtr(void) { return buf+front; }
+	char *GetBufferPtr(void) { return buf + front; }
+
+	//send할 데이터는 front가 항상 0이여야함
+	void *GetSendPtr(void) { return &header; }
+
+	HEADER *GetHeaderPtr(void) { return &header; }
 
 	//////////////////////////////////////////////////////////////////////////
 	// 버퍼 Pos 이동. (음수이동은 안됨)
@@ -120,7 +127,8 @@ public:
 	Packet &operator >> (UINT64 &iValue);
 	Packet &operator >> (UINT &iValue);
 
-
+	void GetHeader(HEADER *desheader);
+	void PutHeader(HEADER *srcheader);
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -160,6 +168,7 @@ private:
 	int front;
 	int rear;
 	int refCnt;
+	HEADER header;
 	char buf[DEFAULT_PACKET_SIZE];
 
 	static MemoryPoolTLS<Packet> *packetPool;

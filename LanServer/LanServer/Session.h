@@ -19,7 +19,8 @@ public:
 
 	DWORD &GetIOCount() { return IOCount; }
 	RingBuffer &GetRecvQ() { return recvQ; }
-	RingBuffer &GetSendQ() { return sendQ; }
+	//RingBuffer &GetSendQ() { return sendQ; }
+	LockFreeQueue<Packet *> *GetSendQ() { return sendQ; }
 	CHAR &GetSendFlag() { return sendFlag; }
 	SOCKET GetSocket() { return sock; }
 	BOOL &GetSocketActive() { return sockActive; }
@@ -27,8 +28,6 @@ public:
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }
 	MyOverlapped &GetRecvOverlap() { return recvOverlap; }
 
-	BOOL RecvPost();
-	BOOL SendPost();
 	BOOL Release();
 	void Lock();
 	void Unlock();
@@ -42,7 +41,8 @@ private:
 	SOCKADDR_IN sockAddr;
 	MyOverlapped sendOverlap;
 	MyOverlapped recvOverlap;
-	RingBuffer sendQ;
+	//RingBuffer sendQ;
+	LockFreeQueue<Packet *> *sendQ;
 	RingBuffer recvQ;
 	DWORD IOCount;
 	CHAR sendFlag;
