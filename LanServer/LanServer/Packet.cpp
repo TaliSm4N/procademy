@@ -14,12 +14,12 @@ Packet::Packet()
 }
 
 Packet::Packet(int iBufferSize)
-	: mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
+	:mode(ERROR_MODE),err(E_NOERROR),front(0),rear(0),size(iBufferSize)
 {
 }
 
-Packet::Packet(int iBufferSize, int Mode)
-	: mode(Mode), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
+Packet::Packet(int iBufferSize,int Mode)
+	: mode(Mode), err(E_NOERROR), front(0), rear(0),size(iBufferSize)
 {
 }
 
@@ -71,7 +71,7 @@ int Packet::MoveWritePos(int iSize)
 }
 int Packet::MoveReadPos(int iSize)
 {
-	if (front + iSize <= rear)
+	if(front+iSize<=rear)
 		front += iSize;
 	else
 	{
@@ -84,7 +84,7 @@ int Packet::MoveReadPos(int iSize)
 
 int Packet::GetData(char *chpDest, int iSize)
 {
-	int useSize = GetDataSize();
+	int useSize=GetDataSize();
 	if (useSize >= iSize)
 		useSize = iSize;
 
@@ -104,7 +104,7 @@ int Packet::PutData(char *chpSrc, int iSrcSize)
 		return -1;
 	}
 
-	memcpy(GetBufferPtr() + rear, chpSrc, iSrcSize);
+	memcpy(GetBufferPtr()+rear, chpSrc, iSrcSize);
 	rear += iSrcSize;
 
 	return iSrcSize;

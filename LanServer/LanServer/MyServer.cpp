@@ -3,7 +3,6 @@
 #include "MyServer.h"
 
 
-
 CMyServer::CMyServer()
 {
 }
@@ -27,7 +26,7 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	//HEADER header;
 	Player *player = new Player(sessionID);
 
-
+	
 
 	//Packet *p = new Packet;
 	//Packet *p = PacketAlloc();
@@ -52,7 +51,7 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	//자동화 테스트
 
 	ReleaseSRWLockExclusive(&playerListLock);
-
+	
 }
 void CMyServer::OnClientLeave(DWORD sessionID)
 {

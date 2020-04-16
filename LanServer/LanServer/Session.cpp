@@ -1,9 +1,10 @@
+#include <WinSock2.h>
 #include <iostream>
 
 #include "LanServerLib.h"
 
 Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
-	:sock(s),sockAddr(sAddr),sendFlag(1),IOCount(0), sockActive(FALSE),sessionID(id)
+	:sock(s),sockAddr(sAddr),sendFlag(1), sockActive(FALSE),sessionID(id),IOCount(0)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
@@ -11,12 +12,16 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	recvOverlap.type = TYPE::RECV;
 	sendQ = new LockFreeQueue<Packet *>(1000);
 	InitializeSRWLock(&sessionLock);
+	//_IOChecker.IOCount = 0;
+	//_IOChecker.releaseFlag = false;
 }
 
 Session::Session()
-	:sendFlag(1), IOCount(0), sockActive(FALSE)
+	:sendFlag(1), sockActive(FALSE), IOCount(0)
 {
 	sendQ = new LockFreeQueue<Packet *>(1000);
+	//_IOChecker.IOCount = 0;
+	//_IOChecker.releaseFlag = false;
 }
 
 void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
@@ -25,8 +30,12 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	sockAddr = sAddr;
 	sessionID = ID;
 	sendFlag = 1;
-	IOCount = 0;
 	sockActive = FALSE;
+	
+	IOCount = 0;
+	//_IOChecker.IOCount = 0;
+	//_IOChecker.releaseFlag = false;
+	
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
 	sendOverlap.type = TYPE::SEND;

@@ -8,8 +8,14 @@ struct MyOverlapped
 	TYPE type;
 };
 
-class Session
+struct IOChecker
 {
+	LONG IOCount;
+	LONG64 releaseFlag;
+};
+
+class Session
+{	
 public:
 	Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD ID);
 	Session();
@@ -19,8 +25,11 @@ public:
 
 	DWORD &GetIOCount() { return IOCount; }
 	RingBuffer &GetRecvQ() { return recvQ; }
+	//IOChecker *GetIOCheckerPtr() { return &_IOChecker; }
 	//RingBuffer &GetSendQ() { return sendQ; }
+
 	LockFreeQueue<Packet *> *GetSendQ() { return sendQ; }
+
 	CHAR &GetSendFlag() { return sendFlag; }
 	SOCKET GetSocket() { return sock; }
 	BOOL &GetSocketActive() { return sockActive; }
@@ -35,6 +44,7 @@ public:
 	void SetSendPacketCnt(int cnt) { sendPacketCnt = cnt; }
 	int GetSendPacketCnt() { return sendPacketCnt; }
 
+	bool acceptCheck;
 private:
 	SOCKET sock;
 	DWORD sessionID;
@@ -44,11 +54,15 @@ private:
 	//RingBuffer sendQ;
 	LockFreeQueue<Packet *> *sendQ;
 	RingBuffer recvQ;
-	DWORD IOCount;
 	CHAR sendFlag;
 	BOOL sockActive;
 	SRWLOCK sessionLock;
 	int sendPacketCnt;
+
+	DWORD IOCount;
+	//bool releaseFlag;
+
+	
 
 	//자동화 테스트용
 //public:

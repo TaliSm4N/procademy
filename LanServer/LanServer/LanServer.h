@@ -2,6 +2,7 @@
 
 enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 
+
 class CLanServer
 {
 public:

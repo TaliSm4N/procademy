@@ -2,7 +2,6 @@
 #include "Player.h"
 
 
-
 Player::Player(LONGLONG id)
 	:sessionID(id)
 {

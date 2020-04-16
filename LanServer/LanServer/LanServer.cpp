@@ -1,6 +1,8 @@
+
+
+
 #include <iostream>
 #include "LanServerLib.h"
-
 
 CLanServer::CLanServer()
 	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
@@ -198,6 +200,7 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 
 		CreateIoCompletionPort((HANDLE)sock, _this->_hcp, (ULONG_PTR)session, 0);
 
+		//InterlockedIncrement64(&session->GetIOCount());
 		_this->OnClientJoin(session->GetID());
 
 		InterlockedExchange8((CHAR *)&session->GetSocketActive(), TRUE);
@@ -205,6 +208,7 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 		if (!_this->RecvPost(session))
 		{ 
 			_this->Disconnect(session->GetID());
+			//_this->SessionRelease(session);
 		}
 		else
 		{
@@ -266,6 +270,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 
 			InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE);
 			closesocket(session->GetSocket());
+			//_this->Disconnect(session->GetID());
 		}
 
 		if (pOverlapped->type == TYPE::RECV)
@@ -290,6 +295,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			//}
 			//session->GetAutoSendQ().UnLock();
 			//자동화 테스트
+
 			//session->GetSendQ().Lock();
 			//for (int i = 0; i < session->GetSendPacketCnt(); i++)
 			//{
@@ -308,12 +314,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			{
 				Packet *temp;
 				session->GetSendQ()->Dequeue(&temp);
-				//temp->Release();
-				//if (temp->UnRef())
-				//{
-					//_this->PacketFree(temp);
 				Packet::Free(temp);
-				//}
 			}
 
 			InterlockedExchange8(&session->GetSendFlag(), 1);
@@ -323,9 +324,10 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			_this->OnSend(session->GetID(),transferred);
 		}
 
-		if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)
+		if (InterlockedDecrement(&session->GetIOCount()) == 0)
 		{
 			_this->Disconnect(session->GetID());
+			//_this->SessionRelease(session);
 		}
 	}
 
@@ -376,10 +378,10 @@ bool CLanServer::Disconnect(DWORD sessionID)
 	//AcquireSRWLockExclusive(&_usedSessionLock);
 	//_unUsedSessionStack.push(sessionID);
 	_sessionIndexStack->Push(sessionID);
-	
+
 	//ReleaseSRWLockExclusive(&_usedSessionLock);
-	
-	
+
+
 	return true;
 }
 
@@ -409,12 +411,13 @@ unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 	return 0;
 }
 
+//수정중
 PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 {
 	int recvQSize = session->GetRecvQ().GetUseSize();
 
 	Packet payload;
-	HEADER *header = payload.GetHeaderPtr();
+	HEADER *header=payload.GetHeaderPtr();
 
 	if (sizeof(HEADER) > recvQSize)
 		return NONE;
@@ -438,13 +441,23 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 {
 	LanServerHeader header;
 
+	header.len = p->GetDataSize();
+	p->PutHeader(&header);
+
 	int idMask = 0xffff;
 	sessionID &= idMask;
 	Session *session = &_sessionList[sessionID];
+	//Session *session = SessionGet(sessionID);//&_sessionList[sessionID];
 	InterlockedIncrement64((LONG64 *)&_sendPacketCounter);
 
 	header.len = p->GetDataSize();
-	p->PutHeader(&header);
+
+	
+
+	if (session->GetSendQ()->GetFreeCount() > 0)
+	{
+		session->GetSendQ()->Enqueue(p);
+	}
 
 	//session->GetSendQ().Lock();
 	//if (session->GetSendQ().GetFreeSize() >= sizeof(p))
@@ -452,14 +465,8 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	//	session->GetSendQ().Enqueue((char *)&p,sizeof(p));
 	//}
 	//session->GetSendQ().UnLock();
-
-	if (session->GetSendQ()->GetFreeCount() >= sizeof(p))
-	{
-		session->GetSendQ()->Enqueue(p);
-	}
-
 	SendPost(session);
-
+	//SessionPut(session);
 	return true;
 }
 
@@ -480,10 +487,10 @@ bool CLanServer::RecvPost(Session *session)
 
 	DWORD flags = 0;
 	
-	if (InterlockedIncrement((LONG *)&session->GetIOCount()) == 1)
-	{
-		volatile int test = 1;
-	}
+	//if (session->acceptCheck)
+		InterlockedIncrement(&session->GetIOCount());
+	//else
+	//	session->acceptCheck = true;
 
 	int retval = WSARecv(session->GetSocket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->GetRecvOverlap(), NULL);
 
@@ -492,9 +499,10 @@ bool CLanServer::RecvPost(Session *session)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)
+			if (InterlockedDecrement(&session->GetIOCount()) == 0)
 			{
 				Disconnect(session->GetID());
+				//SessionRelease(session);
 			}
 
 			return false;
@@ -556,6 +564,7 @@ bool CLanServer::SendPost(Session *session)
 	//session->GetAutoSendQ().UnLock();
 	//자동화 테스트
 	
+	
 	//int sendQsize = session->GetSendQ().GetUseSize();
 	//int peekCnt = sendQsize / sizeof(Packet *);
 	int peekCnt = session->GetSendQ()->GetUseCount();
@@ -563,18 +572,28 @@ bool CLanServer::SendPost(Session *session)
 	Packet *peekData[1024];
 	
 	
-	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
+	//session->GetSendQ().Peek((char *)peekData, peekCnt * sizeof(Packet *));
 	
+	//for (int i = 0; i < peekCnt; i++)
+	//{
+	//	//wsabuf[i].buf = peekData[i]->GetBufferPtr();
+	//	wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
+	//	wsabuf[i].len = peekData[i]->GetDataSize()+sizeof(HEADER);
+	//	//peekData[i]->Ref();
+	//}
+
+	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
+
 	for (int i = 0; i < peekCnt; i++)
 	{
 		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
 		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
-		//peekData[i]->Ref();
 	}
+
 	session->SetSendPacketCnt(peekCnt);
 	//session->GetSendQ().UnLock();
 	DWORD flags = 0;
-	InterlockedIncrement((LONG *)&session->GetIOCount());
+	InterlockedIncrement(&session->GetIOCount());
 
 	
 	int retval = WSASend(session->GetSocket(), wsabuf, peekCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
@@ -586,9 +605,10 @@ bool CLanServer::SendPost(Session *session)
 		if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
 		{
 			InterlockedExchange8(&session->GetSendFlag(), 1);
-			if (InterlockedDecrement((LONG *)&session->GetIOCount()) == 0)
+			if (InterlockedDecrement(&session->GetIOCount()) == 0)
 			{
 				Disconnect(session->GetID());
+				//SessionRelease(session);
 			}
 			return false;
 		}
