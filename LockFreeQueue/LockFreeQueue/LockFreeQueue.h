@@ -3,7 +3,7 @@
 #include "CrashDump.h"
 
 #include <Windows.h>
-#include <algorithm>
+//#include <algorithm>
 #include "MemoryPool.h"
 
 //최근 50000개만 기록한다
@@ -24,15 +24,18 @@ private:
 		{
 			next = NULL;
 			item = data;
+			used = false;
 		}
 
 		NODE()
 		{
 			next = NULL;
+			used = false;
 		}
 
 		T item;
 		NODE *next;
+		bool used;
 	};
 
 	struct END_NODE
@@ -72,6 +75,7 @@ LockFreeQueue<T>::LockFreeQueue()
 {
 	_head = new END_NODE;
 	_head->node = queuePool.Alloc();
+	_head->node->used = true;
 	_tail = new END_NODE;
 	_tail->node = _head->node;
 }
@@ -80,43 +84,34 @@ template<class T>
 bool LockFreeQueue<T>::Enqueue(T data)
 {
 	NODE *newNode = queuePool.Alloc();
-
-	if (newNode == _tail->node)
-	{
-		volatile int test = 1;
-		//CrashDump::Crash();
-	}
+	
 
 	//추적용
-	ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
-	InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)newNode);
+	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
+	//InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)newNode);
 	//추적용
-
 
 	if (newNode == NULL)
 		return false;
 
 	newNode->item = data;
-	newNode->next = NULL;
+	//newNode->next = NULL;
+	newNode->used = true;
 
 	
 	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);
-
-	
+		
 
 	while (1)
 	{
 		END_NODE tail;// = _tail;
 		tail.check = _tail->check;
 		tail.node = _tail->node;
-		NODE *next = tail.node->next;
 
-		//test
-		//if (tail.node == newNode)
-		//{
-		//	volatile int test = 1;
-		//	//CrashDump::Crash();
-		//}
+		if (tail.node->next == (NODE *)0x1)
+			continue;
+
+		NODE *next = tail.node->next;
 
 		if (next == NULL)
 		{
@@ -127,32 +122,7 @@ bool LockFreeQueue<T>::Enqueue(T data)
 				//실패한다면 이 시점에 서는 _tail이 이미 변경됬음 => 변경된 곳에서 _tail을 맞춰줄 것을 기대한다
 				//위의 interlock과는 독립적으로 돌아가기때문에 _tail뒤에는 이미 새로운 node가 들어왔을 가능성이 있음
 				//(하지만 _tail은 여전히 현재 tail을 가리키므로 _tail의 next가 null이 아니게됨)
-
-				if (newNode == tail.node)
-				{
-					volatile int test = 1;
-				}
-
-				NODE *tempTail = tail.node;
-				NODE *tempTailNext = tail.node->next;
-
-				if (tail.node->next == tail.node)
-				{
-					volatile int test = 1;
-				}
-
-				if (InterlockedCompareExchange128((LONG64 *)_tail, checkNum, (LONG64)tail.node->next, (LONG64 *)&tail))
-				{
-					NODE *temp = _tail->node;
-
-					if (temp!=NULL&&temp == temp->next)
-					{
-						volatile int test = 1;
-						CrashDump::Crash();
-					}
-				}
-
-				
+				InterlockedCompareExchange128((LONG64 *)_tail, checkNum, (LONG64)tail.node->next, (LONG64 *)&tail);
 
 				break;
 			}
@@ -161,32 +131,8 @@ bool LockFreeQueue<T>::Enqueue(T data)
 		//단 이경우에도 _tail은 atomic하게 변경되어야함
 		else
 		{
-			NODE *tempTail = tail.node;
-			NODE *tempTailNext = tail.node->next;
-
-			if (tail.node->next == tail.node)
-			{
-				volatile int test = 1;
-			}
-
-			if (InterlockedCompareExchange128((LONG64 *)_tail, checkNum, (LONG64)tail.node->next, (LONG64 *)&tail))
-			{
-				volatile int test = 1;
-				NODE *temp = _tail->node;
-
-
-				if (temp == temp->next)
-				{
-					volatile int test = 1;
-					CrashDump::Crash();
-				}
-
-				if (temp == NULL)
-				{
-					volatile int test = 1;
-					CrashDump::Crash();
-				}
-			}
+		
+			InterlockedCompareExchange128((LONG64 *)_tail, checkNum, (LONG64)tail.node->next, (LONG64 *)&tail);
 			checkNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);//_tail이 변경됨에 따라서 checkNum도 변경
 		}
 	}
@@ -206,6 +152,7 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 		return false;
 	}
 
+
 	END_NODE h;
 	//NODE *newHead = NULL;
 	T popData=NULL;
@@ -214,6 +161,12 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 
 	while (1)
 	{
+		//if (_head->node == _tail->node&&InterlockedCompareExchange((LONG *)&_head->node->next, NULL, NULL) == NULL)
+		//{
+		//	volatile int test = 1;
+		//	CrashDump::Crash();
+		//}
+
 		//END_NODE h;
 		h.check = _head->check;
 		h.node = _head->node;
@@ -223,30 +176,15 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 		END_NODE tail;// = _tail;
 		tail.check = _tail->check;
 		tail.node = _tail->node;
+		NODE *tailNext = tail.node->next;
+
 		if (tail.node->next != NULL)
 		{
+
 			unsigned long long tailCheckNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);//_tail이 변경됨에 따라서 checkNum도 변경
+		
+			InterlockedCompareExchange128((LONG64 *)_tail, tailCheckNum, (LONG64)tail.node->next, (LONG64 *)&tail);
 
-			if (tail.node->next == tail.node)
-			{
-				volatile int test = 1;
-			}
-			if (InterlockedCompareExchange128((LONG64 *)_tail, tailCheckNum, (LONG64)tail.node->next, (LONG64 *)&tail))
-			{
-				
-				NODE *temp = _tail->node;
-				if (temp->next == temp)
-				{
-					volatile int test = 1;
-					CrashDump::Crash();
-				}
-
-				if (temp == NULL)
-				{
-					volatile int test = 1;
-					CrashDump::Crash();
-				}
-			}
 			continue;
 		}
 
@@ -259,16 +197,13 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 			continue;
 
 		//memcpy(&popData, &(h.node->next->item), sizeof(T));
-		memcpy(&popData, &next->item, sizeof(T));
-			//popData = next->item;
-
-		//if (_head->node == _tail->node)
-		//{
-		//	volatile int test = 1;
-		//}
+		//memcpy(&popData, &next->item, sizeof(T));
+		popData = next->item;
 
 		if (InterlockedCompareExchange128((LONG64 *)_head, checkNum, (LONG64)h.node->next, (LONG64 *)&h))
 		{
+			//h.node->used = false;
+			//queuePool.Free(h.node);//<-이놈이 free가 되었는데 이 값이 재 queue에서 불려와 재사용될 때 문제가 생기는 것같음
 			if (data != NULL)
 				*data = popData;
 			break;
@@ -306,15 +241,12 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 	}
 	*/
 	//추적용
-	ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
-	InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)h.node | 0x1000000000000000);
+	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
+	//InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)h.node | 0x1000000000000000);
 	//추적용
-
-	h.node->next = NULL;//이 값이 자꾸만 재활용됨 -> 원인파악 필요
+	
 	queuePool.Free(h.node);
 
-	if (popData == NULL)
-		CrashDump::Crash();
 
 	return true;
 }

@@ -75,11 +75,14 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 		temp->lCount = 0;
 		temp->lData = 0x0000000055555555;
 
-		queue.Enqueue(temp);
+		if (!queue.Enqueue(temp))
+		{
+			CrashDump::Crash();
+		}
 		InterlockedIncrement((LONG *)&pushTotal);
 		//stack.Push(temp);
 	}
-	Sleep(100);
+	Sleep(500);
 
 	st_TEST_DATA *data[1000];
 
@@ -136,7 +139,10 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 		}
 		for (int i = 0; i < count; i++)
 		{
-			queue.Enqueue(data[i]);
+			if(!queue.Enqueue(data[i]))
+			{
+				CrashDump::Crash();
+			}
 			InterlockedIncrement((LONG *)&pushTotal);
 			//stack.Push(data[i]);
 
