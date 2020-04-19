@@ -42,6 +42,9 @@
     <ClCompile Include="RingBuffer.cpp">
       <Filter>소스 파일\Lib</Filter>
     </ClCompile>
+    <ClCompile Include="ChatServer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Session.h">
@@ -71,9 +74,6 @@
     <ClInclude Include="MemoryPoolTLS.h">
       <Filter>헤더 파일\Lib</Filter>
     </ClInclude>
-    <ClInclude Include="MyServer.h">
-      <Filter>헤더 파일\Lib</Filter>
-    </ClInclude>
     <ClInclude Include="Packet.h">
       <Filter>헤더 파일\Lib</Filter>
     </ClInclude>
@@ -84,6 +84,9 @@
       <Filter>헤더 파일\Lib</Filter>
     </ClInclude>
     <ClInclude Include="ChatServer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

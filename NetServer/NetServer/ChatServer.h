@@ -62,4 +62,6 @@ private:
 	HANDLE _updateThread;
 	DWORD _updateThreadID;
 	LockFreeQueue<st_UPDATE_MESSAGE> *_msgQ;
+
+	//섹터 체크 자료구조하나
 };
