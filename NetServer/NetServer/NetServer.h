@@ -3,10 +3,10 @@
 enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 
 
-class CLanServer
+class CNetServer
 {
 public:
-	CLanServer();
+	CNetServer();
 	bool Start(int port, int workerCnt, bool nagle, int maxUser,bool monitoring=true);
 	void Stop();
 	

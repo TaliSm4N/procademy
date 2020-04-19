@@ -1,7 +1,7 @@
 #include <WinSock2.h>
 #include <iostream>
 
-#include "LanServerLib.h"
+#include "NetServerLib.h"
 
 Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	:sock(s),sockAddr(sAddr),sendFlag(1), sockActive(FALSE),sessionID(id)

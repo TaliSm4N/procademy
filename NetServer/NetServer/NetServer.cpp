@@ -2,16 +2,16 @@
 
 
 #include <iostream>
-#include "LanServerLib.h"
+#include "NetServerLib.h"
 
-CLanServer::CLanServer()
+CNetServer::CNetServer()
 	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
 {
 	//packetPool = new MemoryPoolTLS<Packet>(10000, true);
 	Packet::Init();
 }
 
-bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monitoring)
+bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monitoring)
 {
 	////////////////DEBUG
 
@@ -107,7 +107,7 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	}
 }
 
-void CLanServer::Stop()
+void CNetServer::Stop()
 {
 	int handleCnt=_workerCnt+1;
 	if (_monitoring)
@@ -137,9 +137,9 @@ void CLanServer::Stop()
 
 }
 
-unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
+unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 {
-	CLanServer *_this = (CLanServer *)lpParam;
+	CNetServer *_this = (CNetServer *)lpParam;
 
 	Session *session;
 	SOCKET sock;
@@ -221,10 +221,10 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 	return 0;
 }
 
-unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
+unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 {
 	int retVal;
-	CLanServer *_this = (CLanServer *)lpParam;
+	CNetServer *_this = (CNetServer *)lpParam;
 
 	Session *session;
 	MyOverlapped *pOverlapped;
@@ -332,7 +332,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 	return 0;
 }
 
-bool CLanServer::Disconnect(DWORD sessionID)
+bool CNetServer::Disconnect(DWORD sessionID)
 {
 	//int idMask = 0xffff;
 	//sessionID &= idMask;
@@ -358,9 +358,9 @@ bool CLanServer::Disconnect(DWORD sessionID)
 	return true;
 }
 
-unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
+unsigned int WINAPI CNetServer::MonitorThread(LPVOID lpParam)
 {
-	CLanServer *_this = (CLanServer *)lpParam;
+	CNetServer *_this = (CNetServer *)lpParam;
 	int tick = timeGetTime();
 	LONG64 acceptBefore = 0;
 
@@ -385,7 +385,7 @@ unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 }
 
 //¼öÁ¤Áß
-PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
+PROCRESULT CNetServer::CompleteRecvPacket(Session *session)
 {
 	int recvQSize = session->GetRecvQ().GetUseSize();
 
@@ -405,12 +405,13 @@ PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 	if (session->GetRecvQ().Dequeue(&payload, header->len) != header->len)
 		return FAIL;
 
+	payload.decode();
 	OnRecv(session->GetID(), &payload);
 	InterlockedIncrement64((LONG64 *)&_recvPacketCounter);
 	return SUCCESS;
 }
 
-bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
+bool CNetServer::SendPacket(DWORD sessionID, Packet *p)
 {
 	LanServerHeader header;
 
@@ -426,7 +427,7 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	header.len = p->GetDataSize();
 
 	
-
+	p->encode();
 	if (session->GetSendQ()->GetFreeCount() > 0)
 	{
 		session->GetSendQ()->Enqueue(p);
@@ -443,7 +444,7 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	return true;
 }
 
-bool CLanServer::RecvPost(Session *session)
+bool CNetServer::RecvPost(Session *session)
 {
 
 	if (!session->GetSocketActive())
@@ -484,7 +485,7 @@ bool CLanServer::RecvPost(Session *session)
 
 	return true;
 }
-bool CLanServer::SendPost(Session *session)
+bool CNetServer::SendPost(Session *session)
 {
 	if (!session->GetSocketActive())
 	{
@@ -590,7 +591,7 @@ bool CLanServer::SendPost(Session *session)
 	return true;
 }
 
-Session *CLanServer::GetSession(DWORD sessionID)
+Session *CNetServer::GetSession(DWORD sessionID)
 {
 	
 	Session *session = &_sessionList[sessionID & 0xffff];
@@ -608,7 +609,7 @@ Session *CLanServer::GetSession(DWORD sessionID)
 
 	return session;
 }
-void CLanServer::PutSession(Session *session)
+void CNetServer::PutSession(Session *session)
 {
 	if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 	{
@@ -617,7 +618,7 @@ void CLanServer::PutSession(Session *session)
 	}
 }
 
-void CLanServer::ReleaseSession(Session *session)
+void CNetServer::ReleaseSession(Session *session)
 {
 	IOChecker checker;
 
@@ -683,7 +684,7 @@ void CLanServer::ReleaseSession(Session *session)
 }
 
 
-//bool CLanServer::AutoSendPacket(DWORD sessionID, PacketPtr *p)
+//bool CNetServer::AutoSendPacket(DWORD sessionID, PacketPtr *p)
 //{
 //	LanServerHeader header;
 //

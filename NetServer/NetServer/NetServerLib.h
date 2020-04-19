@@ -23,5 +23,5 @@
 #include "PacketPtr.h"
 #include "RingBuffer.h"
 #include "Session.h"
-#include "LanServer.h"
+#include "NetServer.h"
 
