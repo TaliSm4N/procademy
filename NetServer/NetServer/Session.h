@@ -15,9 +15,9 @@ struct IOChecker
 };
 
 class Session
-{	
+{
 public:
-	Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD ID);
+	Session(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID);
 	Session();
 
 	void SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID);
@@ -32,7 +32,7 @@ public:
 	LockFreeQueue<Packet *> *GetSendQ() { return sendQ; }
 
 	CHAR &GetSendFlag() { return sendFlag; }
-	SOCKET GetSocket() { return sock; }
+	SOCKET &GetSocket() { return sock; }
 	BOOL &GetSocketActive() { return sockActive; }
 	DWORD GetID() { return sessionID; }
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }
@@ -64,7 +64,7 @@ private:
 	//bool releaseFlag;
 	IOChecker *IOBlock;
 
-	
+
 
 	//자동화 테스트용
 //public:

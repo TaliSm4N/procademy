@@ -347,10 +347,10 @@ bool CLanServer::Disconnect(DWORD sessionID)
 
 	if (sessionID == session->GetID())
 	{
-		if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
-		{
-			closesocket(session->GetSocket());
-		}
+		
+		closesocket(session->GetSocket());
+		session->GetSocket() = INVALID_SOCKET;
+		InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE);
 	}
 
 	PutSession(session);
@@ -377,6 +377,7 @@ unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 
 			InterlockedExchange64(&_this->_sendPacketTPS, _this->_sendPacketCounter);
 			InterlockedExchange64(&_this->_sendPacketCounter, 0);
+			InterlockedExchange64(&_this->_packetCount, Packet::PacketUseCount());
 
 		}
 	}
@@ -389,23 +390,33 @@ PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 {
 	int recvQSize = session->GetRecvQ().GetUseSize();
 
-	Packet payload;
-	HEADER *header=payload.GetHeaderPtr();
+	Packet *payload = Packet::Alloc();
+	HEADER *header=payload->GetHeaderPtr();
 
 	if (sizeof(HEADER) > recvQSize)
+	{
+		Packet::Free(payload);
 		return NONE;
+	}
 
 	session->GetRecvQ().Peek((char *)header, sizeof(HEADER));
 
 	if (recvQSize < header->len + sizeof(HEADER))
+	{
+		Packet::Free(payload);
 		return NONE;
+	}
 
 	session->GetRecvQ().MoveReadPos(sizeof(HEADER));
 
-	if (session->GetRecvQ().Dequeue(&payload, header->len) != header->len)
+	if (session->GetRecvQ().Dequeue(payload, header->len) != header->len)
+	{
+		Packet::Free(payload);
 		return FAIL;
+	}
 
-	OnRecv(session->GetID(), &payload);
+	OnRecv(session->GetID(), payload);
+	//Packet::Free(payload);
 	InterlockedIncrement64((LONG64 *)&_recvPacketCounter);
 	return SUCCESS;
 }
@@ -474,8 +485,9 @@ bool CLanServer::RecvPost(Session *session)
 		{
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-				Disconnect(session->GetID());
-				//SessionRelease(session);
+
+				//Disconnect(session->GetID());
+				ReleaseSession(session);
 			}
 
 			return false;
@@ -493,12 +505,6 @@ bool CLanServer::SendPost(Session *session)
 
 	if (InterlockedExchange8(&session->GetSendFlag(), 0) == 0)
 	{
-		return false;
-	}
-
-	if (session->GetSendQ()->GetUseCount() <= 0)
-	{
-		InterlockedExchange8(&session->GetSendFlag(), 1);
 		return false;
 	}
 
@@ -543,6 +549,13 @@ bool CLanServer::SendPost(Session *session)
 	int peekCnt = session->GetSendQ()->GetUseCount();
 	WSABUF wsabuf[1024];
 	Packet *peekData[1024];
+
+	if (peekCnt == 0)
+	{
+		InterlockedExchange8(&session->GetSendFlag(), 1);
+		return false;
+		CrashDump::Crash();
+	}
 	
 	
 	//session->GetSendQ().Peek((char *)peekData, peekCnt * sizeof(Packet *));
@@ -556,6 +569,12 @@ bool CLanServer::SendPost(Session *session)
 	//}
 
 	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
+
+	if (peekCnt == 0)
+	{
+		InterlockedExchange8(&session->GetSendFlag(), 1);
+		return false;
+	}
 
 	for (int i = 0; i < peekCnt; i++)
 	{
@@ -580,8 +599,9 @@ bool CLanServer::SendPost(Session *session)
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-				Disconnect(session->GetID());
-				//SessionRelease(session);
+
+				//Disconnect(session->GetID());
+				ReleaseSession(session);
 			}
 			return false;
 		}
@@ -632,12 +652,7 @@ void CLanServer::ReleaseSession(Session *session)
 		return;
 	}
 
-	if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
-	{
-		closesocket(session->GetSocket());
-	}
-
-	OnClientLeave(session->GetID());
+	
 
 	//남은 send Packet 제거
 	while (session->GetSendQ()->GetUseCount() != 0)
@@ -652,27 +667,17 @@ void CLanServer::ReleaseSession(Session *session)
 		//}
 	}
 
-	//session->GetSendQ().Lock();
-	//
-	////남은 send Packet 제거
-	//while(session->GetSendQ().GetUseSize()!=0)
-	//{
-	//	Packet *temp;
-	//	session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
-	//	//temp->Release();
-	//	//if (temp->UnRef())
-	//	//{
-	//		//PacketFree(temp);
-	//	Packet::Free(temp);
-	//	//}
-	//}
-	//
-	//session->GetSendQ().UnLock();
-
 	InterlockedDecrement(&_sessionCount);
 
 	//AcquireSRWLockExclusive(&_usedSessionLock);
 	//_unUsedSessionStack.push(sessionID);
+
+	if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE)&&session->GetSocket()!=INVALID_SOCKET)
+	{
+		closesocket(session->GetSocket());
+	}
+	OnClientLeave(session->GetID());
+
 	_sessionIndexStack->Push(session->GetID()&0xffff);
 
 	//ReleaseSRWLockExclusive(&_usedSessionLock);

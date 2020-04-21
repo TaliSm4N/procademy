@@ -30,6 +30,7 @@ int main()
 		wprintf(L"conReqFail    : %8d\n", test.GetConnectionRequestFail());
 		wprintf(L"recvPacketTPS : %8d\n", test.GetRecvPacketTPS());
 		wprintf(L"sendPacketTPS : %8d\n", test.GetSendPacketTPS());
+		wprintf(L"packetCount   : %8d\n", test.GetPacketCount());
 		wprintf(L"----------------------------------\n");
 		Sleep(1000);
 	}

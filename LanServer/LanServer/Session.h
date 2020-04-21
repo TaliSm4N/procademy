@@ -32,7 +32,7 @@ public:
 	LockFreeQueue<Packet *> *GetSendQ() { return sendQ; }
 
 	CHAR &GetSendFlag() { return sendFlag; }
-	SOCKET GetSocket() { return sock; }
+	SOCKET &GetSocket() { return sock; }
 	BOOL &GetSocketActive() { return sockActive; }
 	DWORD GetID() { return sessionID; }
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }

@@ -28,8 +28,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{7729D4C7-5144-48B2-80BA-80B077DD8676}</ProjectGuid>
-    <RootNamespace>NetServer</RootNamespace>
+    <ProjectGuid>{6EE81262-ACB2-4511-8194-81CFEFB3D05C}</ProjectGuid>
+    <RootNamespace>TextParser</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -172,31 +172,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ChatServer.cpp" />
-    <ClCompile Include="CrashDump.cpp" />
-    <ClCompile Include="NetServer.cpp" />
-    <ClCompile Include="Packet.cpp" />
-    <ClCompile Include="PacketPtr.cpp" />
-    <ClCompile Include="RingBuffer.cpp" />
-    <ClCompile Include="Session.cpp" />
     <ClCompile Include="testMain.cpp" />
     <ClCompile Include="TextParser.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ChatServer.h" />
-    <ClInclude Include="CrashDump.h" />
-    <ClInclude Include="header.h" />
-    <ClInclude Include="NetServer.h" />
-    <ClInclude Include="NetServerLib.h" />
-    <ClInclude Include="LockFreeQueue.h" />
-    <ClInclude Include="LockFreeStack.h" />
-    <ClInclude Include="MemoryPool.h" />
-    <ClInclude Include="MemoryPoolTLS.h" />
-    <ClInclude Include="Packet.h" />
-    <ClInclude Include="PacketPtr.h" />
-    <ClInclude Include="Protocol.h" />
-    <ClInclude Include="RingBuffer.h" />
-    <ClInclude Include="Session.h" />
     <ClInclude Include="TextParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

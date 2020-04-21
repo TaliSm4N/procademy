@@ -90,18 +90,18 @@ bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 
 	//Packet *sendPacket = PacketAlloc();
 	//Packet *sendPacket = new Packet;
-	Packet *sendPacket = Packet::Alloc();
+	//Packet *sendPacket = Packet::Alloc();
 	//LanServerHeader header;
 
-	LONGLONG data;
+	//LONGLONG data;
 
-	*p >> data;
+	//*p >> data;
 
 	//header.len = sizeof(data);
 	//sendPacket->PutData((char *)&header, sizeof(header));
-	*sendPacket << data;
+	//*sendPacket << data;
 
-	SendPacket(sessionID, sendPacket);
+	SendPacket(sessionID, p);
 
 
 	//자동화 테스트

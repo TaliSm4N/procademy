@@ -66,11 +66,13 @@ public:
 	T *Alloc();
 	bool Free(T *data);
 	int GetChunkCount() { return _useChunkCount; }
+	int GetCount() { return _useCount; }
 private:
 	DWORD _tlsIndex;
 	MemoryPool<Chunk> *_pool;
 	int _useChunkCount;
 	bool _placementNew;
+	int _useCount;
 };
 
 template<class T>
@@ -160,7 +162,7 @@ T *MemoryPoolTLS<T>::Alloc()
 	}
 
 	before = chunk->AllocIndex;
-
+	InterlockedIncrement((LONG *)&_useCount);
 	return ret;
 }
 
@@ -193,6 +195,6 @@ bool MemoryPoolTLS<T>::Free(T *data)
 		}
 		//InterlockedDecrement((LONG *)&chunk->pMemoryPool->_useChunkCount);
 	}
-
+	InterlockedDecrement((LONG *)&_useCount);
 	return true;
 }

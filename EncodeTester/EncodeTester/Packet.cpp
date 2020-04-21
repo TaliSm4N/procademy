@@ -7,6 +7,8 @@
 #include "Packet.h"
 
 MemoryPoolTLS<Packet> *Packet::packetPool = NULL;
+int Packet::_key = 0;
+int Packet::_code = 0;
 
 Packet::Packet()
 	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE)
@@ -14,12 +16,12 @@ Packet::Packet()
 }
 
 Packet::Packet(int iBufferSize)
-	:mode(ERROR_MODE),err(E_NOERROR),front(0),rear(0),size(iBufferSize)
+	: mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
 {
 }
 
-Packet::Packet(int iBufferSize,int Mode)
-	: mode(Mode), err(E_NOERROR), front(0), rear(0),size(iBufferSize)
+Packet::Packet(int iBufferSize, int Mode)
+	: mode(Mode), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
 {
 }
 
@@ -71,7 +73,7 @@ int Packet::MoveWritePos(int iSize)
 }
 int Packet::MoveReadPos(int iSize)
 {
-	if(front+iSize<=rear)
+	if (front + iSize <= rear)
 		front += iSize;
 	else
 	{
@@ -84,7 +86,7 @@ int Packet::MoveReadPos(int iSize)
 
 int Packet::GetData(char *chpDest, int iSize)
 {
-	int useSize=GetDataSize();
+	int useSize = GetDataSize();
 	if (useSize >= iSize)
 		useSize = iSize;
 
@@ -104,7 +106,7 @@ int Packet::PutData(char *chpSrc, int iSrcSize)
 		return -1;
 	}
 
-	memcpy(GetBufferPtr()+rear, chpSrc, iSrcSize);
+	memcpy(GetBufferPtr() + rear, chpSrc, iSrcSize);
 	rear += iSrcSize;
 
 	return iSrcSize;
@@ -451,18 +453,21 @@ Packet &Packet::operator >> (UINT &iValue)
 void Packet::GetHeader(HEADER *desheader)
 {
 	//헤더 종류에 따라 코드 수정필요
-	desheader->len = header.len;
+	memcpy(desheader, &header, sizeof(HEADER));
 }
 
 void Packet::PutHeader(HEADER *srcheader)
 {
 	//헤더 종류에 따라 코드 수정필요
-	header.len = srcheader->len;
+	//header.len = srcheader->len;
+	memcpy(&header, srcheader, sizeof(HEADER));
 }
 
-void Packet::Init()
+void Packet::Init(int key, int code)
 {
 	packetPool = new MemoryPoolTLS<Packet>(10000, true);
+	_key = key;
+	_code = code;
 }
 
 Packet *Packet::Alloc()
@@ -481,4 +486,39 @@ bool Packet::Free(Packet *p)
 	}
 
 	return true;
+}
+
+void Packet::encode()
+{
+	char p = 0;
+	header.RandKey;
+
+	p = header.CheckSum ^ (header.RandKey + p + 1);
+	header.CheckSum = p ^ (_key + 1);
+
+	for (int i = 0; i <= header.len; i++)
+	{
+		p = buf[i] ^ (header.RandKey + p + i + 2);
+		buf[i] = p ^ (_key + i + 2 + buf[i - 1]);
+	}
+}
+
+void Packet::decode()
+{
+	char p = 0;
+	char before_p = 0;
+	char before_e = 0;
+
+	p = header.CheckSum ^ (_key + 1);
+	before_p = p;
+	before_e = header.CheckSum;
+	header.CheckSum = p ^ (header.RandKey + 1);
+
+	for (int i = 0; i <= header.len; i++)
+	{
+		before_p = p;
+		p = buf[i] ^ (before_e + _key + i + 2);
+		before_e = buf[i];
+		buf[i] = p ^ (before_p + header.RandKey + i + 2);
+	}
 }

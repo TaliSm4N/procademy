@@ -45,6 +45,9 @@
     <ClCompile Include="ChatServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="TextParser.cpp">
+      <Filter>소스 파일\Lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Session.h">
@@ -88,6 +91,9 @@
     </ClInclude>
     <ClInclude Include="Protocol.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="TextParser.h">
+      <Filter>헤더 파일\Lib</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

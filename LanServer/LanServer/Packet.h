@@ -161,6 +161,8 @@ public:
 	static Packet *Alloc();
 	static bool Free(Packet *);
 
+	static int PacketUseCount() { return packetPool->GetCount(); }
+
 private:
 	BYTE mode;
 	int err;

@@ -6,8 +6,11 @@
 #include <windows.h>
 #include <WS2tcpip.h>
 #include <process.h>
+#include <fstream>
 #include <cstring>
+#include <string>
 #include <map>
+#include <unordered_map>
 #include <stack>
 
 #pragma comment(lib, "winmm.lib")
@@ -23,5 +26,6 @@
 #include "PacketPtr.h"
 #include "RingBuffer.h"
 #include "Session.h"
+#include "TextParser.h"
 #include "NetServer.h"
 

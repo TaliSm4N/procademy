@@ -7,6 +7,7 @@ class CNetServer
 {
 public:
 	CNetServer();
+	bool ConfigStart(const WCHAR *configFile);
 	bool Start(int port, int workerCnt, bool nagle, int maxUser,bool monitoring=true);
 	void Stop();
 	
@@ -89,6 +90,7 @@ public:
 	LONG64 GetSendPacketTPS() const { return _sendPacketTPS; }
 	LONG64 GetAcceptFail() const { return _acceptFail; }
 	LONG64 GetConnectionRequestFail() const { return _connectionRequestFail; }
+	LONG64 GetPacketCount() const { return _packetCount; }
 
 	//새로운 디스커넥트 관련 테스트
 public:
@@ -108,6 +110,7 @@ private://monitoring
 	LONG64 _packetPoolAlloc;
 	LONG64 _acceptFail;
 	LONG64 _connectionRequestFail;
+	LONG64 _packetCount;
 
 //public:
 //	bool AutoSendPacket(DWORD sessionID, PacketPtr *p);

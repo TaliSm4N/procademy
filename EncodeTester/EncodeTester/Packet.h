@@ -5,17 +5,17 @@
 
 
 
-enum PacketMode {ERROR_MODE=0, THROW_MODE};
+enum PacketMode { ERROR_MODE = 0, THROW_MODE };
 
 
-enum PacketError {E_NOERROR=0,E_PUTDATA_ERROR, E_GETDATA_ERROR};
+enum PacketError { E_NOERROR = 0, E_PUTDATA_ERROR, E_GETDATA_ERROR };
 
 class Packet
 {
 public:
 	Packet();
 	Packet(int iBufferSize);
-	Packet(int iBufferSize,int Mode);
+	Packet(int iBufferSize, int Mode);
 
 	virtual ~Packet();
 
@@ -53,7 +53,7 @@ public:
 	// Parameters: 없음.
 	// Return: (int)사용중인 데이타 사이즈.
 	//////////////////////////////////////////////////////////////////////////
-	int GetDataSize(void) { return rear-front; }
+	int GetDataSize(void) { return rear - front; }
 
 
 
@@ -63,7 +63,7 @@ public:
 	// Parameters: 없음.
 	// Return: (char *)버퍼 포인터.
 	//////////////////////////////////////////////////////////////////////////
-	char *GetBufferPtr(void) { return buf+front; }
+	char *GetBufferPtr(void) { return buf + front; }
 
 	//send할 데이터는 front가 항상 0이여야함
 	void *GetSendPtr(void) { return &header; }
@@ -82,7 +82,8 @@ public:
 
 
 
-
+	void encode();
+	void decode();
 
 
 	/* ============================================================================= */
@@ -157,9 +158,11 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	int GetLastError() const { return err; }
 
-	static void Init();
+	static void Init(int key = 0, int code = 0);
 	static Packet *Alloc();
 	static bool Free(Packet *);
+
+	static int PacketUseCount() { return packetPool->GetCount(); }
 
 private:
 	BYTE mode;
@@ -168,9 +171,13 @@ private:
 	int front;
 	int rear;
 	int refCnt;
+#pragma pack(push,1)
 	HEADER header;
 	char buf[DEFAULT_PACKET_SIZE];
+#pragma pack(pop)
 
+	static int _key;
+	static int _code;
 	static MemoryPoolTLS<Packet> *packetPool;
 };
 

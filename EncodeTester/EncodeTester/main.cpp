@@ -69,34 +69,42 @@ void decode(Packet *payload, int ranKey)
 
 int main()
 {
-	Packet::Init();
+	Packet::Init(0xa9, 119);
 	Packet *p = Packet::Alloc();
 
 	char testData[55] = "aaaaaaaaaabbbbbbbbbbcccccccccc1234567890abcdefghijklmn";
 	char temp[55];
 
 	char test[55] = { 0xf9, 0x43, 0x95, 0x8c, 0x5f, 0xf3, 0xf7, 0x44, 0xb1, 0x87, 0x46, 0x23, 0xad, 0xb5, 0x1e, 0x01, 0xc1, 0xa3, 0x1e, 0x3f, 0xb4, 0x80, 0x18, 0x1b, 0xb2, 0xac, 0x36, 0x0b, 0x8c, 0x9c, 0x4a, 0x5e, 0x84, 0x84, 0x7a, 0x0e, 0x74, 0x84, 0x72, 0x0c, 0x16, 0xa8, 0x82, 0x68, 0xc6, 0xac, 0x72, 0x74, 0x86, 0x20, 0x32, 0x50, 0x86, 0x04, 0x2d };
+	HEADER header;
 
-	p->PutData(testData, 55);
+	header.RandKey = 0x31;
+	header.CheckSum = testData[0];
+	p->PutHeader(&header);
 
-	encode(p, 0x31);
-	p->GetData(temp, 55);
+	p->PutData(testData+1, 54);
 
-	for (int i = 0; i < 55; i++)
+	//encode(p, 0x31);
+	p->encode();
+	p->GetData(temp, 54);
+
+	for (int i = 1; i < 54; i++)
 	{
-		if (temp[i] != test[i])
+		if (temp[i-1] != test[i])
 		{
 			system("pause");
 		}
 	}
 	p->Clear();
-	p->PutData(temp, 55);
-	decode(p, 0x31);
-	p->GetData(temp, 55);
+	p->PutData(temp, 54);
+	p->decode();
+	//p->encode();
+	//decode(p, 0x31);
+	p->GetData(temp, 54);
 
-	for (int i = 0; i < 55; i++)
+	for (int i = 1; i < 54; i++)
 	{
-		if (temp[i] != testData[i])
+		if (temp[i-1] != testData[i])
 		{
 			system("pause");
 		}

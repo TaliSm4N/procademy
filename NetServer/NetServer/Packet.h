@@ -158,9 +158,12 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	int GetLastError() const { return err; }
 
-	static void Init(int key = 0);
+	static void Init(int key = 0,int code = 0);
 	static Packet *Alloc();
 	static bool Free(Packet *);
+
+	static int PacketUseCount() { return packetPool->GetCount(); }
+	static int GetCode() { return _code; }
 
 private:
 	BYTE mode;
@@ -175,6 +178,7 @@ private:
 #pragma pack(pop)
 	
 	static int _key;
+	static int _code;
 	static MemoryPoolTLS<Packet> *packetPool;
 };
 

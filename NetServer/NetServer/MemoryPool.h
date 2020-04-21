@@ -10,7 +10,7 @@ template <class T>
 class MemoryPool
 {
 private:
-//#pragma pack(push,1)
+	//#pragma pack(push,1)
 	struct NODE
 	{
 		NODE()
@@ -23,7 +23,7 @@ private:
 		T item;
 		int _bottomBump;
 	};
-//#pragma pack(pop)
+	//#pragma pack(pop)
 
 	struct TOP
 	{
@@ -38,7 +38,7 @@ private:
 	};
 
 public:
-	MemoryPool(int blockNum=0,bool maxLimit=false);
+	MemoryPool(int blockNum = 0, bool maxLimit = false);
 	~MemoryPool();
 
 	T *Alloc(bool placeMent = true);
@@ -61,8 +61,8 @@ public:
 
 
 template <class T>
-MemoryPool<T>::MemoryPool(int blockNum,bool maxLimit)
-	:_maxCapacity(blockNum),_checkNum(0),test(0),_freeCount(blockNum)
+MemoryPool<T>::MemoryPool(int blockNum, bool maxLimit)
+	:_maxCapacity(blockNum), _checkNum(0), test(0), _freeCount(blockNum)
 {
 	NODE *temp;
 	if (blockNum == 0)
@@ -117,7 +117,7 @@ template<class T>
 T *MemoryPool<T>::Alloc(bool placement)
 {
 	NODE *ret = NULL;
-	NODE *newTop=NULL;
+	NODE *newTop = NULL;
 	TOP t;
 	unsigned long long checkNum;
 
@@ -126,7 +126,7 @@ T *MemoryPool<T>::Alloc(bool placement)
 	InterlockedIncrement((LONG *)&test);
 
 	//if (_maxCapacity < InterlockedIncrement((LONG *)&_useCount))
-	if(InterlockedDecrement((LONG *)&_freeCount)<0)
+	if (InterlockedDecrement((LONG *)&_freeCount) < 0)
 	{
 		//maxLimit가 true인 경우 새로운 node를 생성하지 않음
 		if (_maxLimit)
@@ -137,12 +137,12 @@ T *MemoryPool<T>::Alloc(bool placement)
 		else // maxLimit가 true가 아닌 경우 새로운 node를 생성해서 전달
 		{
 
-			InterlockedIncrement((LONG *) &_maxCapacity);
+			InterlockedIncrement((LONG *)&_maxCapacity);
 			InterlockedIncrement((LONG *)&_freeCount);
 			//ret = new NODE();
 			ret = (NODE *)malloc(sizeof(NODE));
 			ret->_bottomBump = BOTTOM_BUMP;
-			
+
 			if (placement)
 				new (&(ret->item)) T();
 
@@ -175,7 +175,7 @@ bool MemoryPool<T>::Free(T *data)
 {
 	//InterlockedIncrement((LONG *)&test);
 
-	NODE *temp = (NODE *)((LONG64)data-sizeof(NODE *));
+	NODE *temp = (NODE *)((LONG64)data - sizeof(NODE *));
 	TOP t;
 	unsigned long long checkNum;
 
@@ -185,7 +185,7 @@ bool MemoryPool<T>::Free(T *data)
 	}
 
 	checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 push행위의 checkNum은 함수 시작 시에 결정
-	
+
 	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)temp, (LONG64 *)&t))
 	{
 		temp->NextBlock = t.node;

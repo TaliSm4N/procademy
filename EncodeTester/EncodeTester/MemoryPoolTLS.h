@@ -26,7 +26,7 @@ class MemoryPoolTLS
 {
 private:
 	struct Chunk;
-//#pragma pack(push,1)
+	//#pragma pack(push,1)
 	struct ChunkBlock
 	{
 		Chunk *pChunk;
@@ -37,7 +37,7 @@ private:
 			_bumper = BUMPER;
 		}
 	};
-//#pragma pack(pop)
+	//#pragma pack(pop)
 
 	struct Chunk
 	{
@@ -61,24 +61,26 @@ private:
 
 
 public:
-	MemoryPoolTLS(int ChunkNum = 0, bool placement=true);
+	MemoryPoolTLS(int ChunkNum = 0, bool placement = true);
 	~MemoryPoolTLS();
 	T *Alloc();
 	bool Free(T *data);
 	int GetChunkCount() { return _useChunkCount; }
+	int GetCount() { return _useCount; }
 private:
 	DWORD _tlsIndex;
 	MemoryPool<Chunk> *_pool;
 	int _useChunkCount;
 	bool _placementNew;
+	int _useCount;
 };
 
 template<class T>
-MemoryPoolTLS<T>::MemoryPoolTLS(int ChunkNum,bool placement)
-	:_useChunkCount(0),_placementNew(placement)
+MemoryPoolTLS<T>::MemoryPoolTLS(int ChunkNum, bool placement)
+	:_useChunkCount(0), _placementNew(placement)
 {
 	_tlsIndex = TlsAlloc();
-	_pool = new MemoryPool<Chunk>(ChunkNum/200 + 1);//chunk °¹¼ö ÁöÁ¤
+	_pool = new MemoryPool<Chunk>(ChunkNum / 200 + 1);//chunk °¹¼ö ÁöÁ¤
 }
 
 template<class T>
@@ -96,11 +98,11 @@ T *MemoryPoolTLS<T>::Alloc()
 
 	Chunk *chunk = (Chunk *)TlsGetValue(_tlsIndex);
 	T *ret;
-	
+
 
 	ChunkBlock *test;
 
-	
+
 
 	if (chunk == NULL)
 	{
@@ -120,12 +122,12 @@ T *MemoryPoolTLS<T>::Alloc()
 		//printf("set Chunk\n");
 	}
 	int temp = chunk->AllocIndex;
-	
+
 
 	//printf("%d\n", chunk->AllocIndex);
 
 	ret = &(chunk->block[chunk->AllocIndex++].item);
-	
+
 	if (_placementNew)
 	{
 		//PRO_BEGIN(L"PLACE_NEW");
@@ -160,7 +162,7 @@ T *MemoryPoolTLS<T>::Alloc()
 	}
 
 	before = chunk->AllocIndex;
-
+	InterlockedIncrement((LONG *)&_useCount);
 	return ret;
 }
 
@@ -176,10 +178,10 @@ bool MemoryPoolTLS<T>::Free(T *data)
 	}
 
 
-	 chunk = chunkBlock->pChunk;
+	chunk = chunkBlock->pChunk;
 
 	//chunk->FreeCount++;
-	 int tempFreeCount = InterlockedIncrement((LONG *)&chunk->FreeCount);
+	int tempFreeCount = InterlockedIncrement((LONG *)&chunk->FreeCount);
 
 	if (tempFreeCount == CHUNK_SIZE)
 	{
@@ -193,6 +195,6 @@ bool MemoryPoolTLS<T>::Free(T *data)
 		}
 		//InterlockedDecrement((LONG *)&chunk->pMemoryPool->_useChunkCount);
 	}
-
+	InterlockedDecrement((LONG *)&_useCount);
 	return true;
 }
