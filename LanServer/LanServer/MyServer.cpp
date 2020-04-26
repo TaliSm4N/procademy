@@ -45,6 +45,7 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	AcquireSRWLockExclusive(&playerListLock);
 	playerList.insert(std::make_pair(sessionID, player));
 	SendPacket(sessionID, p);
+	Packet::Free(p);
 
 	//자동화 테스트
 	//AutoSendPacket(sessionID, pPtr);

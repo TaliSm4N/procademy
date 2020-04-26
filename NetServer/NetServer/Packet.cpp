@@ -1,27 +1,28 @@
 #define _WINSOCKAPI_
 #include <Windows.h>
-
 #include "header.h"
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
 #include "Packet.h"
 
+
 MemoryPoolTLS<Packet> *Packet::packetPool = NULL;
 int Packet::_key = 0;
 int Packet::_code = 0;
 
+
 Packet::Packet()
-	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE)
+	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE),encodeFlag(false), encodeCount(0), refCnt(0)
 {
 }
 
 Packet::Packet(int iBufferSize)
-	: mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
+	: mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(iBufferSize), encodeFlag(false), encodeCount(0), refCnt(0)
 {
 }
 
 Packet::Packet(int iBufferSize, int Mode)
-	: mode(Mode), err(E_NOERROR), front(0), rear(0), size(iBufferSize)
+	: mode(Mode), err(E_NOERROR), front(0), rear(0), size(iBufferSize), encodeFlag(false), encodeCount(0),refCnt(0)
 {
 }
 
@@ -57,6 +58,8 @@ void Packet::Clear()
 {
 	front = 0;
 	rear = 0;
+	err = E_NOERROR;
+	encodeFlag = false;
 }
 
 int Packet::MoveWritePos(int iSize)
@@ -87,14 +90,18 @@ int Packet::MoveReadPos(int iSize)
 int Packet::GetData(char *chpDest, int iSize)
 {
 	int useSize = GetDataSize();
-	if (useSize >= iSize)
-		useSize = iSize;
+	if (useSize < iSize)
+	{
+		//useSize = iSize;
+		err = E_GETDATA_ERROR;
+		return -1;
+	}
 
-	memcpy_s(chpDest, iSize, GetBufferPtr(), useSize);
+	memcpy_s(chpDest, iSize, GetBufferPtr(), iSize);
 
-	MoveReadPos(useSize);
+	MoveReadPos(iSize);
 
-	return useSize;
+	return iSize;
 }
 
 int Packet::PutData(char *chpSrc, int iSrcSize)
@@ -475,6 +482,7 @@ Packet *Packet::Alloc()
 	Packet *ret = packetPool->Alloc();
 	ret->Ref();
 
+
 	return ret;
 }
 
@@ -482,6 +490,7 @@ bool Packet::Free(Packet *p)
 {
 	if (p->UnRef())
 	{
+
 		return packetPool->Free(p);
 	}
 
@@ -490,8 +499,20 @@ bool Packet::Free(Packet *p)
 
 void Packet::encode()
 {
+	if (InterlockedExchange8((char *)&encodeFlag, true) == true)
+		return;
+	InterlockedIncrement((LONG *)&encodeCount);
+	header.code = Packet::GetCode();
+	header.len = GetDataSize();
+	header.RandKey = (BYTE)rand() % 256;
+	header.CheckSum = 0;
+	for (int i = 0; i < header.len; i++)
+	{
+		header.CheckSum += *(GetBufferPtr() + i)%256;
+	}
+	header.CheckSum %= 256;
+
 	char p = 0;
-	header.RandKey;
 
 	p = header.CheckSum ^ (header.RandKey + p + 1);
 	header.CheckSum = p ^ (_key + 1);
@@ -505,6 +526,9 @@ void Packet::encode()
 
 void Packet::decode()
 {
+	if (InterlockedExchange8((char *)&encodeFlag, false) == false)
+		return;
+
 	char p = 0;
 	char before_p = 0;
 	char before_e = 0;
@@ -521,4 +545,22 @@ void Packet::decode()
 		before_e = buf[i];
 		buf[i] = p ^ (before_p + header.RandKey + i + 2);
 	}
+}
+
+bool Packet::VerifyCheckSum()
+{
+	BYTE check = 0x0;
+
+	for (int i = 0; i < header.len; i++)
+	{
+		check += buf[i] % 256;
+	}
+	check %= 256;
+
+	if (check != header.CheckSum)
+	{
+		return false;
+	}
+
+	return true;
 }

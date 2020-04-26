@@ -7,10 +7,8 @@
 ChatServer::ChatServer()
 {
 	_playerMap = new std::unordered_map<DWORD, st_PLAYER *>;
-	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(5000);
-	InitializeSRWLock(&_playerMapLock);
+	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(10000);
 }
-
 
 
 bool ChatServer::Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring)
@@ -21,7 +19,7 @@ bool ChatServer::Start(int port, int workerCnt, bool nagle, int maxUser, bool mo
 	_playerCount = 0;
 	_playerPoolCount = 0;
 
-	_updateMsgPool = new MemoryPoolTLS<st_UPDATE_MESSAGE>(20);
+	_updateMsgPool = new MemoryPoolTLS<st_UPDATE_MESSAGE>(100);
 	_playerPool = new MemoryPoolTLS<st_PLAYER>(maxUser/200+1);
 	CNetServer::Start(port, workerCnt, nagle, maxUser, monitoring);
 
@@ -59,11 +57,11 @@ bool ChatServer::OnConnectionRequest(WCHAR *ClientIP, int Port)
 void ChatServer::OnRecv(DWORD sessionID, Packet *p)
 {
 	st_UPDATE_MESSAGE *msg=_updateMsgPool->Alloc();
-
-	p->GetData((char *)&msg->iMsgType, sizeof(WORD));
+	msg->iMsgType = PACKET;
 	msg->SessionID = sessionID;
 	msg->pPacket = p;
 
+	p->Ref();
 	_msgQ->Enqueue(msg);
 	SetEvent(_msgHandle);
 }
@@ -73,8 +71,28 @@ void ChatServer::OnSend(DWORD sessionID, int sendsize)
 }
 void ChatServer::OnClientJoin(DWORD sessionID)
 {
-	//클라이언트의 프로토콜 약속에 따라서 여기서 연결 완료에 대한 메시지를 쏴줄수도 있음 
+	st_UPDATE_MESSAGE *msg = _updateMsgPool->Alloc();
+	msg->iMsgType = JOIN;
+	msg->SessionID = sessionID;
 
+	_msgQ->Enqueue(msg);
+	SetEvent(_msgHandle);
+}
+void ChatServer::OnClientLeave(DWORD sessionID)
+{
+	st_UPDATE_MESSAGE *msg = _updateMsgPool->Alloc();
+	msg->iMsgType = LEAVE;
+	msg->SessionID = sessionID;
+
+	_msgQ->Enqueue(msg);
+	SetEvent(_msgHandle);
+}
+void ChatServer::OnError(int errorcode, WCHAR *)
+{
+}
+
+void ChatServer::Join(DWORD sessionID)
+{
 	st_PLAYER *player = _playerPool->Alloc();
 
 	player->SessionID = sessionID;
@@ -85,39 +103,38 @@ void ChatServer::OnClientJoin(DWORD sessionID)
 	player->shSectorY = -1;
 	player->LastRecvPacket = timeGetTime();//최초 시간
 
-
+	InterlockedExchange8((char *)&player->connect, true);
+	
 	//playerMap에 등록
-	AcquireSRWLockExclusive(&_playerMapLock);
 	_playerMap->insert(std::make_pair(sessionID, player));
-	ReleaseSRWLockExclusive(&_playerMapLock);
-
-	InterlockedIncrement((LONG *)&_playerCount);
-
+	_playerCount++;
 }
-void ChatServer::OnClientLeave(DWORD sessionID)
-{
-	//playerMap을 뒤져서 존재하면 해당 플레이어 제거해줌
-	//단 player가 없을 경우 그냥 나감
 
+void ChatServer::Leave(DWORD sessionID)
+{
 	st_PLAYER *player;
-	AcquireSRWLockExclusive(&_playerMapLock);
-	auto iter =_playerMap->find(sessionID);
+	auto iter = _playerMap->find(sessionID);
+	
 
 	if (iter == _playerMap->end())
 	{
-		ReleaseSRWLockExclusive(&_playerMapLock);
 		return;
 	}
 	player = iter->second;
-	_playerMap->erase(iter);
-	ReleaseSRWLockExclusive(&_playerMapLock);
+	InterlockedExchange8((char *)&player->connect, false);
 
-	//player에 대한 처리를 하고 있었다면 어떻게 처리를 해야하는가
-	//제대로 만들때 이부분 고려해서 수정
+	if (player->shSectorX != -1 && player->shSectorY != -1)
+	{
+		//기존 섹터에서 꺼내기
+		_sector[player->shSectorY][player->shSectorX].remove(player);
+	}
+
+	_playerMap->erase(iter);
+
 	_playerPool->Free(player);
-}
-void ChatServer::OnError(int errorcode, WCHAR *)
-{
+	
+	_playerCount--;
+	
 }
 
 unsigned int WINAPI ChatServer::UpdateThread(LPVOID lpParam)
@@ -134,7 +151,9 @@ unsigned int WINAPI ChatServer::Monitor(LPVOID lpParam)
 
 unsigned int ChatServer::UpdateThreadRun()
 {
-	st_UPDATE_MESSAGE *msg;
+	st_UPDATE_MESSAGE *msg=NULL;
+	
+	
 	while (1)
 	{
 		int ret = WaitForSingleObject(_msgHandle, INFINITE);
@@ -147,29 +166,67 @@ unsigned int ChatServer::UpdateThreadRun()
 
 		while (_msgQ->GetUseCount() != 0)
 		{
-			_msgQ->Dequeue(&msg);
+			if (!_msgQ->Dequeue(&msg))
+			{
+				volatile int test = 1;
+			}
 
-			//msg타입에 따른 동작함수를 넣어주자
 			switch (msg->iMsgType)
 			{
-			case en_PACKET_CS_CHAT_REQ_LOGIN:
-				ReqLogin(msg->SessionID, msg->pPacket);
+			case JOIN:
+				Join(msg->SessionID);
 				break;
-			case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
-				ReqSectorMove(msg->SessionID, msg->pPacket);
+			case LEAVE:
+				Leave(msg->SessionID);
 				break;
-			case en_PACKET_CS_CHAT_REQ_MESSAGE:
-				ReqMessage(msg->SessionID, msg->pPacket);
+			case PACKET:
+				PacketProc(msg);
 				break;
-
+			default:
+				Disconnect(msg->SessionID);
+				break;
 			}
+			
 			_updateMsgPool->Free(msg);
 		}
 
-		
+		volatile int test = 1;
 	}
 
 	return 0;
+}
+
+void ChatServer::PacketProc(st_UPDATE_MESSAGE *msg)
+{
+	WORD flag = 0;
+	//msg타입에 따른 동작함수를 넣어주자
+
+	*(msg->pPacket) >> flag;
+
+	if (msg->pPacket->GetLastError()!= E_NOERROR)
+	{
+		Disconnect(msg->SessionID);
+		//OnClientLeave(msg->SessionID);
+		return;
+	}
+
+	switch (flag)
+	{
+	case en_PACKET_CS_CHAT_REQ_LOGIN:
+		ReqLogin(msg->SessionID, msg->pPacket);
+		break;
+	case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
+		ReqSectorMove(msg->SessionID, msg->pPacket);
+		break;
+	case en_PACKET_CS_CHAT_REQ_MESSAGE:
+		ReqMessage(msg->SessionID, msg->pPacket);
+		break;
+	default:
+		Disconnect(msg->SessionID);
+		break;
+
+	}
+	Packet::Free(msg->pPacket);
 }
 
 unsigned int ChatServer::MonitorThreadRun()
@@ -200,13 +257,23 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 	p->GetData((char *)player->szID, sizeof(WCHAR) * 20);
 	p->GetData((char *)player->szNick, sizeof(WCHAR) * 20);
 	p->GetData((char *)player->SessionKey, sizeof(char) * dfSESSION_KEY_BYTE_LEN);
+	
 
-	Packet::Free(p);
+	if (p->GetLastError() != E_NOERROR)
+	{
+		if (player->SessionID == sessionID)
+			Disconnect(sessionID);
+		return;
+	}
+	//Packet::Free(p);
 	//일단은 모두 성공가정
 	//추후 수정
 	Packet *sendPacket = MakeResLogin(1,player->AccountNo);
 	
 	SendPacket(sessionID, sendPacket);
+	//SendUnicast(player, sendPacket);
+
+	Packet::Free(sendPacket);
 }
 
 void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
@@ -222,9 +289,19 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	st_PLAYER *player = iter->second;
 	INT64 account;
 	*p >> account;
+
+	if (p->GetLastError() != E_NOERROR)
+	{
+		if (player->SessionID == sessionID)
+			Disconnect(sessionID);
+		return;
+	}
+
+
 	if (player->AccountNo != account)
 	{
-		CrashDump::Crash();
+		if (player->SessionID == sessionID)
+			Disconnect(sessionID);
 		return;
 	}
 
@@ -238,8 +315,15 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	}
 	*p >> player->shSectorX >> player->shSectorY;
 
+	if (p->GetLastError() != E_NOERROR)
+	{
+		if (player->SessionID == sessionID)
+			Disconnect(sessionID);
+		return;
+	}
 
-	Packet::Free(p);
+
+	//Packet::Free(p);
 	//섹터로 넣기
 	
 	_sector[player->shSectorY][player->shSectorX].push_back(player);
@@ -250,7 +334,9 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	Packet *sendPacket = MakeResMoveSector(player->AccountNo, player->shSectorX, player->shSectorY);
 
 	SendPacket(sessionID, sendPacket);
+	//SendUnicast(player, sendPacket);
 	
+	Packet::Free(sendPacket);
 }
 
 void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
@@ -268,23 +354,43 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 	WORD msgLen;
 
 	*p >> account>>msgLen;
+
+	if (p->GetLastError() != E_NOERROR)
+	{
+		if(player->SessionID==sessionID)
+			Disconnect(sessionID);
+		return;
+	}
+
 	if (player->AccountNo != account)
 	{
-		CrashDump::Crash();
+		if (player->SessionID == sessionID)
+			Disconnect(sessionID);
+		return;
+	}
+
+	if (p->GetDataSize() != msgLen)
+	{
+		if (player->SessionID == sessionID)
+			Disconnect(sessionID);
 		return;
 	}
 
 	//새로운 packet에 copy해야함 그대로 쓰면 안됨
 	WCHAR *msg = (WCHAR *)p->GetBufferPtr();
 
+	
+
 	Packet *sendPacket = MakeResMessage(player, msgLen, msg);
 
-	Packet::Free(p);
+	//Packet::Free(p);
 
 	//sector로 보내는 것으로 수정해야함
 	SendPacket(sessionID, sendPacket);
+	//SendSectorAround(player->shSectorX, player->shSectorY, sendPacket);
+	//SendBroadcast(sendPacket);
 
-	//SendSector(player->shSectorX, player->shSectorY, p);
+	Packet::Free(sendPacket);
 }
 
 Packet *ChatServer::MakeResLogin(BYTE status,INT64 accountID)
@@ -295,6 +401,7 @@ Packet *ChatServer::MakeResLogin(BYTE status,INT64 accountID)
 		return NULL;
 
 	*p << (WORD)en_PACKET_CS_CHAT_RES_LOGIN <<status << accountID;
+	
 
 	return p;
 }
@@ -327,29 +434,31 @@ Packet *ChatServer::MakeResMessage(st_PLAYER *player, WORD msgLen, WCHAR *msg)
 	return p;
 }
 
-void ChatServer::SendUnicast(DWORD sessionID, Packet *p)
+void ChatServer::SendUnicast(st_PLAYER *player, Packet *p)
 {
-	SendPacket(sessionID, p);
+	//꺼진 놈에게 send요청 방지??
+
+	if(player->connect&&player->shSectorX>=0&&player->shSectorY>=0)
+		SendPacket(player->SessionID, p);
 }
 void ChatServer::SendSector(int x, int y, Packet *p)
 {
 	st_PLAYER *player;
+
 	for (auto iter = _sector[y][x].begin(); iter != _sector[y][x].end(); iter++)
 	{
-		p->Ref();
 		player = *iter;
 
 
-		SendPacket(player->SessionID, p);
+		SendUnicast(player, p);
 	}
 	//기존의 packet의 ref가 1이였기때문에 한번 빼줌
-	Packet::Free(p);
 }
 void ChatServer::SendSectorAround(int x, int y, Packet *p)
 {
 
 	//sector로 보내는중 packet 반환 방지
-	p->Ref();
+
 	for (int i = -1; i <= 1; i++)
 	{
 		if (x + i >= 0 && x + i < dfSECTOR_MAX)
@@ -363,7 +472,12 @@ void ChatServer::SendSectorAround(int x, int y, Packet *p)
 			}
 		}
 	}
+}
 
-	
-	Packet::Free(p);
+void ChatServer::SendBroadcast(Packet *p)
+{
+	for (auto iter = _playerMap->begin(); iter != _playerMap->end(); iter++)
+	{
+		SendUnicast(iter->second, p);
+	}
 }

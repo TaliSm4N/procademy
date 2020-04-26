@@ -416,7 +416,7 @@ PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 	}
 
 	OnRecv(session->GetID(), payload);
-	//Packet::Free(payload);
+	Packet::Free(payload);
 	InterlockedIncrement64((LONG64 *)&_recvPacketCounter);
 	return SUCCESS;
 }
@@ -432,6 +432,12 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	//sessionID &= idMask;
 	//Session *session = &_sessionList[sessionID];
 	Session *session = GetSession(sessionID);
+
+	if (session == NULL)
+	{
+		return false;
+	}
+
 	InterlockedIncrement64((LONG64 *)&_sendPacketCounter);
 
 	header.len = p->GetDataSize();
@@ -440,6 +446,7 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 
 	if (session->GetSendQ()->GetFreeCount() > 0)
 	{
+		p->Ref();
 		session->GetSendQ()->Enqueue(p);
 	}
 
@@ -554,7 +561,6 @@ bool CLanServer::SendPost(Session *session)
 	{
 		InterlockedExchange8(&session->GetSendFlag(), 1);
 		return false;
-		CrashDump::Crash();
 	}
 	
 	
@@ -615,6 +621,9 @@ Session *CLanServer::GetSession(DWORD sessionID)
 	
 	Session *session = &_sessionList[sessionID & 0xffff];
 
+	if (session->GetID() != sessionID)
+		return NULL;
+
 	if (InterlockedIncrement64(&session->GetIOCount()) == 1)
 	{
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
@@ -652,6 +661,11 @@ void CLanServer::ReleaseSession(Session *session)
 		return;
 	}
 
+	if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE) && session->GetSocket() != INVALID_SOCKET)
+	{
+		closesocket(session->GetSocket());
+	}
+	OnClientLeave(session->GetID());
 	
 
 	//남은 send Packet 제거
@@ -672,11 +686,7 @@ void CLanServer::ReleaseSession(Session *session)
 	//AcquireSRWLockExclusive(&_usedSessionLock);
 	//_unUsedSessionStack.push(sessionID);
 
-	if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE)&&session->GetSocket()!=INVALID_SOCKET)
-	{
-		closesocket(session->GetSocket());
-	}
-	OnClientLeave(session->GetID());
+	
 
 	_sessionIndexStack->Push(session->GetID()&0xffff);
 

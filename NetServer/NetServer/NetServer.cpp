@@ -4,6 +4,8 @@
 #include <iostream>
 #include "NetServerLib.h"
 
+Packet last;
+
 CNetServer::CNetServer()
 	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
 {
@@ -405,12 +407,20 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 		if (pOverlapped->type == TYPE::RECV)
 		{
 			session->GetRecvQ().MoveWritePos(transferred);
+			PROCRESULT result;
 			while (1)
 			{
-				if (_this->CompleteRecvPacket(session) != SUCCESS)
+				result = _this->CompleteRecvPacket(session);
+				if (result != SUCCESS)
 					break;
 			}
-			_this->RecvPost(session);
+
+			if (result == FAIL)
+			{
+				_this->Disconnect(session->GetID());
+			}
+			else
+				_this->RecvPost(session);
 		}
 		else if (pOverlapped->type == TYPE::SEND)
 		{
@@ -520,69 +530,84 @@ unsigned int WINAPI CNetServer::MonitorThread(LPVOID lpParam)
 PROCRESULT CNetServer::CompleteRecvPacket(Session *session)
 {
 	int recvQSize = session->GetRecvQ().GetUseSize();
-
-	Packet *payload = Packet::Alloc();
-	HEADER *header = payload->GetHeaderPtr();
+	
+	Packet *payload;
+	HEADER header;// = payload->GetHeaderPtr();
 
 	if (sizeof(HEADER) > recvQSize)
 	{
-		Packet::Free(payload);
+		//Packet::Free(payload);
 		return NONE;
 	}
 
-	session->GetRecvQ().Peek((char *)header, sizeof(HEADER));
+	session->GetRecvQ().Peek((char *)&header, sizeof(HEADER));
 
-	if (recvQSize < header->len + sizeof(HEADER))
+	if (recvQSize < header.len + sizeof(HEADER))
 	{
-		Packet::Free(payload);
+		//Packet::Free(payload);
 		return NONE;
+	}
+
+	if (header.code != Packet::GetCode())
+	{
+		return FAIL;
 	}
 
 	session->GetRecvQ().MoveReadPos(sizeof(HEADER));
 
-	if (session->GetRecvQ().Dequeue(payload, header->len) != header->len)
+	payload = Packet::Alloc();
+	payload->RecvEncode();
+
+	if (session->GetRecvQ().Dequeue(payload, header.len) != header.len)
 	{
+
 		Packet::Free(payload);
 		return FAIL;
 	}
 
+	payload->PutHeader(&header);
+
 	payload->decode();
+
+	//payload 검증부분
+	
+	if (!payload->VerifyCheckSum())
+	{
+		return FAIL;
+	}
+
 	OnRecv(session->GetID(), payload);
+	Packet::Free(payload);
 	InterlockedIncrement64((LONG64 *)&_recvPacketCounter);
 	return SUCCESS;
 }
 
 bool CNetServer::SendPacket(DWORD sessionID, Packet *p)
 {
-	LanServerHeader header;
 	BYTE checkSum=0;
-	header.code = Packet::GetCode();
-	header.RandKey = (BYTE)rand()%256;
-	header.len = p->GetDataSize();
-
-	for (int i = 0; i < header.len; i++)
-	{
-		checkSum += *(p->GetBufferPtr() + i);
-	}
 	
-
-	header.CheckSum = checkSum%256;
-
-	p->PutHeader(&header);
-
 	//int idMask = 0xffff;
 	//sessionID &= idMask;
 	//Session *session = &_sessionList[sessionID];
 	Session *session = GetSession(sessionID);
+
+	if (session == NULL)
+	{
+		return false;
+	}
+
 	InterlockedIncrement64((LONG64 *)&_sendPacketCounter);
 
-	header.len = p->GetDataSize();
-
-	
 	p->encode();
+
 	if (session->GetSendQ()->GetFreeCount() > 0)
 	{
+		p->Ref();
 		session->GetSendQ()->Enqueue(p);
+	}
+	else
+	{
+		volatile int test = 1;
 	}
 
 	//session->GetSendQ().Lock();
@@ -644,14 +669,10 @@ bool CNetServer::SendPost(Session *session)
 		return false;
 	}
 
+	
+
 	if (InterlockedExchange8(&session->GetSendFlag(), 0) == 0)
 	{
-		return false;
-	}
-
-	if (session->GetSendQ()->GetUseCount() <= 0)
-	{
-		InterlockedExchange8(&session->GetSendFlag(), 1);
 		return false;
 	}
 
@@ -708,12 +729,27 @@ bool CNetServer::SendPost(Session *session)
 	//	//peekData[i]->Ref();
 	//}
 
+	if (peekCnt == 0)
+	{
+		InterlockedExchange8(&session->GetSendFlag(), 1);
+		return false;
+	}
+
 	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
+
+	if (peekCnt == 0)
+	{
+		InterlockedExchange8(&session->GetSendFlag(), 1);
+		return false;
+	}
 
 	for (int i = 0; i < peekCnt; i++)
 	{
 		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
 		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
+
+		memcpy(&last, peekData[i], sizeof(Packet));
+		//last = *peekData[i];
 	}
 
 	session->SetSendPacketCnt(peekCnt);
@@ -736,6 +772,7 @@ bool CNetServer::SendPost(Session *session)
 				Disconnect(session->GetID());
 				//SessionRelease(session);
 			}
+			wprintf(L"%d-----------\n", err);
 			return false;
 		}
 	}
@@ -747,6 +784,9 @@ Session *CNetServer::GetSession(DWORD sessionID)
 {
 	
 	Session *session = &_sessionList[sessionID & 0xffff];
+
+	if (session->GetID() != sessionID)
+		return NULL;
 
 	if (InterlockedIncrement64(&session->GetIOCount()) == 1)
 	{
@@ -823,6 +863,11 @@ void CNetServer::ReleaseSession(Session *session)
 	//session->GetSendQ().UnLock();
 
 	InterlockedDecrement(&_sessionCount);
+
+	if (session->GetSendQ()->GetUseCount() != 0)
+	{
+		volatile int test = 1;
+	}
 
 	//AcquireSRWLockExclusive(&_usedSessionLock);
 	//_unUsedSessionStack.push(sessionID);

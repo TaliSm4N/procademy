@@ -1,5 +1,9 @@
 #pragma once
 
+#define JOIN 0
+#define LEAVE 1
+#define PACKET 2
+
 #define dfSECTOR_MAX 100
 
 #define dfID_MAX_LEN 20
@@ -36,8 +40,9 @@ struct st_PLAYER
 	short	shSectorX;
 	short	shSectorY;
 
-	ULONGLONG	LastRecvPacket;
+	bool connect;
 
+	ULONGLONG	LastRecvPacket;
 };
 
 
@@ -63,6 +68,11 @@ public:
 	virtual void OnError(int errorcode, WCHAR *);
 
 public:
+
+	void Join(DWORD sessionID);
+	void Leave(DWORD sessionID);
+	void PacketProc(st_UPDATE_MESSAGE *msg);
+
 	void ReqLogin(DWORD sessionID,Packet *p);
 	void ReqSectorMove(DWORD sessionID, Packet *p);
 	void ReqMessage(DWORD sessionID, Packet *p);
@@ -72,12 +82,12 @@ public:
 	Packet *MakeResMessage(st_PLAYER *player, WORD msgLen, WCHAR *msg);
 
 public:
-	void SendUnicast(DWORD sessionID,Packet *p);
+	void SendUnicast(st_PLAYER *player,Packet *p);
 	void SendSector(int x, int y,Packet *p);
 	void SendSectorAround(int x, int y, Packet *p);
+	void SendBroadcast(Packet *p);
 private:
 	std::unordered_map<DWORD, st_PLAYER *> *_playerMap;
-	SRWLOCK _playerMapLock;
 	HANDLE _updateThread;
 	DWORD _updateThreadID;
 	HANDLE _monitor;

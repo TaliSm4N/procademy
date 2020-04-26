@@ -4,7 +4,6 @@
 #define DEFAULT_PACKET_SIZE 500
 
 
-
 enum PacketMode {ERROR_MODE=0, THROW_MODE};
 
 
@@ -148,6 +147,12 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	int PutData(char *chpSrc, int iSrcSize);
 
+	bool VerifyCheckSum();
+
+
+	//수신받은 packet은 모두 encoding된 패킷으로 간주하기 위해
+	void RecvEncode() { encodeFlag = true; }
+
 
 	//////////////////////////////////////////////////////////////////////////
 	// 가장 최근 error확인
@@ -172,6 +177,10 @@ private:
 	int front;
 	int rear;
 	int refCnt;
+	bool encodeFlag;
+
+	int encodeCount;
+
 #pragma pack(push,1)
 	HEADER header;
 	char buf[DEFAULT_PACKET_SIZE];
