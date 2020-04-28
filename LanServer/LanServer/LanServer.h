@@ -97,6 +97,8 @@ public:
 	void PutSession(Session *session);
 	void ReleaseSession(Session *session);
 
+	bool OldDisconnect(DWORD sessionID);
+
 	
 private://monitoring
 	LONG64 _acceptTotal;
@@ -111,6 +113,12 @@ private://monitoring
 	LONG64 _connectionRequestFail;
 	LONG64 _packetCount;
 
+public:
+	LONG64 _disconnectCount;
+	LONG64 _releaseCount;
+	LONG64 _recvOverlap;
+	LONG64 _sendOverlap;
+	LONG64 _sessionGetCount;
 //public:
 //	bool AutoSendPacket(DWORD sessionID, PacketPtr *p);
 };

@@ -24,10 +24,10 @@ Session::Session()
 {
 	sendQ = new LockFreeQueue<Packet *>(1000);
 	IOBlock = new IOChecker;
-	IOBlock->IOCount = 0;
-	IOBlock->releaseFlag = 0;
-	//_IOChecker.IOCount = 0;
-	//_IOChecker.releaseFlag = false;
+	
+	
+	InterlockedExchange64(&IOBlock->IOCount, 0);
+	//IOBlock->IOCount = 0;
 }
 
 void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
@@ -37,9 +37,12 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	sessionID = ID;
 	sendFlag = 1;
 	sockActive = FALSE;
+	sendPacketCnt = 0;
 	
+	//IOBlock->releaseFlag = 0;
 	IOBlock->IOCount = 0;
-	IOBlock->releaseFlag = 0;
+	//
+	//InterlockedExchange64(&IOBlock->IOCount, 0);
 	
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));

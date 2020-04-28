@@ -92,6 +92,8 @@ public:
 	LONG64 GetConnectionRequestFail() const { return _connectionRequestFail; }
 	LONG64 GetPacketCount() const { return _packetCount; }
 
+	
+
 	//새로운 디스커넥트 관련 테스트
 public:
 	Session *GetSession(DWORD sessionID);
@@ -111,6 +113,13 @@ private://monitoring
 	LONG64 _acceptFail;
 	LONG64 _connectionRequestFail;
 	LONG64 _packetCount;
+	
+public:
+	LONG64 _disconnectCount;
+	LONG64 _releaseCount;
+	LONG64 _recvOverlap;
+	LONG64 _sendOverlap;
+	LONG64 _sessionGetCount;
 
 //public:
 //	bool AutoSendPacket(DWORD sessionID, PacketPtr *p);

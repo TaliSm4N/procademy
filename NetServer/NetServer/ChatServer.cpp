@@ -5,6 +5,7 @@
 
 
 ChatServer::ChatServer()
+	:_attackDisconCount(0)
 {
 	_playerMap = new std::unordered_map<DWORD, st_PLAYER *>;
 	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(10000);
@@ -102,9 +103,10 @@ void ChatServer::Join(DWORD sessionID)
 	player->shSectorX = -1;
 	player->shSectorY = -1;
 	player->LastRecvPacket = timeGetTime();//최초 시간
+	player->AccountNo = -1;
 
-	InterlockedExchange8((char *)&player->connect, true);
-	
+	//InterlockedExchange8((char *)&player->connect, true);
+	player->login = false;
 	//playerMap에 등록
 	_playerMap->insert(std::make_pair(sessionID, player));
 	_playerCount++;
@@ -120,8 +122,10 @@ void ChatServer::Leave(DWORD sessionID)
 	{
 		return;
 	}
+
 	player = iter->second;
-	InterlockedExchange8((char *)&player->connect, false);
+	player->login = false;
+	//InterlockedExchange8((char *)&player->connect, false);
 
 	if (player->shSectorX != -1 && player->shSectorY != -1)
 	{
@@ -183,6 +187,7 @@ unsigned int ChatServer::UpdateThreadRun()
 				PacketProc(msg);
 				break;
 			default:
+				_attackDisconCount++;
 				Disconnect(msg->SessionID);
 				break;
 			}
@@ -205,6 +210,7 @@ void ChatServer::PacketProc(st_UPDATE_MESSAGE *msg)
 
 	if (msg->pPacket->GetLastError()!= E_NOERROR)
 	{
+		_attackDisconCount++;
 		Disconnect(msg->SessionID);
 		//OnClientLeave(msg->SessionID);
 		return;
@@ -222,6 +228,7 @@ void ChatServer::PacketProc(st_UPDATE_MESSAGE *msg)
 		ReqMessage(msg->SessionID, msg->pPacket);
 		break;
 	default:
+		_attackDisconCount++;
 		Disconnect(msg->SessionID);
 		break;
 
@@ -253,25 +260,63 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 
 	st_PLAYER *player = iter->second;
 
+	if (player->login)
+	{
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+	
+		return;
+	}
+
+	if (player->AccountNo != -1)
+	{
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		return;
+	}
+
+
 	*p >> player->AccountNo;
+
+	
+
 	p->GetData((char *)player->szID, sizeof(WCHAR) * 20);
 	p->GetData((char *)player->szNick, sizeof(WCHAR) * 20);
 	p->GetData((char *)player->SessionKey, sizeof(char) * dfSESSION_KEY_BYTE_LEN);
 	
 
+	if (p->GetDataSize() > 0)
+	{
+		_attackDisconCount++;
+		player->login = false;
+		Disconnect(sessionID);
+
+		return;
+	}
+
 	if (p->GetLastError() != E_NOERROR)
 	{
-		if (player->SessionID == sessionID)
-			Disconnect(sessionID);
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		
 		return;
 	}
 	//Packet::Free(p);
 	//일단은 모두 성공가정
 	//추후 수정
+
+	player->login = true;
+
 	Packet *sendPacket = MakeResLogin(1,player->AccountNo);
 	
-	SendPacket(sessionID, sendPacket);
-	//SendUnicast(player, sendPacket);
+	//SendPacket(sessionID, sendPacket);
+	SendUnicast(player, sendPacket);
 
 	Packet::Free(sendPacket);
 }
@@ -292,16 +337,22 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 
 	if (p->GetLastError() != E_NOERROR)
 	{
-		if (player->SessionID == sessionID)
-			Disconnect(sessionID);
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		
 		return;
 	}
 
 
 	if (player->AccountNo != account)
 	{
-		if (player->SessionID == sessionID)
-			Disconnect(sessionID);
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		
 		return;
 	}
 
@@ -315,10 +366,22 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	}
 	*p >> player->shSectorX >> player->shSectorY;
 
+	if (p->GetDataSize() > 0)
+	{
+		_attackDisconCount++;
+		player->login = false;
+		Disconnect(sessionID);
+
+		return;
+	}
+
 	if (p->GetLastError() != E_NOERROR)
 	{
-		if (player->SessionID == sessionID)
-			Disconnect(sessionID);
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		
 		return;
 	}
 
@@ -333,8 +396,10 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 
 	Packet *sendPacket = MakeResMoveSector(player->AccountNo, player->shSectorX, player->shSectorY);
 
-	SendPacket(sessionID, sendPacket);
-	//SendUnicast(player, sendPacket);
+	//SendPacket(sessionID, sendPacket);
+	
+
+	SendUnicast(player, sendPacket);
 	
 	Packet::Free(sendPacket);
 }
@@ -357,22 +422,31 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 
 	if (p->GetLastError() != E_NOERROR)
 	{
-		if(player->SessionID==sessionID)
-			Disconnect(sessionID);
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		
 		return;
 	}
 
 	if (player->AccountNo != account)
 	{
-		if (player->SessionID == sessionID)
-			Disconnect(sessionID);
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		
 		return;
 	}
 
 	if (p->GetDataSize() != msgLen)
 	{
-		if (player->SessionID == sessionID)
-			Disconnect(sessionID);
+		_attackDisconCount++;
+		//InterlockedExchange8((char *)&player->connect, false);
+		player->login = false;
+		Disconnect(sessionID);
+		
 		return;
 	}
 
@@ -386,8 +460,8 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 	//Packet::Free(p);
 
 	//sector로 보내는 것으로 수정해야함
-	SendPacket(sessionID, sendPacket);
-	//SendSectorAround(player->shSectorX, player->shSectorY, sendPacket);
+	//SendPacket(sessionID, sendPacket);
+	SendSectorAround(player->shSectorX, player->shSectorY, sendPacket);
 	//SendBroadcast(sendPacket);
 
 	Packet::Free(sendPacket);
@@ -438,7 +512,8 @@ void ChatServer::SendUnicast(st_PLAYER *player, Packet *p)
 {
 	//꺼진 놈에게 send요청 방지??
 
-	if(player->connect&&player->shSectorX>=0&&player->shSectorY>=0)
+	//if(player->connect)
+	if(player->login)
 		SendPacket(player->SessionID, p);
 }
 void ChatServer::SendSector(int x, int y, Packet *p)
@@ -449,8 +524,8 @@ void ChatServer::SendSector(int x, int y, Packet *p)
 	{
 		player = *iter;
 
-
-		SendUnicast(player, p);
+		if(player->shSectorX >= 0 && player->shSectorY >= 0)
+			SendUnicast(player, p);
 	}
 	//기존의 packet의 ref가 1이였기때문에 한번 빼줌
 }

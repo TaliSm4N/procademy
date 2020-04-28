@@ -35,6 +35,12 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	_packetPoolUse = 0;
 	_acceptFail = 0;
 
+	_disconnectCount = 0;
+	_releaseCount = 0;
+	_recvOverlap = 0;
+	_sendOverlap = 0;
+	_sessionGetCount = 0;
+
 
 	//sessionList¼³Á¤
 	_sessionList = new Session[_maxUser];
@@ -64,11 +70,20 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 		return -1;
 	}
 
+	int optval = 0;
+	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR)
+	{
+		InterlockedIncrement((LONG *)&_acceptFail);
+		closesocket(_listenSock);
+		return -1;
+	}
+
 	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
 	_sockAddr.sin_family = AF_INET;
 	_sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	_sockAddr.sin_port = htons(_port);
-	int retval = bind(_listenSock, (SOCKADDR *)&_sockAddr, sizeof(_sockAddr));
+	retval = bind(_listenSock, (SOCKADDR *)&_sockAddr, sizeof(_sockAddr));
 
 	if (retval == SOCKET_ERROR)
 	{
@@ -167,14 +182,7 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 			continue;
 		}
 
-		int optval = 0;
-		retval = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
-		if (retval == SOCKET_ERROR)
-		{
-			InterlockedIncrement((LONG *)&_this->_acceptFail);
-			closesocket(sock);
-			return -1;
-		}
+		
 		
 		InetNtopW(AF_INET, &sockAddr.sin_addr, IP, 16);
 		if (!_this->OnConnectionRequest(IP, ntohs(sockAddr.sin_port)))
@@ -213,7 +221,15 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 			//_this->SessionRelease(session);
 		}
 
-		_this->PutSession(session);
+		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+		{
+			//²÷±â
+			_this->ReleaseSession(session);
+			//_this->OldDisconnect(session->GetID());
+		}
+		
+
+		//_this->PutSession(session);
 
 		idCount++;
 	}
@@ -272,6 +288,8 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 
 		if (pOverlapped->type == TYPE::RECV)
 		{
+			InterlockedDecrement64(&_this->_recvOverlap);
+
 			session->GetRecvQ().MoveWritePos(transferred);
 			while (1)
 			{
@@ -307,6 +325,8 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			//}
 			//session->GetSendQ().UnLock();
 
+			InterlockedDecrement64(&_this->_sendOverlap);
+
 			for (int i = 0; i < session->GetSendPacketCnt(); i++)
 			{
 				Packet *temp;
@@ -323,7 +343,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			//_this->Disconnect(session->GetID());
+			//_this->OldDisconnect(session->GetID());
 			_this->ReleaseSession(session);
 		}
 	}
@@ -347,13 +367,17 @@ bool CLanServer::Disconnect(DWORD sessionID)
 
 	if (sessionID == session->GetID())
 	{
-		
+		InterlockedIncrement64(&_disconnectCount);
+
+
 		closesocket(session->GetSocket());
 		session->GetSocket() = INVALID_SOCKET;
 		InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE);
 	}
 
 	PutSession(session);
+
+	
 
 	return true;
 }
@@ -501,6 +525,8 @@ bool CLanServer::RecvPost(Session *session)
 		}
 	}
 
+	InterlockedIncrement64(&_recvOverlap);
+
 	return true;
 }
 bool CLanServer::SendPost(Session *session)
@@ -606,12 +632,14 @@ bool CLanServer::SendPost(Session *session)
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
 
-				//Disconnect(session->GetID());
+				//OldDisconnect(session->GetID());
 				ReleaseSession(session);
 			}
 			return false;
 		}
 	}
+
+	InterlockedIncrement64(&_sendOverlap);
 
 	return true;
 }
@@ -629,11 +657,13 @@ Session *CLanServer::GetSession(DWORD sessionID)
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
 			//²÷±â
-			//Disconnect(sessionID);
+			//OldDisconnect(sessionID);
 			ReleaseSession(session);
 			return NULL;
 		}
 	}
+
+	InterlockedIncrement64(&_sessionGetCount);
 
 	return session;
 }
@@ -644,6 +674,7 @@ void CLanServer::PutSession(Session *session)
 		//²÷±â
 		ReleaseSession(session);
 	}
+	InterlockedDecrement64(&_sessionGetCount);
 }
 
 void CLanServer::ReleaseSession(Session *session)
@@ -692,9 +723,25 @@ void CLanServer::ReleaseSession(Session *session)
 
 	//ReleaseSRWLockExclusive(&_usedSessionLock);
 
-	
+	InterlockedIncrement64(&_releaseCount);
 
 	return;
+}
+
+bool CLanServer::OldDisconnect(DWORD sessionID)
+{
+	Session *session = &_sessionList[sessionID&0xffff];// = GetSession(sessionID);
+
+	OnClientLeave(session->GetID());
+
+	while (session->GetSendQ()->GetUseCount() != 0)
+	{
+		Packet *temp;
+		session->GetSendQ()->Dequeue(&temp);
+		Packet::Free(temp);
+	}
+
+	return false;
 }
 
 

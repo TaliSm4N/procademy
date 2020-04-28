@@ -8,7 +8,7 @@
 
 #define dfID_MAX_LEN 20
 #define dfNICK_MAX_LEN 20
-#define dfSESSION_KEY_BYTE_LEN 8
+#define dfSESSION_KEY_BYTE_LEN 64
 ////////////////////////////////////////////////////////////////////////////
 // UpdateThread ¸Þ½ÃÁö
 //
@@ -40,7 +40,8 @@ struct st_PLAYER
 	short	shSectorX;
 	short	shSectorY;
 
-	bool connect;
+	//bool connect;
+	bool login;
 
 	ULONGLONG	LastRecvPacket;
 };
@@ -115,4 +116,7 @@ private:
 
 	int _playerCount;
 	int _playerPoolCount;
+
+public:
+	int _attackDisconCount;
 };

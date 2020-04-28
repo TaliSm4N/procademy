@@ -36,6 +36,11 @@ int main()
 		wprintf(L"PlayerCount   : %8d\n", test.GetPlayerCount());
 		wprintf(L"PlayerPool    : %8d\n", test.GetPlayerPoolCount());
 		wprintf(L"----------------------------------\n");
+		wprintf(L"DisconCnt     : %8d\n", test._disconnectCount);
+		wprintf(L"releaseCnt    : %8d\n", test._releaseCount);
+		wprintf(L"recvOverlap   : %8d\n", test._recvOverlap);
+		wprintf(L"sendOverlap   : %8d\n", test._sendOverlap);
+		wprintf(L"sessionGet    : %8d\n", test._sessionGetCount);
 		Sleep(1000);
 	}
 }
