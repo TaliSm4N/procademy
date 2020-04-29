@@ -628,7 +628,7 @@ bool CLanServer::SendPost(Session *session)
 		int err;
 		if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
 		{
-			InterlockedExchange8(&session->GetSendFlag(), 1);
+			//InterlockedExchange8(&session->GetSendFlag(), 1);
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
 
