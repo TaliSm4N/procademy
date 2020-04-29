@@ -11,7 +11,7 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	sendOverlap.type = TYPE::SEND;
 	recvOverlap.type = TYPE::RECV;
 	sendQ = new LockFreeQueue<Packet *>(1000);
-	InitializeSRWLock(&sessionLock);
+	//InitializeSRWLock(&sessionLock);
 	IOBlock = new IOChecker;
 	IOBlock->IOCount = 0;
 	IOBlock->releaseFlag = 0;
@@ -22,11 +22,15 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 Session::Session()
 	:sendFlag(1), sockActive(FALSE)
 {
+	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
+	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
+	sendOverlap.type = TYPE::SEND;
+	recvOverlap.type = TYPE::RECV;
 	sendQ = new LockFreeQueue<Packet *>(1000);
 	IOBlock = new IOChecker;
+	IOBlock->IOCount = 0;
+	IOBlock->releaseFlag = 0;
 	
-	
-	InterlockedExchange64(&IOBlock->IOCount, 0);
 	//IOBlock->IOCount = 0;
 }
 
@@ -40,7 +44,7 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	sendPacketCnt = 0;
 	
 	//IOBlock->releaseFlag = 0;
-	IOBlock->IOCount = 0;
+	//IOBlock->IOCount = 0;
 	//
 	//InterlockedExchange64(&IOBlock->IOCount, 0);
 	

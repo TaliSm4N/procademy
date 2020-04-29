@@ -371,7 +371,7 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 		//InterlockedExchange64(&session->GetReleaseFlag(), false);
 		_this->OnClientJoin(session->GetID());
 
-		//InterlockedExchange8((CHAR *)&session->GetSocketActive(), TRUE);
+		InterlockedExchange8((CHAR *)&session->GetSocketActive(), TRUE);
 		//accept 순간에 성공하지 않으면 session이 생성되지 않은거나 다름이 없음
 		if (_this->RecvPost(session))
 		{ 
@@ -538,13 +538,13 @@ bool CNetServer::Disconnect(DWORD sessionID)
 
 	if (sessionID == session->GetID())
 	{
-		//if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
-		//{
+		if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
+		{
 			InterlockedIncrement64(&_disconnectCount);
 			//closesocket(session->GetSocket());
-			//closesocket(socket);
-			shutdown(socket,SD_BOTH);
-		//}
+			closesocket(socket);
+			//shutdown(socket,SD_BOTH);
+		}
 		//session->GetSocket() = INVALID_SOCKET;
 		
 	}
@@ -686,10 +686,10 @@ bool CNetServer::SendPacket(DWORD sessionID, Packet *p)
 bool CNetServer::RecvPost(Session *session)
 {
 	
-	//if (!session->GetSocketActive())
-	//{
-	//	return false;
-	//}
+	if (!session->GetSocketActive())
+	{
+		return false;
+	}
 	
 	
 
@@ -732,12 +732,15 @@ bool CNetServer::RecvPost(Session *session)
 }
 bool CNetServer::SendPost(Session *session)
 {
-	//if (!session->GetSocketActive())
-	//{
-	//	return false;
-	//}
+	if (!session->GetSocketActive())
+	{
+		return false;
+	}
 
-	
+	if (session->GetSendQ()->GetUseCount() <= 0)
+	{
+		return false;
+	}
 
 	if (InterlockedExchange8(&session->GetSendFlag(), 0) == 0)
 	{
@@ -797,19 +800,19 @@ bool CNetServer::SendPost(Session *session)
 	//	//peekData[i]->Ref();
 	//}
 
-	if (peekCnt == 0)
-	{
-		InterlockedExchange8(&session->GetSendFlag(), 1);
-		return false;
-	}
+	//if (peekCnt == 0)
+	//{
+	//	InterlockedExchange8(&session->GetSendFlag(), 1);
+	//	return false;
+	//}
 
 	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
 
-	if (peekCnt == 0)
-	{
-		InterlockedExchange8(&session->GetSendFlag(), 1);
-		return false;
-	}
+	//if (peekCnt == 0)
+	//{
+	//	InterlockedExchange8(&session->GetSendFlag(), 1);
+	//	return false;
+	//}
 
 	for (int i = 0; i < peekCnt; i++)
 	{
@@ -834,11 +837,12 @@ bool CNetServer::SendPost(Session *session)
 		int err;
 		if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
 		{
-			InterlockedExchange8(&session->GetSendFlag(), 1);
+			//InterlockedExchange8(&session->GetSendFlag(), 1);
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-				Disconnect(session->GetID());
+				//Disconnect(session->GetID());
 				//SessionRelease(session);
+				ReleaseSession(session);
 			}
 			//wprintf(L"%d-----------\n", err);
 			return false;
@@ -883,18 +887,18 @@ Session *CNetServer::GetSession(DWORD sessionID)
 	}
 
 	//이미 release에 들어갔을 경우 대비
-	if (InterlockedCompareExchange64(&session->GetReleaseFlag(), true, true))
-	{
-		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
-		{
-			//끊기
-			//Disconnect(sessionID);
-			ReleaseSession(session);
-			return NULL;
-		}
-	
-		return NULL;
-	}
+	//if (InterlockedCompareExchange64(&session->GetReleaseFlag(), true, true))
+	//{
+	//	if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+	//	{
+	//		//끊기
+	//		//Disconnect(sessionID);
+	//		ReleaseSession(session);
+	//		return NULL;
+	//	}
+	//
+	//	return NULL;
+	//}
 
 	InterlockedIncrement64(&_sessionGetCount);
 
@@ -925,12 +929,13 @@ void CNetServer::ReleaseSession(Session *session)
 	{
 		return;
 	}
+	//InterlockedIncrement64(&session->GetIOCount());
 
-	//if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
-	//{
-		
+	if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
+	{
+	
 		closesocket(session->GetSocket());
-	//}
+	}
 
 	OnClientLeave(session->GetID());
 
@@ -964,17 +969,10 @@ void CNetServer::ReleaseSession(Session *session)
 	//
 	//session->GetSendQ().UnLock();
 
-	
-
-	if (session->GetSendQ()->GetUseCount() != 0)
-	{
-		volatile int test = 1;
-	}
-
 	//AcquireSRWLockExclusive(&_usedSessionLock);
 	//_unUsedSessionStack.push(sessionID);
 
-
+	
 	_sessionIndexStack->Push(session->GetID()&0xffff);
 	InterlockedDecrement(&_sessionCount);
 	//ReleaseSRWLockExclusive(&_usedSessionLock);
