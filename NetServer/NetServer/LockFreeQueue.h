@@ -262,7 +262,7 @@ int LockFreeQueue<T>::Peek(T *peekData, int size)
 	NODE *cur = _head->node;
 	int i;
 	NODE *curNext;
-	for (i = 0; i < size&&i < _useCount; i++)
+	for (i = 0; i < _useCount; i++)
 	{
 		curNext = cur->next;
 		peekData[i] = cur->next->item;

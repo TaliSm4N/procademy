@@ -4,7 +4,7 @@
 #include <iostream>
 #include "NetServerLib.h"
 
-Packet last;
+
 
 CNetServer::CNetServer()
 	:_sessionCount(0),_acceptTotal(0),_acceptTPS(0),_recvPacketTPS(0),_sendPacketTPS(0),_packetPoolAlloc(0),_packetPoolUse(0)
@@ -501,6 +501,7 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 				session->GetSendQ()->Dequeue(&temp);
 				Packet::Free(temp);
 			}
+			session->SetSendPacketCnt(0);
 
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 
@@ -737,10 +738,10 @@ bool CNetServer::SendPost(Session *session)
 		return false;
 	}
 
-	if (session->GetSendQ()->GetUseCount() <= 0)
-	{
-		return false;
-	}
+	//if (session->GetSendQ()->GetUseCount() <= 0)
+	//{
+	//	return false;
+	//}
 
 	if (InterlockedExchange8(&session->GetSendFlag(), 0) == 0)
 	{
@@ -808,18 +809,23 @@ bool CNetServer::SendPost(Session *session)
 
 	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
 
-	//if (peekCnt == 0)
-	//{
-	//	InterlockedExchange8(&session->GetSendFlag(), 1);
-	//	return false;
-	//}
+	if (peekCnt == 0)
+	{
+		InterlockedExchange8(&session->GetSendFlag(), 1);
+
+		if (session->GetSendQ()->GetUseCount() > 0)
+		{
+			return SendPost(session);
+		}
+
+		return false;
+	}
 
 	for (int i = 0; i < peekCnt; i++)
 	{
 		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
 		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
-
-		memcpy(&last, peekData[i], sizeof(Packet));
+		//memcpy(&last, peekData[i], sizeof(Packet));
 		//last = *peekData[i];
 	}
 
@@ -887,18 +893,18 @@ Session *CNetServer::GetSession(DWORD sessionID)
 	}
 
 	//ÀÌ¹Ì release¿¡ µé¾î°¬À» °æ¿ì ´ëºñ
-	//if (InterlockedCompareExchange64(&session->GetReleaseFlag(), true, true))
-	//{
-	//	if (InterlockedDecrement64(&session->GetIOCount()) == 0)
-	//	{
-	//		//²÷±â
-	//		//Disconnect(sessionID);
-	//		ReleaseSession(session);
-	//		return NULL;
-	//	}
-	//
-	//	return NULL;
-	//}
+	if (InterlockedCompareExchange64(&session->GetReleaseFlag(), true, true))
+	{
+		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+		{
+			//²÷±â
+			//Disconnect(sessionID);
+			//ReleaseSession(session);
+			return NULL;
+		}
+	
+		return NULL;
+	}
 
 	InterlockedIncrement64(&_sessionGetCount);
 
@@ -933,7 +939,6 @@ void CNetServer::ReleaseSession(Session *session)
 
 	if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
 	{
-	
 		closesocket(session->GetSocket());
 	}
 

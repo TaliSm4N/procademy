@@ -43,7 +43,7 @@ public:
 	void Lock();
 	void Unlock();
 
-	void SetSendPacketCnt(int cnt) { sendPacketCnt = cnt; }
+	void SetSendPacketCnt(int cnt) { InterlockedExchange((LONG *)&sendPacketCnt, cnt); }
 	int GetSendPacketCnt() { return sendPacketCnt; }
 
 	

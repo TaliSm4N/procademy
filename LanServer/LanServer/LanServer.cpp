@@ -324,7 +324,10 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			//	//}
 			//}
 			//session->GetSendQ().UnLock();
-
+			if (session->GetSendFlag() == 1)
+			{
+				volatile int test = 1;
+			}
 			InterlockedDecrement64(&_this->_sendOverlap);
 
 			for (int i = 0; i < session->GetSendPacketCnt(); i++)
@@ -332,6 +335,11 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 				Packet *temp;
 				session->GetSendQ()->Dequeue(&temp);
 				Packet::Free(temp);
+			}
+
+			if (session->GetSendFlag() == 1)
+			{
+				volatile int test = 1;
 			}
 
 			InterlockedExchange8(&session->GetSendFlag(), 1);
@@ -579,15 +587,19 @@ bool CLanServer::SendPost(Session *session)
 	
 	//int sendQsize = session->GetSendQ().GetUseSize();
 	//int peekCnt = sendQsize / sizeof(Packet *);
-	int peekCnt = session->GetSendQ()->GetUseCount();
+	int peekCnt=0;
+	//if ((peekCnt = session->GetSendQ()->GetUseCount()) == 0)
+	//{
+	//	volatile int test = 1;
+	//}
 	WSABUF wsabuf[1024];
 	Packet *peekData[1024];
 
-	if (peekCnt == 0)
-	{
-		InterlockedExchange8(&session->GetSendFlag(), 1);
-		return false;
-	}
+	//if (peekCnt == 0)
+	//{
+	//	InterlockedExchange8(&session->GetSendFlag(), 1);
+	//	return false;
+	//}
 	
 	
 	//session->GetSendQ().Peek((char *)peekData, peekCnt * sizeof(Packet *));
@@ -605,6 +617,12 @@ bool CLanServer::SendPost(Session *session)
 	if (peekCnt == 0)
 	{
 		InterlockedExchange8(&session->GetSendFlag(), 1);
+
+		if (session->GetSendQ()->GetUseCount() > 0)
+		{
+			return SendPost(session);
+		}
+
 		return false;
 	}
 

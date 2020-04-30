@@ -40,7 +40,7 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	sockAddr = sAddr;
 	sessionID = ID;
 	sendFlag = 1;
-	sockActive = FALSE;
+	//sockActive = FALSE;
 	sendPacketCnt = 0;
 	
 	//IOBlock->releaseFlag = 0;
