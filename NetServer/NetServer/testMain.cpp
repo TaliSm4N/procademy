@@ -38,6 +38,7 @@ int main()
 		wprintf(L"----------------------------------\n");
 		wprintf(L"DisconCnt     : %8d\n", test._disconnectCount);
 		wprintf(L"releaseCnt    : %8d\n", test._releaseCount);
+		wprintf(L"releaseClose  : %8d\n", test._releaseClose);
 		wprintf(L"recvOverlap   : %8d\n", test._recvOverlap);
 		wprintf(L"sendOverlap   : %8d\n", test._sendOverlap);
 		wprintf(L"sessionGet    : %8d\n", test._sessionGetCount);

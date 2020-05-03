@@ -89,6 +89,7 @@ public:
 	void SendBroadcast(Packet *p);
 private:
 	std::unordered_map<DWORD, st_PLAYER *> *_playerMap;
+	//SRWLOCK playerLock;
 	HANDLE _updateThread;
 	DWORD _updateThreadID;
 	HANDLE _monitor;

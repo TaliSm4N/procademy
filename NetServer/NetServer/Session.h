@@ -46,7 +46,6 @@ public:
 	void SetSendPacketCnt(int cnt) { InterlockedExchange((LONG *)&sendPacketCnt, cnt); }
 	int GetSendPacketCnt() { return sendPacketCnt; }
 
-	
 private:
 	SOCKET sock;
 	DWORD sessionID;
@@ -64,6 +63,7 @@ private:
 	//DWORD IOCount;
 	//bool releaseFlag;
 	IOChecker *IOBlock;
+	
 
 
 

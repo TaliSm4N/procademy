@@ -26,6 +26,7 @@ public:
 	LONG64 &GetIOCount() { return IOBlock->IOCount; }
 	IOChecker *GetIOBlock() { return IOBlock; }
 	RingBuffer &GetRecvQ() { return recvQ; }
+	LONG64 &GetReleaseFlag() { return IOBlock->releaseFlag; }
 	//IOChecker *GetIOCheckerPtr() { return &_IOChecker; }
 	//RingBuffer &GetSendQ() { return sendQ; }
 
@@ -34,7 +35,7 @@ public:
 	CHAR &GetSendFlag() { return sendFlag; }
 	SOCKET &GetSocket() { return sock; }
 	BOOL &GetSocketActive() { return sockActive; }
-	DWORD GetID() { return sessionID; }
+	DWORD &GetID() { return sessionID; }
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }
 	MyOverlapped &GetRecvOverlap() { return recvOverlap; }
 

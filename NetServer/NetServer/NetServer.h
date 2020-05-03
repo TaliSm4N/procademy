@@ -13,7 +13,7 @@ public:
 	
 	bool Disconnect(DWORD sessionID);
 
-	bool RecvPost(Session *session);
+	bool RecvPost(Session *session,bool first=false);
 	bool SendPost(Session *session);
 
 	bool SendPacket(DWORD sessionID, Packet *p);
@@ -120,6 +120,7 @@ public:
 	LONG64 _recvOverlap;
 	LONG64 _sendOverlap;
 	LONG64 _sessionGetCount;
+	LONG64 _releaseClose;
 
 //public:
 //	bool AutoSendPacket(DWORD sessionID, PacketPtr *p);

@@ -667,9 +667,6 @@ Session *CLanServer::GetSession(DWORD sessionID)
 	
 	Session *session = &_sessionList[sessionID & 0xffff];
 
-	if (session->GetID() != sessionID)
-		return NULL;
-
 	if (InterlockedIncrement64(&session->GetIOCount()) == 1)
 	{
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
@@ -677,8 +674,33 @@ Session *CLanServer::GetSession(DWORD sessionID)
 			//²÷±â
 			//OldDisconnect(sessionID);
 			ReleaseSession(session);
-			return NULL;
+			
 		}
+		return NULL;
+	}
+
+	if (session->GetID() != sessionID)
+	{
+		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+		{
+			//²÷±â
+			//OldDisconnect(sessionID);
+			ReleaseSession(session);
+			
+		}
+		return NULL;
+	}
+
+	if (session->GetReleaseFlag())
+	{
+		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+		{
+			//²÷±â
+			//OldDisconnect(sessionID);
+			ReleaseSession(session);
+			
+		}
+		return NULL;
 	}
 
 	InterlockedIncrement64(&_sessionGetCount);
@@ -698,6 +720,7 @@ void CLanServer::PutSession(Session *session)
 void CLanServer::ReleaseSession(Session *session)
 {
 	IOChecker checker;
+	DWORD id;
 
 	checker.IOCount = 0;
 	checker.releaseFlag = false;
@@ -709,6 +732,9 @@ void CLanServer::ReleaseSession(Session *session)
 	{
 		return;
 	}
+
+	id = session->GetID();
+	session->GetID() = -1;
 
 	if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE) && session->GetSocket() != INVALID_SOCKET)
 	{

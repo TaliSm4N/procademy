@@ -8,7 +8,8 @@ ChatServer::ChatServer()
 	:_attackDisconCount(0)
 {
 	_playerMap = new std::unordered_map<DWORD, st_PLAYER *>;
-	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(10000);
+	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(5000);
+	//InitializeSRWLock(&playerLock);
 }
 
 
@@ -108,7 +109,9 @@ void ChatServer::Join(DWORD sessionID)
 	//InterlockedExchange8((char *)&player->connect, true);
 	player->login = false;
 	//playerMap¿¡ µî·Ï
+	//AcquireSRWLockExclusive(&playerLock);
 	_playerMap->insert(std::make_pair(sessionID, player));
+	//ReleaseSRWLockExclusive(&playerLock);
 	_playerCount++;
 }
 

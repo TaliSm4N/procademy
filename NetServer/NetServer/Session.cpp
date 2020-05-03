@@ -13,7 +13,7 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	sendQ = new LockFreeQueue<Packet *>(1000);
 	//InitializeSRWLock(&sessionLock);
 	IOBlock = new IOChecker;
-	IOBlock->IOCount = 0;
+	IOBlock->IOCount = 1;
 	IOBlock->releaseFlag = 0;
 	//_IOChecker.IOCount = 0;
 	//_IOChecker.releaseFlag = false;
@@ -28,7 +28,7 @@ Session::Session()
 	recvOverlap.type = TYPE::RECV;
 	sendQ = new LockFreeQueue<Packet *>(1000);
 	IOBlock = new IOChecker;
-	IOBlock->IOCount = 0;
+	IOBlock->IOCount = 1;
 	IOBlock->releaseFlag = 0;
 	
 	//IOBlock->IOCount = 0;
