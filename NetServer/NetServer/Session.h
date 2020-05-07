@@ -46,6 +46,12 @@ public:
 	void SetSendPacketCnt(int cnt) { InterlockedExchange((LONG *)&sendPacketCnt, cnt); }
 	int GetSendPacketCnt() { return sendPacketCnt; }
 
+	int recent_send_transfer;
+	int recent_recv_transfer;
+	//int status;
+	//int b_status;
+	//int bb_status;
+
 private:
 	SOCKET sock;
 	DWORD sessionID;

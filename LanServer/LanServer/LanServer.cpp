@@ -763,7 +763,7 @@ void CLanServer::ReleaseSession(Session *session)
 
 	
 
-	_sessionIndexStack->Push(session->GetID()&0xffff);
+	_sessionIndexStack->Push(id&0xffff);
 
 	//ReleaseSRWLockExclusive(&_usedSessionLock);
 

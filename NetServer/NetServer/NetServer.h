@@ -98,7 +98,7 @@ public:
 public:
 	Session *GetSession(DWORD sessionID);
 	void PutSession(Session *session);
-	void ReleaseSession(Session *session);
+	void ReleaseSession(Session *session,DWORD sessionID = NULL);
 
 	
 private://monitoring
