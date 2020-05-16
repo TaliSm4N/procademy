@@ -18,6 +18,14 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32")
 
+struct CLIENT_CONNECT_INFO
+{
+	WCHAR IP[16];
+	int Port;
+	SOCKET sock;
+	DWORD ID;
+};
+
 #include "header.h"
 #include "CrashDump.h"
 #include "MemoryPool.h"
@@ -27,8 +35,8 @@
 #include "Packet.h"
 #include "PacketPtr.h"
 #include "RingBuffer.h"
+#include "Session.h"
 #include "TextParser.h"
 #include "Profiler.h"
 #include "Log.h"
-#include "Session.h"
 #include "MMOServer.h"

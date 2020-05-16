@@ -2,23 +2,20 @@
 
 enum en_SESSION_MODE {MODE_NONE=0,MODE_AUTH,MODE_AUTH_TO_GAME,MODE_GAME,MODE_LOGOUT_IN_AUTH,MODE_LOGOUT_IN_GAME,WAIT_LOGOUT};
 
-struct CLIENT_CONNECT_INFO
-{
-	WCHAR IP[16];
-	int Port;
-	SOCKET sock;
-	DWORD ID;
-};
+
 
 class Session
 {
 public:
 	void SendPacket(Packet *);
 	void Disconnect();
+	void Reset();
+	void Logout();
 public:
 	void SetClientInfo(CLIENT_CONNECT_INFO *clientInfo) { _ClientInfo = *clientInfo; }
 	void SetMode(en_SESSION_MODE mode) { _Mode = mode; }
 	void SetSendCnt(int cnt) { _iSendPacketCnt = cnt; }
+	VOID SetIndex(int index) { iArrayIndex = index; }
 
 	en_SESSION_MODE GetMode() { return _Mode; }
 	bool GetLogoutFlag() { return _bLogoutFlag; }
@@ -28,7 +25,8 @@ public:
 
 	RingBuffer &RecvQ() { return _RecvQ; }
 	LockFreeQueue<Packet *> &SendQ() { return _SendQ; }
-	std::queue<Packet *> &CompletePacketQ() { return _CompletePacket; }
+	//std::queue<Packet *> &CompletePacketQ() { return _CompletePacket; }
+	LockFreeQueue<Packet *> &CompletePacketQ() { return _CompletePacket; }
 	LONG &SendFlag() { return _lSendIO; }
 	OVERLAPPED &RecvOverlap() { return _RecvOverlapped; }
 	OVERLAPPED &SendOverlap() { return _SendOverlapped; }
@@ -44,6 +42,9 @@ public:
 	virtual void OnGame_ClientRelease();
 	virtual void OnGame_Packet(Packet *p);
 private:
+	void CloseSocket();
+	
+private:
 	en_SESSION_MODE			_Mode;		// 세션의 상태모드
 	int						iArrayIndex;	// Session 배열의 자기 인덱스
 
@@ -52,8 +53,9 @@ private:
 	RingBuffer				_RecvQ;
 	LockFreeQueue<Packet *>	_SendQ;
 
-	//일반 큐로 사용
-	std::queue<Packet *>	_CompletePacket;
+	//일반 큐로 수정 예정
+	//std::queue<Packet *>	_CompletePacket;
+	LockFreeQueue<Packet *> _CompletePacket;
 
 	OVERLAPPED			_RecvOverlapped;
 	OVERLAPPED			_SendOverlapped;
@@ -64,6 +66,9 @@ private:
 	LONG				_lSendIO;
 	LONG64				_IOCount;
 
+	SOCKET _closeSock;
+	
+protected:
 	bool				_bLogoutFlag;
 	bool				_bAuthToGameFlag;
 };

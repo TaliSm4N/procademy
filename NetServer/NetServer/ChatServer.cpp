@@ -175,6 +175,7 @@ unsigned int ChatServer::UpdateThreadRun()
 		{
 			if (!_msgQ->Dequeue(&msg))
 			{
+				CrashDump::Crash();
 				volatile int test = 1;
 			}
 
@@ -275,6 +276,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 
 	if (player->AccountNo != -1)
 	{
+		CrashDump::Crash();
 		_attackDisconCount++;
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
@@ -351,6 +353,11 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 
 	if (player->AccountNo != account)
 	{
+		//test
+		//CrashDump::Crash();
+
+		//check
+
 		_attackDisconCount++;
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
@@ -435,6 +442,9 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 
 	if (player->AccountNo != account)
 	{
+		//test
+		//CrashDump::Crash();
+
 		_attackDisconCount++;
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;

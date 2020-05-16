@@ -20,7 +20,7 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 }
 
 Session::Session()
-	:sendFlag(1), sockActive(FALSE)
+	:sendFlag(1), sockActive(FALSE),sock(INVALID_SOCKET)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
@@ -36,6 +36,10 @@ Session::Session()
 
 void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 {
+	if (sock != INVALID_SOCKET)
+	{
+		volatile int test = 1;
+	}
 	sock = s;
 	sockAddr = sAddr;
 	sessionID = ID;

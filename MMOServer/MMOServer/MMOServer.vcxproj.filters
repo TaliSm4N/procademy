@@ -45,6 +45,21 @@
     <ClCompile Include="TextParser.cpp">
       <Filter>NetWorkLib\Source</Filter>
     </ClCompile>
+    <ClCompile Include="MMOServer.cpp">
+      <Filter>NetWorkLib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Log.cpp">
+      <Filter>NetWorkLib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="player.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>NetWorkLib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="EchoServer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CrashDump.h">
@@ -79,6 +94,27 @@
     </ClInclude>
     <ClInclude Include="TextParser.h">
       <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="MMOServer.h">
+      <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="MMOLib.h">
+      <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Log.h">
+      <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="player.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonProtocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="EchoServer.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

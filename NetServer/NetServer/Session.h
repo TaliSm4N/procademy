@@ -70,7 +70,8 @@ private:
 	//bool releaseFlag;
 	IOChecker *IOBlock;
 	
-
+public:
+	SOCKET _closeSocket;
 
 
 	//자동화 테스트용

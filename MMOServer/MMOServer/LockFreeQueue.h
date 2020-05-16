@@ -69,9 +69,9 @@ template<class T>
 LockFreeQueue<T>::LockFreeQueue()
 	:_headCheckNum(0), _tailCheckNum(0), _useCount(0), _maxCount(0)
 {
-	queuePool = new MemoryPool<NODE>(1000, true);
+	queuePool = new MemoryPool<NODE>(1000, false);
 	_head = new END_NODE;
-	_head->node = queuePool.Alloc();
+	_head->node = queuePool->Alloc();
 	_tail = new END_NODE;
 	_tail->node = _head->node;
 }
@@ -91,7 +91,8 @@ template<class T>
 bool LockFreeQueue<T>::Enqueue(T data)
 {
 	NODE *newNode = queuePool->Alloc();
-
+	END_NODE tail;
+	NODE *next;
 
 	//추적용
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
@@ -110,14 +111,12 @@ bool LockFreeQueue<T>::Enqueue(T data)
 
 	while (1)
 	{
-		END_NODE tail;// = _tail;
+		// = _tail;
 		tail.check = _tail->check;
 		tail.node = _tail->node;
 
-		if (tail.node->next == (NODE *)0x1)
-			continue;
 
-		NODE *next = tail.node->next;
+		next = tail.node->next;
 
 		if (next == NULL)
 		{
@@ -159,9 +158,11 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 	}
 
 
-	END_NODE h;
-	//NODE *newHead = NULL;
 	T popData;// = (T)NULL;
+	END_NODE h;
+	NODE *next;
+	END_NODE tail;
+	//NODE *newHead = NULL;
 	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_headCheckNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
 
 
@@ -176,13 +177,12 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 		//END_NODE h;
 		h.check = _head->check;
 		h.node = _head->node;
-		NODE *next = h.node->next;
+		next = h.node->next;
 
 		//tail이 밀리지 않았을 때 모든 head를 빼내게 될 경우 tail이 유실될 수 있다.
-		END_NODE tail;// = _tail;
+		tail;// = _tail;
 		tail.check = _tail->check;
 		tail.node = _tail->node;
-		NODE *tailNext = tail.node->next;
 
 		if (tail.node->next != NULL)
 		{

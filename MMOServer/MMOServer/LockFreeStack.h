@@ -190,6 +190,8 @@ bool LockFreeStack<T>::Pop(T *data)
 
 	//top -> next가 자기 자신인 경우는 최초 생성시 만들어진 top뿐이다.
 
+	
+
 	if(data!=NULL)
 		*data = popData;
 

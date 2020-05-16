@@ -1,3 +1,4 @@
+/*
 #include <iostream>
 #include <Windows.h>
 #include <process.h>
@@ -89,7 +90,7 @@ unsigned __stdcall WorkerThreadProc(LPVOID lpThreadParameter)
 
 	return 0;
 }
-/*
+*/
 #include <iostream>
 #include <Windows.h>
 #include <thread>
@@ -160,4 +161,3 @@ void test5()
 	Sleep(300);
 	PRO_END(L"TEST5");
 }
-*/

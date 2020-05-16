@@ -99,6 +99,12 @@ bool LockFreeStack<T>::Push(T data)
 
 	newNode->item = data;
 
+	if (data == NULL)
+	{
+		CrashDump::Crash();
+		volatile int test = 1;
+	}
+
 	//추적용
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
 	//InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)newNode);
@@ -142,7 +148,7 @@ bool LockFreeStack<T>::Pop(T *data)
 
 	TOP t;
 	NODE *newTop = NULL;// = _TopNode->node->next;
-	T popData = NULL;;// = _TopNode->node->item;
+	T popData = _TopNode->node->item;// = _TopNode->node->item;
 	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
 	bool success = true;
 	//do
@@ -180,6 +186,12 @@ bool LockFreeStack<T>::Pop(T *data)
 		
 	} 
 
+	if (popData == 0)
+	{
+		CrashDump::Crash();
+		volatile int test = 1;
+	}
+
 	//추적용
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
 	//InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)t.node | 0x1000000000000000);
@@ -190,8 +202,15 @@ bool LockFreeStack<T>::Pop(T *data)
 
 	//top -> next가 자기 자신인 경우는 최초 생성시 만들어진 top뿐이다.
 
+	
+
 	if(data!=NULL)
 		*data = popData;
+	else
+	{
+		CrashDump::Crash();
+		volatile int test = 1;
+	}
 
 	return true;
 }

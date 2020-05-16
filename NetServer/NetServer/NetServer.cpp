@@ -43,7 +43,7 @@ bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 
 	_sessionIndexStack = new LockFreeStack<int>();
 
-	for (int i = _maxUser - 1; i >= 0; i--)
+	for (int i = _maxUser - 1; i > 0; i--)
 	{
 		//_unUsedSessionStack.push(i);
 		_sessionIndexStack->Push(i);
@@ -193,7 +193,7 @@ bool CNetServer::ConfigStart(const WCHAR *configFile)
 
 	_sessionIndexStack = new LockFreeStack<int>();
 
-	for (int i = _maxUser - 1; i >= 0; i--)
+	for (int i = _maxUser - 1; i > 0; i--)
 	{
 		//_unUsedSessionStack.push(i);
 		_sessionIndexStack->Push(i);
@@ -355,7 +355,18 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 		uniqueID = idCount;
 		uniqueID <<= 16;
 		//AcquireSRWLockExclusive(&_this->_usedSessionLock);
-		_this->_sessionIndexStack->Pop(&sessionPos);
+		if (!_this->_sessionIndexStack->Pop(&sessionPos))
+		{
+			CrashDump::Crash();
+			volatile int test = 1;
+		}
+
+		//test
+		if (sessionPos == 0)
+		{
+			CrashDump::Crash();
+		}
+
 		//sessionPos = _this->_unUsedSessionStack.top();
 		//_this->_unUsedSessionStack.pop();
 		//ReleaseSRWLockExclusive(&_this->_usedSessionLock);
@@ -391,7 +402,11 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 		
 		//accept 순간에 성공하지 않으면 session이 생성되지 않은거나 다름이 없음
 		
-		
+		if (session == _this->_sessionList)
+		{
+			CrashDump::Crash();
+		}
+
 		
 		if (_this->RecvPost(session,true))
 		{ 
@@ -415,6 +430,10 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 		}
 
 		idCount++;
+		uniqueID = -1;
+		session = NULL;
+		sock = INVALID_SOCKET;
+		sessionPos = -1;
 	}
 
 	return 0;
@@ -593,7 +612,10 @@ bool CNetServer::Disconnect(DWORD sessionID)
 
 		SOCKET sock = session->GetSocket();
 		if (InterlockedExchange(&session->GetSocket(), INVALID_SOCKET) != INVALID_SOCKET)
+		{
+			session->_closeSocket = sock;
 			closesocket(sock);
+		}
 	//}
 
 	PutSession(session);
@@ -762,6 +784,9 @@ bool CNetServer::RecvPost(Session *session,bool first)
 	//else
 	//	session->acceptCheck = true;
 
+
+	ZeroMemory(&session->GetRecvOverlap(), sizeof(MyOverlapped));
+	session->GetRecvOverlap().type = RECV;
 	int retval = WSARecv(session->GetSocket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->GetRecvOverlap(), NULL);
 	
 
@@ -796,7 +821,7 @@ bool CNetServer::SendPost(Session *session)
 	//{
 	//	return false;
 	//}
-
+	
 	//if (session->GetSendQ()->GetUseCount() <= 0)
 	//{
 	//	return false;
@@ -899,6 +924,8 @@ bool CNetServer::SendPost(Session *session)
 	InterlockedIncrement64(&session->GetIOCount());
 
 	
+	ZeroMemory(&session->GetSendOverlap(), sizeof(MyOverlapped));
+	session->GetSendOverlap().type = SEND;
 	int retval = WSASend(session->GetSocket(), wsabuf, peekCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
 	//int retval = WSASend(session->GetSocket(), wsaAutobuf, peekAutoCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
 
@@ -963,26 +990,6 @@ Session *CNetServer::GetSession(DWORD sessionID)
 		return NULL;
 	}
 
-	//문제로 보이는 파트
-
-	//여기 진입 후에 down Client가 발생하는 것으로 추정
-	//명확하지는 않음
-	if (session->GetID() != sessionID)
-	{
-		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
-		{
-
-			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
-			//InterlockedExchange((LONG *)&session->b_status, session->status);
-			//InterlockedExchange((LONG *)&session->status, 16);
-			//끊기
-			//Disconnect(sessionID);
-			ReleaseSession(session,sessionID);
-			//CrashDump::Crash();
-			
-		}
-		return NULL;
-	}
 
 	//이미 release에 들어갔을 경우 대비
 	//여기 들어가면 down client발생	
@@ -1000,6 +1007,23 @@ Session *CNetServer::GetSession(DWORD sessionID)
 			//CrashDump::Crash();
 		}
 	
+		return NULL;
+	}
+
+	if (session->GetID() != sessionID)
+	{
+		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+		{
+
+			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+			//InterlockedExchange((LONG *)&session->b_status, session->status);
+			//InterlockedExchange((LONG *)&session->status, 16);
+			//끊기
+			//Disconnect(sessionID);
+			ReleaseSession(session, sessionID);
+			//CrashDump::Crash();
+
+		}
 		return NULL;
 	}
 
@@ -1029,30 +1053,27 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 	checker.IOCount = 0;
 	checker.releaseFlag = false;
 
-	if (sessionID != NULL)
-	{
-		if (sessionID != session->GetID())
-			return;
-	}
-	
-	//release를 하지 않아도 될 경우 탈출
-	//IOCount가 0이 아니거나 release가 진행 중일 때
+	//if (!InterlockedExchange64(&session->GetReleaseFlag(), true))
+	//{
+	//	//release를 하지 않아도 될 경우 탈출
+	////IOCount가 0이 아니거나 release가 진행 중일 때
+	//	
+	//}
+
 	if (!InterlockedCompareExchange128((LONG64 *)session->GetIOBlock(), (LONG64)true, (LONG64)0, (LONG64 *)&checker))
 	{
+		//InterlockedExchange64(&session->GetReleaseFlag(), false);
+		//
+		//if (session->GetIOCount() == 0)
+		//	ReleaseSession(session, sessionID);
+
 		return;
 	}
 
-	if (sessionID != session->GetID())
-	{
-		sessionID = session->GetID();
-		InterlockedExchange64((LONG64 *)session->GetReleaseFlag(), false);
 
-		if (InterlockedDecrement64((LONG64 *)session->GetIOCount())==0)
-		{
-			ReleaseSession(session,sessionID);
-		}
-		return;
-	}
+
+	
+
 	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 	//InterlockedExchange((LONG *)&session->b_status, session->status);
 	//InterlockedExchange((LONG *)&session->status, 19);
@@ -1065,8 +1086,11 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 	//if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
 	//{
 		SOCKET sock= session->GetSocket();
-		if(InterlockedExchange(&session->GetSocket(), INVALID_SOCKET)!= INVALID_SOCKET)
+		if (InterlockedExchange(&session->GetSocket(), INVALID_SOCKET) != INVALID_SOCKET)
+		{
+			session->_closeSocket = sock;
 			closesocket(sock);
+		}
 		InterlockedIncrement64(&_releaseClose);
 	//}
 
@@ -1105,6 +1129,17 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 	//AcquireSRWLockExclusive(&_usedSessionLock);
 	//_unUsedSessionStack.push(sessionID);
 
+	if (id & 0xffff==0x0)
+	{
+		CrashDump::Crash();
+		volatile int test = 1;
+	}
+
+	if (session->GetSocket() != INVALID_SOCKET)
+	{
+		CrashDump::Crash();
+		volatile int test = 1;
+	}
 	
 	_sessionIndexStack->Push(id&0xffff);
 	InterlockedDecrement(&_sessionCount);

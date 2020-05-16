@@ -159,7 +159,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='r|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Custom</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -173,24 +173,36 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CrashDump.cpp" />
+    <ClCompile Include="EchoServer.cpp" />
+    <ClCompile Include="Log.cpp" />
+    <ClCompile Include="MMOServer.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PacketPtr.cpp" />
+    <ClCompile Include="player.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
+    <ClCompile Include="Session.cpp" />
     <ClCompile Include="testMaincpp.cpp" />
     <ClCompile Include="TextParser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="CrashDump.h" />
+    <ClInclude Include="EchoServer.h" />
     <ClInclude Include="header.h" />
     <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="LockFreeStack.h" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="MemoryPoolTLS.h" />
+    <ClInclude Include="MMOLib.h" />
+    <ClInclude Include="MMOServer.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketPtr.h" />
+    <ClInclude Include="player.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="Session.h" />
     <ClInclude Include="TextParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

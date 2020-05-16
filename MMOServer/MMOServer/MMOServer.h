@@ -56,7 +56,6 @@ private:
 
 	void ProcGame_AuthToGame(void);
 	void ProcGame_Packet(void);
-	void ProcGame_Packet(void);
 	void ProcGame_Logout(void);
 
 	void ProcGame_Release(void);
@@ -158,6 +157,9 @@ private:
 
 public:
 
+	int GetWorkerThreadCount() { return _iWorkerThread; }
+	int GetMaxUser() { return _maxSession; }
+
 	long		_Monitor_AcceptSocket;
 	long		_Monitor_AcceptFail;
 	long		_Monitor_SessionAllMode;
@@ -169,4 +171,18 @@ public:
 	long		_Monitor_Counter_Accept;	//AcceptTPS
 	long		_Monitor_Counter_PacketProc;	//RecvPacketTPS
 	long		_Monitor_Counter_PacketSend;	//SendPacketTPS
+	long		_Monitor_Counter_Packet;
+
+	
+private:
+	long		_Monitor_PacketProc;	//RecvPacket
+	long		_Monitor_PacketSend;	//SendPacket
+	long		_Counter_AuthUpdate;
+	long		_Counter_GameUpdate;
+
+	//debug¿ë ÇÔ¼ö
+private:
+	long GET_AUTHCOUNT();
+	long GET_GAMECOUNT();
+	long GET_USERCOUNT();
 };
