@@ -193,11 +193,7 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 		}
 
 		uniqueID = idCount;
-		//AcquireSRWLockExclusive(&_this->_usedSessionLock);
 		_this->_sessionIndexStack->Pop(&sessionPos);
-		//sessionPos = _this->_unUsedSessionStack.top();
-		//_this->_unUsedSessionStack.pop();
-		//ReleaseSRWLockExclusive(&_this->_usedSessionLock);
 		uniqueID <<= 16;
 		uniqueID += sessionPos;
 		session = &_this->_sessionList[sessionPos];
@@ -215,21 +211,15 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 		//accept 순간에 성공하지 않으면 session이 생성되지 않은거나 다름이 없음
 		if (_this->RecvPost(session))
 		{ 
-			//_this->Disconnect(session->GetID());
 			//OnClientJoin과정에서 send할 내용이 생겼을 경우 send명령을 해주기 위한 코드
 			_this->SendPost(session);
-			//_this->SessionRelease(session);
 		}
 
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
 			//끊기
 			_this->ReleaseSession(session);
-			//_this->OldDisconnect(session->GetID());
 		}
-		
-
-		//_this->PutSession(session);
 
 		idCount++;
 	}
@@ -280,9 +270,6 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 			//이 부분의 코드가 항상 끊김처리인 것은 아님
 			//그러나 보통은 사용하지 않는 기법
 			//끊김처리
-
-			
-			//closesocket(session->GetSocket());
 			_this->Disconnect(session->GetID());
 		}
 
@@ -300,30 +287,6 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 		}
 		else if (pOverlapped->type == TYPE::SEND)
 		{
-			//자동화 테스트
-			//session->GetAutoSendQ().Lock();
-			//for (int i = 0; i < session->GetSendPacketCnt(); i++)
-			//{
-			//	PacketPtr *temp;
-			//	session->GetAutoSendQ().Dequeue((char *)&temp, sizeof(PacketPtr *));
-			//	delete temp;
-			//}
-			//session->GetAutoSendQ().UnLock();
-			//자동화 테스트
-
-			//session->GetSendQ().Lock();
-			//for (int i = 0; i < session->GetSendPacketCnt(); i++)
-			//{
-			//	Packet *temp;
-			//	session->GetSendQ().Dequeue((char *)&temp, sizeof(Packet *));
-			//	//temp->Release();
-			//	//if (temp->UnRef())
-			//	//{
-			//		//_this->PacketFree(temp);
-			//	Packet::Free(temp);
-			//	//}
-			//}
-			//session->GetSendQ().UnLock();
 			if (session->GetSendFlag() == 1)
 			{
 				volatile int test = 1;
@@ -351,7 +314,6 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			//_this->OldDisconnect(session->GetID());
 			_this->ReleaseSession(session);
 		}
 	}
@@ -362,9 +324,6 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 
 bool CLanServer::Disconnect(DWORD sessionID)
 {
-	//int idMask = 0xffff;
-	//sessionID &= idMask;
-	//Session *session = &_sessionList[sessionID];
 	Session *session = GetSession(sessionID);
 
 	if (session == NULL)
@@ -460,9 +419,6 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	header.len = p->GetDataSize();
 	p->PutHeader(&header);
 
-	//int idMask = 0xffff;
-	//sessionID &= idMask;
-	//Session *session = &_sessionList[sessionID];
 	Session *session = GetSession(sessionID);
 
 	if (session == NULL)
@@ -482,12 +438,6 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 		session->GetSendQ()->Enqueue(p);
 	}
 
-	//session->GetSendQ().Lock();
-	//if (session->GetSendQ().GetFreeSize() >= sizeof(p))
-	//{
-	//	session->GetSendQ().Enqueue((char *)&p,sizeof(p));
-	//}
-	//session->GetSendQ().UnLock();
 	SendPost(session);
 	PutSession(session);
 	return true;
@@ -509,11 +459,8 @@ bool CLanServer::RecvPost(Session *session)
 
 
 	DWORD flags = 0;
-	
-	//if (session->acceptCheck)
-		InterlockedIncrement64(&session->GetIOCount());
-	//else
-	//	session->acceptCheck = true;
+
+	InterlockedIncrement64(&session->GetIOCount());
 
 	int retval = WSARecv(session->GetSocket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->GetRecvOverlap(), NULL);
 
@@ -524,8 +471,6 @@ bool CLanServer::RecvPost(Session *session)
 		{
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-
-				//Disconnect(session->GetID());
 				ReleaseSession(session);
 			}
 
@@ -548,69 +493,12 @@ bool CLanServer::SendPost(Session *session)
 	{
 		return false;
 	}
-
-	//session->GetSendQ().Lock();
-	//if (session->GetSendQ().GetUseSize() <= 0)
-	//{
-	//	InterlockedExchange8(&session->GetSendFlag(), 1);
-	//	session->GetSendQ().UnLock();
-	//	return false;
-	//}
-
-	//자동화 테스트
-	//session->GetAutoSendQ().Lock();
-	//
-	//if (session->GetAutoSendQ().GetUseSize() <= 0)
-	//{
-	//	InterlockedExchange8(&session->GetSendFlag(), 1);
-	//	session->GetAutoSendQ().UnLock();
-	//	return false;
-	//}
-	//
-	//int autoSendQsize = session->GetAutoSendQ().GetUseSize();
-	//int peekAutoCnt = autoSendQsize / sizeof(PacketPtr *);
-	//PacketPtr *peekAutoData[1024];
-	//WSABUF wsaAutobuf[1024];
-	//
-	//session->GetAutoSendQ().Peek((char *)peekAutoData, peekAutoCnt * sizeof(PacketPtr *));
-	//
-	//for (int i = 0; i < peekAutoCnt; i++)
-	//{
-	//	wsaAutobuf[i].buf = peekAutoData[i]->GetPacket()->GetBufferPtr();
-	//	wsaAutobuf[i].len = peekAutoData[i]->GetPacket()->GetDataSize();
-	//}
-	//
-	//session->SetSendPacketCnt(peekAutoCnt);
-	//session->GetAutoSendQ().UnLock();
-	//자동화 테스트
 	
 	
-	//int sendQsize = session->GetSendQ().GetUseSize();
-	//int peekCnt = sendQsize / sizeof(Packet *);
 	int peekCnt=0;
-	//if ((peekCnt = session->GetSendQ()->GetUseCount()) == 0)
-	//{
-	//	volatile int test = 1;
-	//}
 	WSABUF wsabuf[1024];
 	Packet *peekData[1024];
 
-	//if (peekCnt == 0)
-	//{
-	//	InterlockedExchange8(&session->GetSendFlag(), 1);
-	//	return false;
-	//}
-	
-	
-	//session->GetSendQ().Peek((char *)peekData, peekCnt * sizeof(Packet *));
-	
-	//for (int i = 0; i < peekCnt; i++)
-	//{
-	//	//wsabuf[i].buf = peekData[i]->GetBufferPtr();
-	//	wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
-	//	wsabuf[i].len = peekData[i]->GetDataSize()+sizeof(HEADER);
-	//	//peekData[i]->Ref();
-	//}
 
 	peekCnt = session->GetSendQ()->Peek(peekData, peekCnt);
 
@@ -633,24 +521,20 @@ bool CLanServer::SendPost(Session *session)
 	}
 
 	session->SetSendPacketCnt(peekCnt);
-	//session->GetSendQ().UnLock();
 	DWORD flags = 0;
 	InterlockedIncrement64(&session->GetIOCount());
 
 	
 	int retval = WSASend(session->GetSocket(), wsabuf, peekCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
-	//int retval = WSASend(session->GetSocket(), wsaAutobuf, peekAutoCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
+
 
 	if (retval == SOCKET_ERROR)
 	{
 		int err;
 		if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
 		{
-			//InterlockedExchange8(&session->GetSendFlag(), 1);
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-
-				//OldDisconnect(session->GetID());
 				ReleaseSession(session);
 			}
 			return false;

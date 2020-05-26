@@ -369,3 +369,8 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+Profiler/Profiler/2020-05-17 00-35 tt.txt
+MMOServer/MMOServer/2020-05-17 00-23 profile.txt
+MMOServer/MMOServer/2020-05-16 23-57 profile.txt
+MMOServer/MMOServer/2020-05-17 00-24 profile.txt
+*.txt

@@ -12,7 +12,7 @@
 #define AMOUNT_MAX 100000
 #define THREAD_MAX 30
 
-#define DATA_SIZE 4000
+#define DATA_SIZE 400
 
 unsigned int WINAPI MemoryPoolThread(LPVOID lpParam);
 unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam);
@@ -64,49 +64,49 @@ int main()
 
 	DWORD id;
 
-	//printf("set Test Thread Count(max %d)\n>> ",THREAD_MAX);
-	//scanf("%d", &threadCnt);
-	//printf("set Test Amount(max %d)\n>> ",AMOUNT_MAX);
-	//scanf("%d", &testAmount);
-	//printf("set Test Count\n>> ");
-	//scanf("%d", &testCnt);
-	//do
-	//{
-	//	printf("set Test Mode(0:all alloc - all free 1:one alloc - one free)\n>>");
-	//	scanf("%d", &testMode);
-	//	if (testMode == 0 || testMode == 1)
-	//	{
-	//		break;
-	//	}
-	//}
-	//while (1);
-	//
-	//if (threadCnt > THREAD_MAX)
-	//	threadCnt = THREAD_MAX;
-	//
-	//if (testAmount > AMOUNT_MAX)
-	//	testAmount = AMOUNT_MAX;
+	printf("set Test Thread Count(max %d)\n>> ",THREAD_MAX);
+	scanf("%d", &threadCnt);
+	printf("set Test Amount(max %d)\n>> ",AMOUNT_MAX);
+	scanf("%d", &testAmount);
+	printf("set Test Count\n>> ");
+	scanf("%d", &testCnt);
+	do
+	{
+		printf("set Test Mode(0:all alloc - all free 1:one alloc - one free)\n>>");
+		scanf("%d", &testMode);
+		if (testMode >= 0 &&testMode<=3)
+		{
+			break;
+		}
+	}
+	while (1);
+	
+	if (threadCnt > THREAD_MAX)
+		threadCnt = THREAD_MAX;
+	
+	if (testAmount > AMOUNT_MAX)
+		testAmount = AMOUNT_MAX;
 
 	
 
-	threadCnt = 4;
-	testAmount = AMOUNT_MAX;
-	testCnt = 10;
-	testMode = 0;
+	//threadCnt = 4;
+	//testAmount = AMOUNT_MAX;
+	//testCnt = 10;
+	//testMode = 1;
 	
 
 	//test
-	memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200);
-	for (int i = 0; i < threadCnt; i++)
-	{
-		threadHandle[i] = (HANDLE)_beginthreadex(NULL, 0, testThread, NULL, 0, (unsigned int *)&id);
-	}
-	
-	while (1) 
-	{
-		printf("Use Chunk Count %d\n",memoryTLS->GetChunkCount());
-		Sleep(1000); 
-	}
+	//memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200);
+	//for (int i = 0; i < threadCnt; i++)
+	//{
+	//	threadHandle[i] = (HANDLE)_beginthreadex(NULL, 0, testThread, NULL, 0, (unsigned int *)&id);
+	//}
+	//
+	//while (1) 
+	//{
+	//	printf("Use Chunk Count %d\n",memoryTLS->GetChunkCount());
+	//	Sleep(1000); 
+	//}
 	//test
 
 
@@ -123,7 +123,7 @@ int main()
 		return -1;
 	}
 	
-	memory = new MemoryPool<st_TEST_DATA>(AMOUNT_MAX*threadCnt);
+	memory = new MemoryPool<st_TEST_DATA>(AMOUNT_MAX*threadCnt/1000);
 	
 	
 	for (int i = 0; i < threadCnt; i++)
@@ -140,7 +140,7 @@ int main()
 	}
 	
 	delete memory;
-	memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200);
+	memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200 / 1000,false);
 
 	for (int i = 0; i < threadCnt; i++)
 	{
@@ -204,15 +204,15 @@ unsigned int WINAPI MemoryPoolThread(LPVOID lpParam)
 			//PRO_END(L"Mem_ALLOC");
 
 			//p[0]->data[0] = 1;
-			//PRO_BEGIN(L"MEM_DAT_SET");
-			//for (int j = 0; j < testAmount; j++)
-			//{
-			//	for (int index = 0; index < DATA_SIZE; index++)
-			//	{
-			//		p[j]->data[index] = index % sizeof(unsigned char);
-			//	}
-			//}
-			//PRO_END(L"MEM_DAT_SET");
+			PRO_BEGIN(L"MEM_DAT_SET");
+			for (int j = 0; j < testAmount; j++)
+			{
+				for (int index = 0; index < DATA_SIZE; index++)
+				{
+					p[j]->data[index] = index % 0xff;
+				}
+			}
+			PRO_END(L"MEM_DAT_SET");
 
 			//PRO_BEGIN(L"Mem_FREE");
 			for (int j = 0; j < testAmount; j++)
@@ -238,7 +238,7 @@ unsigned int WINAPI MemoryPoolThread(LPVOID lpParam)
 				PRO_BEGIN(L"MEM_DAT_SET");
 				for (int index = 0; index < DATA_SIZE; index++)
 				{
-					p[j]->data[index] = index % sizeof(unsigned char);
+					p[j]->data[index] = index % 0xff;
 				}
 				PRO_END(L"MEM_DAT_SET");
 
@@ -246,6 +246,86 @@ unsigned int WINAPI MemoryPoolThread(LPVOID lpParam)
 				memory->Free(p[j]);
 				//PRO_END(L"Mem_FREE");
 				
+			}
+			PRO_END(L"MemoryPool");
+		}
+	}
+	else if (testMode == 2)
+	{
+		int allocCnt=0;
+		srand(time(NULL));
+		int ran;
+		
+		for (int t = 0; t < testCnt; t++)
+		{
+			PRO_BEGIN(L"MemoryPool");
+			while (allocCnt < testAmount)
+			{
+				ran = rand() % 30;
+				
+				for (int i = 0; i < ran; i++)
+				{
+					p[i] = memory->Alloc(false);
+
+					allocCnt++;
+
+					if (allocCnt >= testAmount)
+					{
+						ran = i;
+						break;
+					}
+				}
+
+				for (int i = 0; i < ran; i++)
+				{
+					PRO_BEGIN(L"MEM_DAT_SET");
+					for (int index = 0; index < DATA_SIZE; index++)
+					{
+						p[i]->data[index] = index % 0xff;
+					}
+					PRO_END(L"MEM_DAT_SET");
+				}
+
+				for (int i = 0; i < ran; i++)
+				{
+					memory->Free(p[i]);
+				}
+				
+			}
+			PRO_END(L"MemoryPool");
+		}
+	}
+	else if (testMode == 3)
+	{
+		for (int i = 0; i < testCnt; i++)
+		{
+			PRO_BEGIN(L"MemoryPool");
+			for (int j = 0; j < testAmount/10; j++)
+			{
+				//PRO_BEGIN(L"Mem_ALLOC");
+				for (int k = 0; k < 10; k++)
+				{
+					p[j*10 + k] = memory->Alloc(false);
+				}
+				//PRO_END(L"Mem_ALLOC");
+
+				PRO_BEGIN(L"MEM_DAT_SET");
+				for (int k = 0; k < 10; k++)
+				{
+					for (int index = 0; index < DATA_SIZE; index++)
+					{
+						p[j * 10 + k]->data[index] = index % 0xff;
+					}
+				}
+				PRO_END(L"MEM_DAT_SET");
+
+				//PRO_BEGIN(L"Mem_FREE");
+				for (int k = 0; k < 10; k++)
+				{
+					memory->Free(p[j * 10 + k]);
+				}
+				//PRO_END(L"Mem_FREE");
+
 			}
 			PRO_END(L"MemoryPool");
 		}
@@ -272,15 +352,15 @@ unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam)
 			//PRO_END(L"MemTLS_ALLOC");
 
 			//p[0]->data[0] = 1;
-			//PRO_BEGIN(L"MEMTLS_DAT_SET");
-			//for (int j = 0; j < testAmount; j++)
-			//{
-			//	for (int index = 0; index < DATA_SIZE; index++)
-			//	{
-			//		p[j]->data[index] = index % sizeof(unsigned char);
-			//	}
-			//}
-			//PRO_END(L"MEMTLS_DAT_SET");
+			PRO_BEGIN(L"MEMTLS_DAT_SET");
+			for (int j = 0; j < testAmount; j++)
+			{
+				for (int index = 0; index < DATA_SIZE; index++)
+				{
+					p[j]->data[index] = index % 0xff;
+				}
+			}
+			PRO_END(L"MEMTLS_DAT_SET");
 
 			//PRO_BEGIN(L"MemTLS_FREE");
 			for (int j = 0; j < testAmount; j++)
@@ -306,13 +386,92 @@ unsigned int WINAPI MemoryPoolTLSThread(LPVOID lpParam)
 				PRO_BEGIN(L"MEMTLS_DAT_SET");
 				for (int index = 0; index < DATA_SIZE; index++)
 				{
-					p[j]->data[index] = index % sizeof(unsigned char);
+					p[j]->data[index] = index % 0xff;
 				}
 				PRO_END(L"MEMTLS_DAT_SET");
 
 				//PRO_BEGIN(L"MemTLS_FREE");
 				memoryTLS->Free(p[j]);
 				//PRO_END(L"MemTLS_FREE");
+			}
+			PRO_END(L"MemoryPoolTLS");
+		}
+	}
+	else if (testMode == 2)
+	{
+		int allocCnt = 0;
+		srand(time(NULL));
+		int ran;
+		for (int t = 0; t < testCnt; t++)
+		{
+			PRO_BEGIN(L"MemoryPoolTLS");
+			while (allocCnt < testAmount)
+			{
+				ran = rand() % 30;
+				
+				for (int i = 0; i < ran; i++)
+				{
+					p[i] = memoryTLS->Alloc();
+
+					allocCnt++;
+
+					if (allocCnt >= testAmount)
+					{
+						ran = i;
+						break;
+					}
+				}
+
+				for (int i = 0; i < ran; i++)
+				{
+					PRO_BEGIN(L"MEMTLS_DAT_SET");
+					for (int index = 0; index < DATA_SIZE; index++)
+					{
+						p[i]->data[index] = index % 0xff;
+					}
+					PRO_END(L"MEMTLS_DAT_SET");
+				}
+
+				for (int i = 0; i < ran; i++)
+				{
+					memoryTLS->Free(p[i]);
+				}
+				
+			}
+			PRO_END(L"MemoryPoolTLS");
+		}
+	}
+	else if (testMode == 3)
+	{
+		for (int i = 0; i < testCnt; i++)
+		{
+			PRO_BEGIN(L"MemoryPoolTLS");
+			for (int j = 0; j < testAmount / 10; j++)
+			{
+				//PRO_BEGIN(L"Mem_ALLOC");
+				for (int k = 0; k < 10; k++)
+				{
+					p[j * 10 + k] = memoryTLS->Alloc();
+				}
+				//PRO_END(L"Mem_ALLOC");
+
+				PRO_BEGIN(L"MEMTLS_DAT_SET");
+				for (int k = 0; k < 10; k++)
+				{
+					for (int index = 0; index < DATA_SIZE; index++)
+					{
+						p[j * 10 + k]->data[index] = index % 0xff;
+					}
+				}
+				PRO_END(L"MEMTLS_DAT_SET");
+
+				//PRO_BEGIN(L"Mem_FREE");
+				for (int k = 0; k < 10; k++)
+				{
+					memoryTLS->Free(p[j * 10 + k]);
+				}
+				//PRO_END(L"Mem_FREE");
+
 			}
 			PRO_END(L"MemoryPoolTLS");
 		}
@@ -340,15 +499,15 @@ unsigned int WINAPI NewDeleteThread(LPVOID lpParam)
 			//PRO_END(L"New");
 
 			//p[0]->data[0] = 1;
-			//PRO_BEGIN(L"NEWDEL_DAT_SET");
-			//for (int j = 0; j < testAmount; j++)
-			//{
-			//	for (int index = 0; index < DATA_SIZE; index++)
-			//	{
-			//		p[j]->data[index] = index % sizeof(unsigned char);
-			//	}
-			//}
-			//PRO_END(L"NEWDEL_DAT_SET");
+			PRO_BEGIN(L"NEWDEL_DAT_SET");
+			for (int j = 0; j < testAmount; j++)
+			{
+				for (int index = 0; index < DATA_SIZE; index++)
+				{
+					p[j]->data[index] = index % 0xff;
+				}
+			}
+			PRO_END(L"NEWDEL_DAT_SET");
 
 			//PRO_BEGIN(L"Delete");
 			for (int j = 0; j < testAmount; j++)
@@ -374,13 +533,93 @@ unsigned int WINAPI NewDeleteThread(LPVOID lpParam)
 				PRO_BEGIN(L"NEWDEL_DAT_SET");
 				for (int index = 0; index < DATA_SIZE; index++)
 				{
-					p[j]->data[index] = index % sizeof(unsigned char);
+					p[j]->data[index] = index % 0xff;
 				}
 				PRO_END(L"NEWDEL_DAT_SET");
 
 				//PRO_BEGIN(L"Delete");
 				delete p[j];
 				//PRO_END(L"Delete");				
+			}
+			PRO_END(L"NewDelete");
+		}
+	}
+	else if (testMode == 2)
+	{
+		int allocCnt = 0;
+		srand(time(NULL));
+		int ran;
+
+		for (int t = 0; t < testCnt; t++)
+		{
+			PRO_BEGIN(L"NewDelete");
+			while (allocCnt < testAmount)
+			{
+				ran = rand() % 30;
+				
+				for (int i = 0; i < ran; i++)
+				{
+					p[i] = new st_TEST_DATA;
+
+					allocCnt++;
+
+					if (allocCnt >= testAmount)
+					{
+						ran = i;
+						break;
+					}
+				}
+
+				for (int i = 0; i < ran; i++)
+				{
+					PRO_BEGIN(L"NEWDEL_DAT_SET");
+					for (int index = 0; index < DATA_SIZE; index++)
+					{
+						p[i]->data[index] = index % 0xff;
+					}
+					PRO_END(L"NEWDEL_DAT_SET");
+				}
+
+				for (int i = 0; i < ran; i++)
+				{
+					delete p[i];
+				}
+				
+			}
+			PRO_END(L"NewDelete");
+		}
+	}
+	else if (testMode == 3)
+	{
+		for (int i = 0; i < testCnt; i++)
+		{
+			PRO_BEGIN(L"NewDelete");
+			for (int j = 0; j < testAmount / 10; j++)
+			{
+				//PRO_BEGIN(L"Mem_ALLOC");
+				for (int k = 0; k < 10; k++)
+				{
+					p[j * 10 + k] = new st_TEST_DATA;
+				}
+				//PRO_END(L"Mem_ALLOC");
+
+				PRO_BEGIN(L"NEWDEL_DAT_SET");
+				for (int k = 0; k < 10; k++)
+				{
+					for (int index = 0; index < DATA_SIZE; index++)
+					{
+						p[j * 10 + k]->data[index] = index % 0xff;
+					}
+				}
+				PRO_END(L"NEWDEL_DAT_SET");
+
+				//PRO_BEGIN(L"Mem_FREE");
+				for (int k = 0; k < 10; k++)
+				{
+					delete p[j * 10 + k];
+				}
+				//PRO_END(L"Mem_FREE");
+
 			}
 			PRO_END(L"NewDelete");
 		}

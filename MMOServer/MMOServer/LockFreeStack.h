@@ -47,7 +47,7 @@ private:
 
 public:
 	LockFreeStack();
-	~LockFreeStack() {};
+	~LockFreeStack() { delete _TopNode; };
 	T Top();
 	bool Push(T data);
 	bool Pop(T *data = NULL);

@@ -32,6 +32,9 @@ struct st_PLAYER
 	DWORD	SessionID;
 
 	INT64	AccountNo;
+
+
+
 	WCHAR	szID[dfID_MAX_LEN];
 	WCHAR	szNick[dfNICK_MAX_LEN];
 

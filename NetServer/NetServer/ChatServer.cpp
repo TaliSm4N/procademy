@@ -101,6 +101,7 @@ void ChatServer::Join(DWORD sessionID)
 
 	//존재할 수 없는 섹터의 좌표
 	//해당 섹터의 위치를 가리키는 player는 아직 접속이 완료되지 않음
+
 	player->shSectorX = -1;
 	player->shSectorY = -1;
 	player->LastRecvPacket = timeGetTime();//최초 시간
@@ -136,6 +137,8 @@ void ChatServer::Leave(DWORD sessionID)
 		_sector[player->shSectorY][player->shSectorX].remove(player);
 	}
 
+	if(player->SessionID!=sessionID)
+		SYSLOG_LOG(L"test", LOG_DEBUG, L"leave player sessionID %d accountno %d player_sessionID %d", sessionID, player->AccountNo,player->SessionID);
 	_playerMap->erase(iter);
 
 	_playerPool->Free(player);

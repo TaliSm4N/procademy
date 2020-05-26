@@ -397,6 +397,12 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 		
 		//InterlockedExchange8((CHAR *)&session->GetSocketActive(), TRUE);
 		//InterlockedExchange64(&session->GetReleaseFlag(), false);
+
+		if (session->GetID()==0)
+		{
+			CrashDump::Crash();
+		}
+
 		_this->OnClientJoin(session->GetID());
 		
 		
@@ -490,7 +496,8 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			//InterlockedExchange((LONG *)&session->b_status, session->status);
 			//InterlockedExchange((LONG *)&session->status, 3);
 			//closesocket(session->GetSocket());
-			_this->Disconnect(session->GetID());
+			//_this->Disconnect(session->GetID());
+			session->Disconnect();
 		}
 
 		if (pOverlapped == &session->GetRecvOverlap())
@@ -599,6 +606,7 @@ bool CNetServer::Disconnect(DWORD sessionID)
 		return false;
 	}
 
+	//CrashDump::Crash();
 	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 	//InterlockedExchange((LONG *)&session->b_status, session->status);
 	//InterlockedExchange((LONG *)&session->status, 8);
@@ -787,6 +795,12 @@ bool CNetServer::RecvPost(Session *session,bool first)
 
 	ZeroMemory(&session->GetRecvOverlap(), sizeof(MyOverlapped));
 	session->GetRecvOverlap().type = RECV;
+
+	if (&session->GetRecvOverlap() == &_sessionList[0].GetRecvOverlap())
+	{
+		CrashDump::Crash();
+	}
+
 	int retval = WSARecv(session->GetSocket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->GetRecvOverlap(), NULL);
 	
 
@@ -1080,6 +1094,8 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 	
 	//InterlockedIncrement64(&session->GetIOCount());
 	id = session->GetID();
+	session->bbeforeID = session->beforeID;
+	session->beforeID = id;
 	session->GetID() = 0;
 	OnClientLeave(id);
 

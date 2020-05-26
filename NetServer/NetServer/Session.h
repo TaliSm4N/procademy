@@ -39,6 +39,7 @@ public:
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }
 	MyOverlapped &GetRecvOverlap() { return recvOverlap; }
 
+	bool Disconnect();
 	BOOL Release();
 	void Lock();
 	void Unlock();
@@ -72,6 +73,9 @@ private:
 	
 public:
 	SOCKET _closeSocket;
+	
+	DWORD beforeID;
+	DWORD bbeforeID;
 
 
 	//자동화 테스트용

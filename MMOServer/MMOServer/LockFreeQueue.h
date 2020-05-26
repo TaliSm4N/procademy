@@ -43,6 +43,7 @@ private:
 public:
 	LockFreeQueue();
 	LockFreeQueue(int maxCount);
+	~LockFreeQueue();
 	bool Enqueue(T data);
 	bool Dequeue(T *data = NULL);
 	int GetUseCount() { return _useCount; }
@@ -85,6 +86,14 @@ LockFreeQueue<T>::LockFreeQueue(int maxCount)
 	_head->node = queuePool->Alloc();
 	_tail = new END_NODE;
 	_tail->node = _head->node;
+}
+
+template<class T>
+LockFreeQueue<T>::~LockFreeQueue()
+{
+	delete _head;
+	delete _tail;
+	delete queuePool;
 }
 
 template<class T>

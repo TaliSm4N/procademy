@@ -27,6 +27,7 @@ void Player::OnAuth_Packet(Packet *p)
 		Auth_ReqLogin(p);
 		break;
 	default:
+		SYSLOG_LOG(L"Content", LOG_WARNING, L"AUTH session[%d] :fault type num %d",_AccountNo,type);
 		Disconnect();
 	}
 }
@@ -49,6 +50,8 @@ void Player::OnGame_Packet(Packet *p)
 
 	WORD type;
 
+	//packet 재사용되는 경우 있음
+	//해결 필요
 	*p >> type;
 
 	switch (type)
@@ -57,6 +60,7 @@ void Player::OnGame_Packet(Packet *p)
 		Game_Echo(p);
 		break;
 	default:
+		SYSLOG_LOG(L"Content", LOG_WARNING, L"GAME session[%d] :fault type num %d", _AccountNo, type);
 		Disconnect();
 	}
 }
@@ -80,6 +84,8 @@ void Player::Auth_ReqLogin(Packet *p)
 
 	SendPacket(sendPacket);
 
+	Packet::Free(sendPacket);
+
 
 }
 void Player::Game_Echo(Packet *p)
@@ -90,6 +96,7 @@ void Player::Game_Echo(Packet *p)
 
 	*p >> AccountNo >> SendTick;
 
+	//accountNO가 잘못 올때가 있음 해결 필요
 	if (AccountNo != _AccountNo)
 	{
 		volatile int test = 1;
@@ -97,5 +104,8 @@ void Player::Game_Echo(Packet *p)
 
 	*sendPacket << (WORD)en_PACKET_CS_GAME_RES_ECHO << AccountNo << SendTick;
 
+	PRO_BEGIN(L"SEND_PACKET");
 	SendPacket(sendPacket);
+	PRO_END(L"SEND_PACKET");
+	Packet::Free(sendPacket);
 }

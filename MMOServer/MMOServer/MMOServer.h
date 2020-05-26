@@ -2,6 +2,9 @@
 
 #define WORKER_THREAD_MAX 10
 
+#define GAME_PROC_PACKET_MAX 5
+#define AUTH_PROC_PACKET_MAX 5
+
 enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 
 class CMMOServer
@@ -120,7 +123,8 @@ private:
 	//----------------------------------------------------------------------------
 	// Send 부
 	//----------------------------------------------------------------------------
-	HANDLE		_hSendThread;
+	//HANDLE		_hSendThread;
+	HANDLE		_hSendThread[10];
 
 
 	Session	**_pSessionArray;
@@ -166,23 +170,46 @@ public:
 	long		_Monitor_SessionAuthMode;
 	long		_Monitor_SessionGameMode;
 
+	long		_Monitor_SessionAuthToGameMode;
+
 	long		_Monitor_Counter_AuthUpdate;
 	long		_Monitor_Counter_GameUpdate;
+	long		_Monitor_Counter_SendUpdate;
 	long		_Monitor_Counter_Accept;	//AcceptTPS
 	long		_Monitor_Counter_PacketProc;	//RecvPacketTPS
 	long		_Monitor_Counter_PacketSend;	//SendPacketTPS
 	long		_Monitor_Counter_Packet;
 
-	
-private:
+
 	long		_Monitor_PacketProc;	//RecvPacket
 	long		_Monitor_PacketSend;	//SendPacket
 	long		_Counter_AuthUpdate;
 	long		_Counter_GameUpdate;
+	long		_Counter_SendUpdate;
+
+	long		_Monitor_RecvOverlap;
+	long		_Monitor_SendOverlap;
+	
+	long		_Monitor_AcctionDelay;
+	long		_Monitor_AcctionDelay_Counter;
+	long		_Monitor_Packet_Survive_Time;
+	long		_Monitor_Packet_Survive_Time_Counter;
+
+	long		_Monitor_Logout_Counter;
+	long		_Monitor_Disconnect_Counter;
+	long		_Monitor_Transferred_Zero;
+
+	long		_Monitor_Counter_Recv;
 
 	//debug용 함수
 private:
 	long GET_AUTHCOUNT();
 	long GET_GAMECOUNT();
 	long GET_USERCOUNT();
+
+private:
+	HANDLE _sendThreadEvent;
+	HANDLE _gameThreadEvent;
+	HANDLE _authThreadEvent;
+	HANDLE _monitorThreadEvent;
 };

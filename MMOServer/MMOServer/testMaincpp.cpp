@@ -37,9 +37,18 @@ int main()
 		 wprintf(L"==================================\n");
 		 wprintf(L"AuthThreadFPS : %8d\n",test->_Monitor_Counter_AuthUpdate);
 		 wprintf(L"GameThreadFPS : %8d\n", test->_Monitor_Counter_GameUpdate);
+		 wprintf(L"SendThreadFPS : %8d\n", test->_Monitor_Counter_SendUpdate);
 		 wprintf(L"AuthCnt       : %8d\n", test->_Monitor_SessionAuthMode);
 		 wprintf(L"GameCnt       : %8d\n", test->_Monitor_SessionGameMode);
+		 //wprintf(L"AuthToGameCnt : %8d\n", test->_Monitor_SessionAuthToGameMode);
 		 wprintf(L"----------------------------------\n");
+		 wprintf(L"recvOverlap   : %8d\n",test->_Monitor_RecvOverlap);
+		 wprintf(L"sendOverlap   : %8d\n",test->_Monitor_SendOverlap);
+		 wprintf(L"LogOut Cnt    : %8d\n", test->_Monitor_Logout_Counter);
+		 wprintf(L"Discon Cnt    : %8d\n", test->_Monitor_Disconnect_Counter);
+		 wprintf(L"TransZero Cnt : %8d\n", test->_Monitor_Transferred_Zero);
+		 wprintf(L"Recv Packet   : %8d\n", test->_Monitor_Counter_Recv);
+		 
 
 		 ServerControl();
 

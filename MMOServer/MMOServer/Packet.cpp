@@ -4,12 +4,12 @@
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
 #include "Packet.h"
+#include "Profiler.h"
 
 
 MemoryPoolTLS<Packet> *Packet::packetPool = NULL;
 int Packet::_key = 0;
 int Packet::_code = 0;
-
 
 Packet::Packet()
 	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE),encodeFlag(false), encodeCount(0), refCnt(0)
@@ -479,20 +479,30 @@ void Packet::Init(int key, int code)
 
 Packet *Packet::Alloc()
 {
+	PRO_BEGIN(L"PACKET_ALLOC");
 	Packet *ret = packetPool->Alloc();
+	ret->AllocTime = GetTickCount();
 	ret->Ref();
 
+	PRO_END(L"PACKET_ALLOC");
 
 	return ret;
 }
 
+
 bool Packet::Free(Packet *p)
 {
+	bool ret;
+	PRO_BEGIN(L"PACKET_FREE");
 	if (p->UnRef())
 	{
+		ret = packetPool->Free(p);
+		PRO_END(L"PACKET_FREE");
 
-		return packetPool->Free(p);
+		return ret;
 	}
+	PRO_END(L"PACKET_FREE");
+
 
 	return true;
 }
@@ -501,6 +511,9 @@ void Packet::encode()
 {
 	if (InterlockedExchange8((char *)&encodeFlag, true) == true)
 		return;
+
+	PRO_BEGIN(L"ENCODE");
+
 	InterlockedIncrement((LONG *)&encodeCount);
 	header.code = Packet::GetCode();
 	header.len = GetDataSize();
@@ -522,6 +535,8 @@ void Packet::encode()
 		p = buf[i] ^ (header.RandKey + p + i + 2);
 		buf[i] = p ^ (_key + i + 2 + buf[i - 1]);
 	}
+
+	PRO_END(L"ENCODE");
 }
 
 void Packet::decode()

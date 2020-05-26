@@ -116,5 +116,8 @@
     <ClInclude Include="EchoServer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="MyQueue.h">
+      <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

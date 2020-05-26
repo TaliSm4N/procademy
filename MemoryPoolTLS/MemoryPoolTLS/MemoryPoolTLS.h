@@ -24,7 +24,7 @@ template <class T>
 class MemoryPoolTLS
 {
 private:
-	struct Chunk;
+	class Chunk;
 //#pragma pack(push,1)
 	struct ChunkBlock
 	{
@@ -34,28 +34,69 @@ private:
 		ChunkBlock()
 		{
 			_bumper = BUMPER;
+			pChunk = NULL;
 		}
 	};
 //#pragma pack(pop)
 
-	struct Chunk
+	class Chunk
 	{
+	//private:
+	public:
+		bool used;
 		int AllocIndex;
-		int FreeCount;
+		LONG FreeCount;
 		ChunkBlock block[CHUNK_SIZE];
 		MemoryPoolTLS<T> *pMemoryPool;
-
+		
+	public:
 		Chunk()
 		{
+			AllocIndex = 0;
+			FreeCount = 0;
+			used = false;
+			//for (int i = 0; i < CHUNK_SIZE; i++)
+			//{
+			//	block[i].pChunk = this;
+			//}
+			
+			//pMemoryPool = _pool;
+		}
+
+		void init()
+		{
+			used = true;
 			for (int i = 0; i < CHUNK_SIZE; i++)
 			{
 				block[i].pChunk = this;
 			}
-			AllocIndex = 0;
-			FreeCount = 0;
-			//pMemoryPool = _pool;
 		}
 
+		T *Alloc()
+		{
+			T *ret = &block[AllocIndex].item;
+			AllocIndex++;
+
+			if (AllocIndex == CHUNK_SIZE)
+			{
+				pMemoryPool->chunkAlloc();
+			}
+
+			return ret;
+		}
+
+		bool Free()
+		{
+			if (InterlockedIncrement(&FreeCount) == CHUNK_SIZE)
+			{
+				if (!pMemoryPool->_pool.Free(this))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
 	};
 
 
@@ -66,8 +107,32 @@ public:
 	bool Free(T *data);
 	int GetChunkCount() { return _useChunkCount; }
 private:
+	Chunk *chunkAlloc()
+	{
+		Chunk *chunk = _pool.Alloc();
+
+		if (chunk == NULL)
+		{
+			return NULL;
+		}
+
+		if (!chunk->used)
+		{
+			chunk->init();
+		}
+		else
+		{
+			volatile int test = 1;
+		}
+
+		chunk->pMemoryPool = this;
+		TlsSetValue(_tlsIndex, chunk);
+
+		return chunk;
+	}
+private:
 	DWORD _tlsIndex;
-	MemoryPool<Chunk> *_pool;
+	MemoryPool<Chunk> _pool;
 	int _useChunkCount;
 	bool _placementNew;
 };
@@ -77,37 +142,37 @@ MemoryPoolTLS<T>::MemoryPoolTLS(int ChunkNum,bool placement)
 	:_useChunkCount(0),_placementNew(placement)
 {
 	_tlsIndex = TlsAlloc();
-	_pool = new MemoryPool<Chunk>(ChunkNum);
+	//_pool = new MemoryPool<Chunk>(ChunkNum);
 }
 
 template<class T>
 MemoryPoolTLS<T>::~MemoryPoolTLS()
 {
-	delete _pool;
+	//delete _pool;
 }
+
+
 
 template<class T>
 T *MemoryPoolTLS<T>::Alloc()
 {
 	Chunk *chunk = (Chunk *)TlsGetValue(_tlsIndex);
 	T *ret;
-	
-
-	ChunkBlock *test;
 
 	if (chunk == NULL)
 	{
+		chunk = chunkAlloc();
 		//PRO_BEGIN(L"CHUNK_ALLOC");
-		chunk = _pool->Alloc();//chunk는 반드시 placement new
-
-		if (chunk == NULL)
-		{
-			return NULL;
-		}
-
-		//PRO_END(L"CHUNK_ALLOC");
-		chunk->pMemoryPool = this;
-		TlsSetValue(_tlsIndex, chunk);
+		//chunk = _pool.Alloc();//chunk는 반드시 placement new
+		//
+		//if (chunk == NULL)
+		//{
+		//	return NULL;
+		//}
+		//
+		////PRO_END(L"CHUNK_ALLOC");
+		//chunk->pMemoryPool = this;
+		//TlsSetValue(_tlsIndex, chunk);
 		//InterlockedIncrement((LONG *)&_useChunkCount);
 		//printf("set Chunk\n");
 	}
@@ -115,7 +180,9 @@ T *MemoryPoolTLS<T>::Alloc()
 
 	//printf("%d\n", chunk->AllocIndex);
 
-	ret = &(chunk->block[chunk->AllocIndex++].item);
+	//ret = &(chunk->block[chunk->AllocIndex++].item);
+
+	ret = chunk->Alloc();
 	
 	if (_placementNew)
 	{
@@ -126,26 +193,21 @@ T *MemoryPoolTLS<T>::Alloc()
 
 	//ret = chunk->Alloc();
 
-	if (chunk->AllocIndex > CHUNK_SIZE)
-	{
-		volatile int test = 1;
-	}
-
-	if (chunk->AllocIndex == CHUNK_SIZE)
-	{
-		//PRO_BEGIN(L"CHUNK_ALLOC");
-		chunk = _pool->Alloc();//chunk는 반드시 placement new
-
-		if (chunk == NULL)
-		{
-			return NULL;
-		}
-		//PRO_END(L"CHUNK_ALLOC");
-		chunk->pMemoryPool = this;
-		TlsSetValue(_tlsIndex, chunk);
-		//InterlockedIncrement((LONG *)&_useChunkCount);
-		//printf("newChunk\n");
-	}
+	//if (chunk->AllocIndex == CHUNK_SIZE)
+	//{
+	//	//PRO_BEGIN(L"CHUNK_ALLOC");
+	//	chunk = _pool.Alloc();//chunk는 반드시 placement new
+	//
+	//	if (chunk == NULL)
+	//	{
+	//		return NULL;
+	//	}
+	//	//PRO_END(L"CHUNK_ALLOC");
+	//	chunk->pMemoryPool = this;
+	//	TlsSetValue(_tlsIndex, chunk);
+	//	//InterlockedIncrement((LONG *)&_useChunkCount);
+	//	//printf("newChunk\n");
+	//}
 
 	return ret;
 }
@@ -164,21 +226,23 @@ bool MemoryPoolTLS<T>::Free(T *data)
 
 	 chunk = chunkBlock->pChunk;
 
+	 return chunk->Free();
+
 	//chunk->FreeCount++;
-	 InterlockedIncrement((LONG *)&chunk->FreeCount);
+	//InterlockedIncrement((LONG *)&chunk->FreeCount);
+	//
+	//f (chunk->FreeCount == CHUNK_SIZE)
+	//
+	//	//해당 청크가 Free를 호출한 memoryPool에 속하지 않았을 경우가 있을 수 있으므로
+	//	//chunk내의 memoryPool을 통해 free해야한다.
+	//
+	//
+	//	if (!chunk->pMemoryPool->_pool->Free(chunk))
+	//	{
+	//		return false;
+	//	}
+	//	//InterlockedDecrement((LONG *)&chunk->pMemoryPool->_useChunkCount);
+	//
 
-	if (chunk->FreeCount == CHUNK_SIZE)
-	{
-		//해당 청크가 Free를 호출한 memoryPool에 속하지 않았을 경우가 있을 수 있으므로
-		//chunk내의 memoryPool을 통해 free해야한다.
-
-
-		if (!chunk->pMemoryPool->_pool->Free(chunk))
-		{
-			return false;
-		}
-		//InterlockedDecrement((LONG *)&chunk->pMemoryPool->_useChunkCount);
-	}
-
-	return true;
+	//return true;
 }

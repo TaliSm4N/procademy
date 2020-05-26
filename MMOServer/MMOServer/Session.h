@@ -3,7 +3,6 @@
 enum en_SESSION_MODE {MODE_NONE=0,MODE_AUTH,MODE_AUTH_TO_GAME,MODE_GAME,MODE_LOGOUT_IN_AUTH,MODE_LOGOUT_IN_GAME,WAIT_LOGOUT};
 
 
-
 class Session
 {
 public:
@@ -13,9 +12,11 @@ public:
 	void Logout();
 public:
 	void SetClientInfo(CLIENT_CONNECT_INFO *clientInfo) { _ClientInfo = *clientInfo; }
-	void SetMode(en_SESSION_MODE mode) { _Mode = mode; }
+	void SetMode(en_SESSION_MODE mode) { _bLogoutFlag = false; _bAuthToGameFlag = false; _Mode = mode; }
 	void SetSendCnt(int cnt) { _iSendPacketCnt = cnt; }
 	VOID SetIndex(int index) { iArrayIndex = index; }
+	void SetLogoutFlag(bool b) { _bLogoutFlag = b; }
+	void SetAuthToGameFlag(bool b) { _bAuthToGameFlag = b; }
 
 	en_SESSION_MODE GetMode() { return _Mode; }
 	bool GetLogoutFlag() { return _bLogoutFlag; }
@@ -25,13 +26,15 @@ public:
 
 	RingBuffer &RecvQ() { return _RecvQ; }
 	LockFreeQueue<Packet *> &SendQ() { return _SendQ; }
-	//std::queue<Packet *> &CompletePacketQ() { return _CompletePacket; }
+	//MyQueue<Packet *> &CompletePacketQ() { return _CompletePacket; }
 	LockFreeQueue<Packet *> &CompletePacketQ() { return _CompletePacket; }
 	LONG &SendFlag() { return _lSendIO; }
 	OVERLAPPED &RecvOverlap() { return _RecvOverlapped; }
 	OVERLAPPED &SendOverlap() { return _SendOverlapped; }
 	LONG64 &IOCount() { return _IOCount; }
 	SOCKET &Socket() { return _ClientInfo.sock; }
+
+	bool ValidMode(en_SESSION_MODE mode);
 public:
 	virtual void OnAuth_ClientJoin();
 	virtual void OnAuth_ClientLeave();
@@ -44,6 +47,9 @@ public:
 private:
 	void CloseSocket();
 	
+protected:
+	bool				_bLogoutFlag;
+	bool				_bAuthToGameFlag;
 private:
 	en_SESSION_MODE			_Mode;		// 세션의 상태모드
 	int						iArrayIndex;	// Session 배열의 자기 인덱스
@@ -54,7 +60,7 @@ private:
 	LockFreeQueue<Packet *>	_SendQ;
 
 	//일반 큐로 수정 예정
-	//std::queue<Packet *>	_CompletePacket;
+	//MyQueue<Packet *>	_CompletePacket;
 	LockFreeQueue<Packet *> _CompletePacket;
 
 	OVERLAPPED			_RecvOverlapped;
@@ -67,8 +73,9 @@ private:
 	LONG64				_IOCount;
 
 	SOCKET _closeSock;
+
+	//debug용
+public:
 	
-protected:
-	bool				_bLogoutFlag;
-	bool				_bAuthToGameFlag;
+
 };

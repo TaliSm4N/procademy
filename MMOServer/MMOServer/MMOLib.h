@@ -32,6 +32,7 @@ struct CLIENT_CONNECT_INFO
 #include "MemoryPoolTLS.h"
 #include "LockFreeStack.h"
 #include "LockFreeQueue.h"
+#include "MyQueue.h"
 #include "Packet.h"
 #include "PacketPtr.h"
 #include "RingBuffer.h"

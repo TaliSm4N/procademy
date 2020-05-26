@@ -169,6 +169,10 @@ public:
 
 	static int PacketUseCount() { return packetPool->GetCount(); }
 	static int GetCode() { return _code; }
+	
+public:
+	DWORD AllocTime;
+	DWORD FreeTime;
 
 private:
 	BYTE mode;
@@ -189,6 +193,7 @@ private:
 	static int _key;
 	static int _code;
 	static MemoryPoolTLS<Packet> *packetPool;
+
 };
 
 #endif

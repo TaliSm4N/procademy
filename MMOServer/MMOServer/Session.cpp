@@ -3,10 +3,17 @@
 
 void Session::SendPacket(Packet *p)
 {
+	if (_Mode == MODE_NONE)
+		return;
+	if (_bLogoutFlag)
+		return;
+
 	p->encode();
 
+	p->Ref();
+	PRO_BEGIN(L"SEND_ENQ");
 	_SendQ.Enqueue(p);
-
+	PRO_END(L"SEND_ENQ");
 
 	return;
 }
@@ -43,9 +50,17 @@ void Session::Reset()
 	while (_CompletePacket.GetUseCount() > 0)
 	{
 		_CompletePacket.Dequeue(&temp);
-
+	
 		Packet::Free(temp);
 	}
+
+	//while (!_CompletePacket.empty())
+	//{
+	//	temp = _CompletePacket.front();
+	//	_CompletePacket.pop();
+	//
+	//	Packet::Free(temp);
+	//}
 	
 
 	ZeroMemory(&_RecvOverlapped, sizeof(OVERLAPPED));
@@ -68,6 +83,7 @@ void Session::Disconnect()
 
 void Session::Logout()
 {
+	_lSendIO = true;//logout중 send를 막기위해 send 중 상황으로 간주
 	_bLogoutFlag = true;
 }
 
@@ -93,4 +109,17 @@ void Session::OnGame_ClientRelease()
 }
 void Session::OnGame_Packet(Packet *p)
 {
+}
+
+bool Session::ValidMode(en_SESSION_MODE mode)
+{
+	bool ret = false;
+
+	if (_Mode != mode)
+		return ret;
+
+	if (!(_bLogoutFlag || _bAuthToGameFlag))
+		ret = true;
+
+	return ret;
 }

@@ -3,10 +3,14 @@
 #include <process.h>
 #include <ctime>
 #include <map>
+#include <conio.h>
+#include <queue>
+#include "Profiler.h"
 #include "LockFreeQueue.h"
 #include "CrashDump.h"
 
 unsigned int WINAPI WorkerThread(LPVOID lpParam);
+unsigned int WINAPI nonWorkerThread(LPVOID lpParam);
 
 struct st_TEST_DATA
 {
@@ -16,6 +20,7 @@ struct st_TEST_DATA
 
 
 LockFreeQueue<st_TEST_DATA *> queue;
+std::queue<st_TEST_DATA *> stdQueue;
 
 //CrashDump *Dump;
 
@@ -45,6 +50,11 @@ int main()
 		_beginthreadex(NULL, 0, WorkerThread, NULL, 0, (unsigned int *)&id);
 	}
 
+	for (int i = 0; i < 1; i++)
+	{
+		_beginthreadex(NULL, 0, nonWorkerThread, NULL, 0, (unsigned int *)&id);
+	}
+
 	int spinbefore = 0;
 	int popBefore = 0;
 	int pushBefore = 0;
@@ -60,10 +70,122 @@ int main()
 		printf("test Deq  TPS    : %d\n", popTotal - popBefore);
 		printf("test Deq  Total  : %d\n", popBefore = popTotal);
 		printf("--------------------------------------------------\n");
+
+		if (_kbhit())
+		{
+			WCHAR c = _getch();
+
+			if (c == L'r' || c == 'R')
+			{
+				ProfileDataOutText(L"Test");
+				ProfileDataSumOutText(L"TestSum");
+			}
+		}
+
 		Sleep(1000);
 	}
 }
 
+
+unsigned int WINAPI nonWorkerThread(LPVOID lpParam)
+{
+	SRWLOCK locker;
+	InitializeSRWLock(&locker);
+	srand(time(NULL));
+	for (int i = 0; i < 3; i++)
+	{
+		st_TEST_DATA *temp = new st_TEST_DATA;
+		temp->lCount = 0;
+		temp->lData = 0x0000000055555555;
+
+		PRO_BEGIN(L"PUSH");
+		AcquireSRWLockExclusive(&locker);
+		stdQueue.push(temp);
+		ReleaseSRWLockExclusive(&locker);
+		PRO_END(L"PUSH");
+		InterlockedIncrement((LONG *)&pushTotal);
+		//stack.Push(temp);
+	}
+	Sleep(500);
+
+	st_TEST_DATA *data[1000];
+
+	while (1)
+	{
+		//200°³´Â ²¨³»±â
+		//int count = rand() % 300 + 701;
+		int count = 3;
+
+		for (int i = 0; i < count; i++)
+		{
+			//if (!stack.Pop(&data[i]))
+			PRO_BEGIN(L"POP");
+			AcquireSRWLockExclusive(&locker);
+			data[i] = stdQueue.front();
+			if (data[i] == NULL)
+			{
+				CrashDump::Crash();
+			}
+			
+			
+			stdQueue.pop();
+			ReleaseSRWLockExclusive(&locker);
+			PRO_END(L"POP");
+			
+			InterlockedIncrement((LONG *)&popTotal);
+
+			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
+			{
+				CrashDump::Crash();
+			}
+		}
+
+		for (int i = 0; i < count; i++)
+		{
+			InterlockedIncrement((LONG *)&data[i]->lData);
+			InterlockedIncrement((LONG *)&data[i]->lCount);
+		}
+
+		for (int i = 0; i < count; i++)
+		{
+			if (data[i]->lData != 0x0000000055555556 || data[i]->lCount != 1)
+			{
+				CrashDump::Crash();
+			}
+		}
+
+		for (int i = 0; i < count; i++)
+		{
+			InterlockedDecrement((LONG *)&data[i]->lData);
+			InterlockedDecrement((LONG *)&data[i]->lCount);
+		}
+
+		Sleep(20);
+
+		for (int i = 0; i < count; i++)
+		{
+
+			if (data[i]->lData != 0x0000000055555555 || data[i]->lCount != 0)
+			{
+				CrashDump::Crash();
+			}
+		}
+		for (int i = 0; i < count; i++)
+		{
+			PRO_BEGIN(L"PUSH");
+			AcquireSRWLockExclusive(&locker);
+			stdQueue.push(data[i]);
+			ReleaseSRWLockExclusive(&locker);
+			PRO_END(L"PUSH");
+			InterlockedIncrement((LONG *)&pushTotal);
+			//stack.Push(data[i]);
+
+		}
+
+	}
+
+	return 0;
+}
 
 unsigned int WINAPI WorkerThread(LPVOID lpParam)
 {
@@ -152,6 +274,8 @@ unsigned int WINAPI WorkerThread(LPVOID lpParam)
 
 	return 0;
 }
+
+
 /*
 // cmpxchg16b.c
 // processor: x64

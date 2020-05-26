@@ -1,9 +1,9 @@
 #pragma once
 
 #include "CrashDump.h"
+#include "Profiler.h"
 
 #include <Windows.h>
-//#include <algorithm>
 #include "MemoryPool.h"
 
 //최근 50000개만 기록한다
@@ -24,27 +24,22 @@ private:
 		{
 			next = NULL;
 			item = data;
-			used = false;
 		}
 
 		NODE()
 		{
 			next = NULL;
-			used = false;
 		}
 
 		T item;
 		NODE *next;
-		bool used;
 	};
 
 	struct END_NODE
 	{
 		END_NODE()
 		{
-			node = NULL;// new NODE;
-			//node=new NODE();
-			//node->next = node;
+			node = NULL;
 			check = 0;
 		}
 
@@ -75,7 +70,6 @@ LockFreeQueue<T>::LockFreeQueue()
 {
 	_head = new END_NODE;
 	_head->node = queuePool.Alloc();
-	_head->node->used = true;
 	_tail = new END_NODE;
 	_tail->node = _head->node;
 }
@@ -83,6 +77,7 @@ LockFreeQueue<T>::LockFreeQueue()
 template<class T>
 bool LockFreeQueue<T>::Enqueue(T data)
 {
+	PRO_BEGIN(L"ENQ");
 	NODE *newNode = queuePool.Alloc();
 	
 
@@ -92,11 +87,12 @@ bool LockFreeQueue<T>::Enqueue(T data)
 	//추적용
 
 	if (newNode == NULL)
+	{
+		PRO_END(L"ENQ");
 		return false;
+	}
 
 	newNode->item = data;
-	//newNode->next = NULL;
-	newNode->used = true;
 
 	
 	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);
@@ -127,10 +123,10 @@ bool LockFreeQueue<T>::Enqueue(T data)
 				break;
 			}
 		}
-		//tail의 next가 NULL이 아닌 경우 tail을 옮겨줘야함
-		//단 이경우에도 _tail은 atomic하게 변경되어야함
 		else
 		{
+			//tail의 next가 NULL이 아닌 경우 tail을 옮겨줘야함
+			//단 이경우에도 _tail은 atomic하게 변경되어야함
 		
 			InterlockedCompareExchange128((LONG64 *)_tail, checkNum, (LONG64)tail.node->next, (LONG64 *)&tail);
 			checkNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);//_tail이 변경됨에 따라서 checkNum도 변경
@@ -138,7 +134,7 @@ bool LockFreeQueue<T>::Enqueue(T data)
 	}
 
 	InterlockedIncrement((LONG *)&_useCount);
-
+	PRO_END(L"ENQ");
 	return true;
 }
 
@@ -152,7 +148,7 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 		return false;
 	}
 
-
+	PRO_BEGIN(L"DEQ");
 	END_NODE h;
 	//NODE *newHead = NULL;
 	T popData=NULL;
@@ -161,13 +157,7 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 
 	while (1)
 	{
-		//if (_head->node == _tail->node&&InterlockedCompareExchange((LONG *)&_head->node->next, NULL, NULL) == NULL)
-		//{
-		//	volatile int test = 1;
-		//	CrashDump::Crash();
-		//}
 
-		//END_NODE h;
 		h.check = _head->check;
 		h.node = _head->node;
 		NODE *next = h.node->next;
@@ -188,58 +178,20 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 			continue;
 		}
 
-		
-
-
-		//
-		//if(h.node->next==NULL)
 		if (next == NULL)
 			continue;
 
-		//memcpy(&popData, &(h.node->next->item), sizeof(T));
-		//memcpy(&popData, &next->item, sizeof(T));
 		popData = next->item;
 
 		if (InterlockedCompareExchange128((LONG64 *)_head, checkNum, (LONG64)h.node->next, (LONG64 *)&h))
 		{
-			//h.node->used = false;
-			//queuePool.Free(h.node);//<-이놈이 free가 되었는데 이 값이 재 queue에서 불려와 재사용될 때 문제가 생기는 것같음
 			if (data != NULL)
 				*data = popData;
 			break;
 		}
 	}
 
-	/*
-	while (!InterlockedCompareExchange128((LONG64 *)_head,checkNum,(LONG64)_head->node->next,(LONG64 *)&h))
-	{
-		//tail이 밀리지 않았을 때 모든 head를 빼내게 될 경우 tail이 유실될 수 있다.
-		END_NODE tail;// = _tail;
-		tail.check = _tail->check;
-		tail.node = _tail->node;
-		if (tail.node->next != NULL)
-		{
-			unsigned long long tailCheckNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);//_tail이 변경됨에 따라서 checkNum도 변경
-			if (InterlockedCompareExchange128((LONG64 *)_tail, tailCheckNum, (LONG64)tail.node->next, (LONG64 *)&tail))
-			{
-				volatile int test = 1;
-				NODE *temp = _tail->node;
-				if (temp->next == temp)
-				{
-					CrashDump::Crash();
-				}
-			}
-		}
-
-		newHead = h.node->next;
-
-		//newHead가 null인 경우는 _head가 재사용됬을 때뿐이다. => useCount가 0인데 dequeue한 경우엔 while문 안으로 진입이 안됨
-		//따라서 newHead가 null인 경우 자연스럽게 _head와 h가 일치할 수 없고(_head는 이미 바뀌었으므로) while루프가 돌게된다.
-		//newHead가 null인 경우에도 _head가 h와 동일하지 않다면 _head가 재사용된 것이므로 popData가 잘못되서 반환될 가능성은 없다
-		if(newHead!=NULL)
-			popData = newHead->item;
-	}
-	*/
+	
 	//추적용
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
 	//InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)h.node | 0x1000000000000000);
@@ -247,6 +199,6 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 	
 	queuePool.Free(h.node);
 
-
+	PRO_END(L"DEQ");
 	return true;
 }

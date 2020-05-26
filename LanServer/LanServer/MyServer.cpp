@@ -23,33 +23,21 @@ void CMyServer::OnSend(DWORD sessionID, int sendsize)
 }
 void CMyServer::OnClientJoin(DWORD sessionID)
 {
-	//HEADER header;
 	Player *player = new Player(sessionID);
 
-	
 
-	//Packet *p = new Packet;
-	//Packet *p = PacketAlloc();
 	Packet *p = Packet::Alloc();
-	//header.len = 8;
-	//p->PutHeader(&header);
-	//p->PutData((char *)&header, sizeof(header));
+
 	*p << 0x7fffffffffffffff;
 
-	//자동화 테스트
-	//PacketPtr *pPtr =new PacketPtr;
-	//pPtr->GetPacket()->PutData((char *)&header, sizeof(header));
-	//*pPtr << 0x7fffffffffffffff;
-	//자동화 테스트
+
 
 	AcquireSRWLockExclusive(&playerListLock);
 	playerList.insert(std::make_pair(sessionID, player));
 	SendPacket(sessionID, p);
 	Packet::Free(p);
 
-	//자동화 테스트
-	//AutoSendPacket(sessionID, pPtr);
-	//자동화 테스트
+
 
 	ReleaseSRWLockExclusive(&playerListLock);
 	
@@ -89,29 +77,9 @@ bool CMyServer::Echo(LONGLONG sessionID, Packet *p)
 	Player *player = iter->second;
 	ReleaseSRWLockExclusive(&playerListLock);
 
-	//Packet *sendPacket = PacketAlloc();
-	//Packet *sendPacket = new Packet;
-	//Packet *sendPacket = Packet::Alloc();
-	//LanServerHeader header;
-
-	//LONGLONG data;
-
-	//*p >> data;
-
-	//header.len = sizeof(data);
-	//sendPacket->PutData((char *)&header, sizeof(header));
-	//*sendPacket << data;
 
 	SendPacket(sessionID, p);
 
-
-	//자동화 테스트
-	//PacketPtr *pPtr = new PacketPtr;
-	//pPtr->GetPacket()->PutData((char *)&header, sizeof(header));
-	//*pPtr << data;
-	//
-	//AutoSendPacket(sessionID, pPtr);
-	//자동화 테스트
 
 	return TRUE;
 }

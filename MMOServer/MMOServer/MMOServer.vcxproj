@@ -197,6 +197,7 @@
     <ClInclude Include="MemoryPoolTLS.h" />
     <ClInclude Include="MMOLib.h" />
     <ClInclude Include="MMOServer.h" />
+    <ClInclude Include="MyQueue.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketPtr.h" />
     <ClInclude Include="player.h" />

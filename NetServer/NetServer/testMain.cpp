@@ -8,6 +8,8 @@ int main()
 {
 	//SYSTEM_INFO sysInfo;
 
+	SYSLOG_LEVEL(LOG_DEBUG);
+
 	CrashDump();
 
 	//GetSystemInfo(&sysInfo);

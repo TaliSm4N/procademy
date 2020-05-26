@@ -40,6 +40,7 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	{
 		volatile int test = 1;
 	}
+
 	sock = s;
 	sockAddr = sAddr;
 	sessionID = ID;
@@ -66,6 +67,18 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 Session::~Session()
 {
 	Release();
+}
+
+bool Session::Disconnect()
+{
+	SOCKET closeSock = sock;
+	if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
+	{
+		_closeSocket = closeSock;
+		closesocket(closeSock);
+	}
+
+	return true;
 }
 
 BOOL Session::Release()

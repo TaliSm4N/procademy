@@ -175,10 +175,12 @@
     <ClInclude Include="CrashDump.h" />
     <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="MemoryPool.h" />
+    <ClInclude Include="Profiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CrashDump.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Profiler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

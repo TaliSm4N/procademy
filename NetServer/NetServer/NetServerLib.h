@@ -16,6 +16,7 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32")
 
+#include "Log.h"
 #include "header.h"
 #include "CrashDump.h"
 #include "MemoryPool.h"
