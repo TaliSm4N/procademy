@@ -77,13 +77,13 @@ void Session::Reset()
 
 void Session::Disconnect()
 {
+	_bLogoutFlag = true;
 	CloseSocket();
-	//_bLogoutFlag = true;
 }
 
 void Session::Logout()
 {
-	_lSendIO = true;//logout중 send를 막기위해 send 중 상황으로 간주
+	//_lSendIO = true;//logout중 send를 막기위해 send 중 상황으로 간주
 	_bLogoutFlag = true;
 }
 

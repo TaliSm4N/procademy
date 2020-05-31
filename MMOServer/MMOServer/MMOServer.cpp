@@ -179,7 +179,7 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 	liDueTime.QuadPart = -100000LL;
 
 	SetWaitableTimer(_sendThreadEvent, &liDueTime, 20, NULL, NULL, FALSE);
-	SetWaitableTimer(_gameThreadEvent, &liDueTime, 10, NULL, NULL, FALSE);
+	SetWaitableTimer(_gameThreadEvent, &liDueTime, 5, NULL, NULL, FALSE);
 	SetWaitableTimer(_authThreadEvent, &liDueTime, 10, NULL, NULL, FALSE);
 	SetWaitableTimer(_monitorThreadEvent, &liDueTime, 1000, NULL, NULL, FALSE);
 
@@ -309,8 +309,8 @@ void CMMOServer::ProcAuth_Accept()
 
 		if (InterlockedDecrement64(&session->IOCount()) == 0)
 		{
-			//session->Disconnect();
-			session->Logout();
+			session->Disconnect();
+			//session->Logout();
 			InterlockedIncrement(&_Monitor_Logout_Counter);
 		}
 	}
@@ -395,6 +395,9 @@ void CMMOServer::ProcAuth_StatusChange(void)
 
 		if (session->GetMode() == MODE_LOGOUT_IN_AUTH)
 		{
+			if (session->SendFlag())
+				continue;
+
 			InterlockedDecrement(&_Monitor_SessionAuthMode);
 			session->SetMode(WAIT_LOGOUT);
 			session->OnAuth_ClientLeave();
@@ -463,6 +466,7 @@ void CMMOServer::ProcGame_AuthToGame()
 		if (session->GetLogoutFlag()&&session->GetMode()==MODE_GAME)
 		{
 			//session->SetLogoutFlag(false);
+			
 			session->SetMode(MODE_LOGOUT_IN_GAME);
 			continue;
 		}
@@ -552,6 +556,9 @@ void CMMOServer::ProcGame_Logout()
 			continue;
 		}
 
+		if (session->SendFlag())
+			continue;
+
 		InterlockedDecrement(&_Monitor_SessionGameMode);
 
 		session->SetMode(WAIT_LOGOUT);
@@ -628,11 +635,14 @@ bool				CMMOServer::IOCPWorkerThread_update(void)
 		{
 			session->Disconnect();
 			InterlockedIncrement(&_Monitor_Transferred_Zero);
-		}
 
-		//recv
-		if (pOverlapped == &session->RecvOverlap())
+			if (pOverlapped == &session->SendOverlap())
+				InterlockedExchange(&session->SendFlag(), false);
+
+		}
+		else if (pOverlapped == &session->RecvOverlap())
 		{
+			//recv
 			InterlockedDecrement(&_Monitor_RecvOverlap);
 
 			session->RecvQ().MoveWritePos(transferred);
@@ -669,14 +679,14 @@ bool				CMMOServer::IOCPWorkerThread_update(void)
 			}
 			session->SetSendCnt(0);
 
-			if(!session->GetLogoutFlag())
-				InterlockedExchange(&session->SendFlag(), false);
+			//if(!session->GetLogoutFlag())
+			InterlockedExchange(&session->SendFlag(), false);
 		}
 
 		if (InterlockedDecrement64(&session->IOCount()) == 0)
 		{
-			//session->Disconnect();
-			session->Logout();
+			session->Disconnect();
+			//session->Logout();
 			InterlockedIncrement(&_Monitor_Logout_Counter);
 		}
 	}
@@ -778,8 +788,8 @@ bool CMMOServer::RecvPost(Session *session, bool first)
 			PRO_END(L"WSARecv");
 			if (InterlockedDecrement64(&session->IOCount()) == 0)
 			{
-				//session->Disconnect();
-				session->Logout();
+				session->Disconnect();
+				//session->Logout();
 				InterlockedIncrement(&_Monitor_Logout_Counter);
 			}
 			
@@ -823,23 +833,25 @@ bool				CMMOServer::SendThread_update(void)
 				continue;
 			}
 
+			
+
 			mode = session->GetMode();
 			if (mode != MODE_AUTH && mode != MODE_GAME)
 			{
+				//InterlockedCompareExchange(&session->SendFlag(), false, true);
 				continue;
 			}
 
 			if (session->SendQ().GetUseCount() <= 0)
 			{
+				//InterlockedCompareExchange(&session->SendFlag(), false, true);
 				continue;
 			}
 
-			if (InterlockedExchange(&session->SendFlag(), true))
+			if (InterlockedCompareExchange(&session->SendFlag(), true, false))
 			{
 				continue;
 			}
-
-			
 
 			PRO_BEGIN(L"PEEK");
 			peekCnt = session->SendQ().Peek(peekData, peekCnt);
@@ -875,11 +887,12 @@ bool				CMMOServer::SendThread_update(void)
 					if (InterlockedDecrement64(&session->IOCount()) == 0)
 					{
 						
-						//session->Disconnect();
-						session->Logout();
+						session->Disconnect();
+						//session->Logout();
 						InterlockedIncrement(&_Monitor_Logout_Counter);
 						
 					}
+					InterlockedCompareExchange(&session->SendFlag(), false, true);
 					continue;
 				}
 			}
