@@ -1,8 +1,8 @@
 #pragma once
 
-#include <sdkddkver.h>
+//#include <sdkddkver.h>
 #include <WinSock2.h>
-#include <windows.h>
+//#include <windows.h>
 #include <WS2tcpip.h>
 #include <process.h>
 #include <fstream>

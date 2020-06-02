@@ -48,7 +48,6 @@ bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 		//_unUsedSessionStack.push(i);
 		_sessionIndexStack->Push(i);
 	}
-
 	Packet::Init();
 	if (WSAStartup(MAKEWORD(2, 2), &_wsa) != 0) return false;
 
@@ -497,6 +496,10 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			//InterlockedExchange((LONG *)&session->status, 3);
 			//closesocket(session->GetSocket());
 			//_this->Disconnect(session->GetID());
+
+			if(pOverlapped==&session->GetSendOverlap())
+				InterlockedExchange8(&session->GetSendFlag(), 1);
+
 			session->Disconnect();
 		}
 		else if (pOverlapped == &session->GetRecvOverlap())
@@ -803,6 +806,21 @@ bool CNetServer::RecvPost(Session *session,bool first)
 		CrashDump::Crash();
 	}
 
+	if (session->GetSocket() == INVALID_SOCKET)
+	{
+		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+		{
+
+			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+			//InterlockedExchange((LONG *)&session->b_status, session->status);
+			//InterlockedExchange((LONG *)&session->status, 13);
+			ReleaseSession(session, session->GetID());
+			//Disconnect(session->GetID());
+			//SessionRelease(session);
+		}
+		return false;
+	}
+
 	int retval = WSARecv(session->GetSocket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->GetRecvOverlap(), NULL);
 	
 
@@ -824,7 +842,7 @@ bool CNetServer::RecvPost(Session *session,bool first)
 			}
 			if (session->GetIOCount() == -1)
 				CrashDump::Crash();
-			LOG(L"DEBUG", LOG_DEBUG, L"WSARecv error %d sessionid %d", err, session->GetID());
+			//LOG(L"DEBUG", LOG_DEBUG, L"WSARecv error %d sessionid %d SOCK %d", err, session->GetID(),session->GetSocket());
 			return false;
 		}
 	}
@@ -920,6 +938,22 @@ bool CNetServer::SendPost(Session *session)
 	
 	ZeroMemory(&session->GetSendOverlap(), sizeof(MyOverlapped));
 	session->GetSendOverlap().type = SEND;
+
+	if (session->GetSocket() == INVALID_SOCKET)
+	{
+		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
+		{
+
+			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+			//InterlockedExchange((LONG *)&session->b_status, session->status);
+			//InterlockedExchange((LONG *)&session->status, 13);
+			ReleaseSession(session, session->GetID());
+			//Disconnect(session->GetID());
+			//SessionRelease(session);
+		}
+		return false;
+	}
+
 	int retval = WSASend(session->GetSocket(), wsabuf, peekCnt, NULL, flags, (OVERLAPPED *)&session->GetSendOverlap(), NULL);
 
 	if (retval == SOCKET_ERROR)
@@ -937,7 +971,7 @@ bool CNetServer::SendPost(Session *session)
 			if (session->GetIOCount() == -1)
 				CrashDump::Crash();
 			//wprintf(L"%d-----------\n", err);
-			LOG(L"DEBUG", LOG_DEBUG, L"WSASend error %d sessionid %d", err, session->GetID());
+			//LOG(L"DEBUG", LOG_DEBUG, L"WSASend error %d sessionid %d", err, session->GetID());
 			return false;
 		}
 	}

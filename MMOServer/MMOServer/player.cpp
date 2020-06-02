@@ -99,7 +99,8 @@ void Player::Game_Echo(Packet *p)
 	//accountNO가 잘못 올때가 있음 해결 필요
 	if (AccountNo != _AccountNo)
 	{
-		volatile int test = 1;
+		SYSLOG_LOG(L"Content", LOG_WARNING, L"GAME session[%d] :fault Account num %d", _AccountNo,AccountNo);
+		CrashDump::Crash();
 	}
 
 	*sendPacket << (WORD)en_PACKET_CS_GAME_RES_ECHO << AccountNo << SendTick;

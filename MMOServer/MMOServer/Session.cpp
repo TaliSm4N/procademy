@@ -70,14 +70,23 @@ void Session::Reset()
 	_iSendPacketCnt = 0;
 	_iSendPacketSize = 0;
 	_lSendIO = 0;
-	_IOCount = 0;
+	//_IOCount = 0;
+
+
+	logSend = 0;
+	logIOCP = 0;
+	logRecv = 0;
+	logAccept = 0;
+
+	Senderr = 0;
+	Recverr = 0;
 	
 	//closesocket(_closeSock);
 }
 
 void Session::Disconnect()
 {
-	_bLogoutFlag = true;
+	//_bLogoutFlag = true;
 	CloseSocket();
 }
 
