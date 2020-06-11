@@ -374,3 +374,5 @@ MMOServer/MMOServer/2020-05-17 00-23 profile.txt
 MMOServer/MMOServer/2020-05-16 23-57 profile.txt
 MMOServer/MMOServer/2020-05-17 00-24 profile.txt
 *.txt
+DBConnect/DBConnect/include/
+*.lib
