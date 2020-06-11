@@ -4,6 +4,7 @@
 #include <WinSock2.h>
 //#include <windows.h>
 #include <WS2tcpip.h>
+#include <mstcpip.h>
 #include <process.h>
 #include <fstream>
 #include <cstring>

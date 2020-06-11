@@ -10,13 +10,14 @@ class Session
 public:
 	friend class CMMOServer;
 public:
+	Session() { _ClientInfo.sock = INVALID_SOCKET; }
 	void SendPacket(Packet *);
 	void Disconnect();
 	void Reset();
 	void Logout();
 public:
 	void SetClientInfo(CLIENT_CONNECT_INFO *clientInfo) { _ClientInfo = *clientInfo; }
-	void SetMode(en_SESSION_MODE mode) { _Mode = mode;  _bLogoutFlag = false; _bAuthToGameFlag = false;  }
+	void SetMode(en_SESSION_MODE mode) { _Mode = mode; _bAuthToGameFlag = false;  }
 	void SetSendCnt(int cnt) { _iSendPacketCnt = cnt; }
 	VOID SetIndex(int index) { iArrayIndex = index; }
 	void SetLogoutFlag(bool b) { _bLogoutFlag = b; }
@@ -80,14 +81,25 @@ private:
 
 	//debug¿ë
 public:
-	int logSend;
-	int logIOCP;
-	int logRecv;
-	int logAccept;
-	int Senderr;
-	int Recverr;
-
-	SOCKET recvSock;
-	SOCKET sendSock;
-
+	//int logoutcnt;
+	//int shutcnt;
+	//int logSend;
+	//int logIOCP;
+	//int logRecv;
+	////int logfalse;
+	////int tranZ;
+	//int logAccept;
+	//
+	//DWORD recvTime;
+	//DWORD endRecvTime;
+	//DWORD sendTime;
+	//DWORD endSendTime;
+	//int Senderr;
+	//int Recverr;
+	//
+	//SOCKET recvSock;
+	//SOCKET sendSock;
+	//
+	//int logoutcnt;
+	//int transferredZ;
 };

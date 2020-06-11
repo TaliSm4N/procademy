@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CrashDump.h"
+
 
 #include <Windows.h>
 //#include <algorithm>
@@ -43,6 +43,7 @@ private:
 public:
 	LockFreeQueue();
 	LockFreeQueue(int maxCount);
+	~LockFreeQueue();
 	bool Enqueue(T data);
 	bool Dequeue(T *data = NULL);
 	int GetUseCount() { return _useCount; }
@@ -67,11 +68,11 @@ private:
 
 template<class T>
 LockFreeQueue<T>::LockFreeQueue()
-	:_headCheckNum(0), _tailCheckNum(0), _useCount(0),_maxCount(0)
+	:_headCheckNum(0), _tailCheckNum(0), _useCount(0), _maxCount(0)
 {
-	queuePool = new MemoryPool<NODE>(1000,true);
+	queuePool = new MemoryPool<NODE>(1000, false);
 	_head = new END_NODE;
-	_head->node = queuePool.Alloc();
+	_head->node = queuePool->Alloc();
 	_tail = new END_NODE;
 	_tail->node = _head->node;
 }
@@ -88,10 +89,19 @@ LockFreeQueue<T>::LockFreeQueue(int maxCount)
 }
 
 template<class T>
+LockFreeQueue<T>::~LockFreeQueue()
+{
+	delete _head;
+	delete _tail;
+	delete queuePool;
+}
+
+template<class T>
 bool LockFreeQueue<T>::Enqueue(T data)
 {
 	NODE *newNode = queuePool->Alloc();
-	
+	END_NODE tail;
+	NODE *next;
 
 	//추적용
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
@@ -104,17 +114,18 @@ bool LockFreeQueue<T>::Enqueue(T data)
 	newNode->item = data;
 	//newNode->next = NULL;
 
-	
+
 	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);
-		
+
 
 	while (1)
 	{
-		END_NODE tail;// = _tail;
+		// = _tail;
 		tail.check = _tail->check;
 		tail.node = _tail->node;
 
-		NODE *next = tail.node->next;
+
+		next = tail.node->next;
 
 		if (next == NULL)
 		{
@@ -134,7 +145,7 @@ bool LockFreeQueue<T>::Enqueue(T data)
 		//단 이경우에도 _tail은 atomic하게 변경되어야함
 		else
 		{
-		
+
 			InterlockedCompareExchange128((LONG64 *)_tail, checkNum, (LONG64)tail.node->next, (LONG64 *)&tail);
 			checkNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);//_tail이 변경됨에 따라서 checkNum도 변경
 		}
@@ -156,9 +167,11 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 	}
 
 
+	T popData;// = (T)NULL;
 	END_NODE h;
+	NODE *next;
+	END_NODE tail;
 	//NODE *newHead = NULL;
-	T popData=NULL;
 	unsigned long long checkNum = InterlockedIncrement64((LONG64 *)&_headCheckNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
 
 
@@ -173,25 +186,24 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 		//END_NODE h;
 		h.check = _head->check;
 		h.node = _head->node;
-		NODE *next = h.node->next;
+		next = h.node->next;
 
 		//tail이 밀리지 않았을 때 모든 head를 빼내게 될 경우 tail이 유실될 수 있다.
-		END_NODE tail;// = _tail;
+		tail;// = _tail;
 		tail.check = _tail->check;
 		tail.node = _tail->node;
-		NODE *tailNext = tail.node->next;
 
 		if (tail.node->next != NULL)
 		{
 
 			unsigned long long tailCheckNum = InterlockedIncrement64((LONG64 *)&_tailCheckNum);//_tail이 변경됨에 따라서 checkNum도 변경
-		
+
 			InterlockedCompareExchange128((LONG64 *)_tail, tailCheckNum, (LONG64)tail.node->next, (LONG64 *)&tail);
 
 			continue;
 		}
 
-		
+
 
 
 		//
@@ -246,7 +258,7 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
 	//InterlockedExchange64((LONG64 *)&track[trackTemp % TRACK_MAX], (LONG64)h.node | 0x1000000000000000);
 	//추적용
-	
+
 	queuePool->Free(h.node);
 
 
@@ -256,10 +268,10 @@ bool LockFreeQueue<T>::Dequeue(T *data)
 template<class T>
 int LockFreeQueue<T>::Peek(T *peekData, int size)
 {
-	NODE *cur=_head->node;
+	NODE *cur = _head->node;
 	int i;
 	NODE *curNext;
-	for (i = 0; i<_useCount; i++)
+	for (i = 0; i < _useCount; i++)
 	{
 		curNext = cur->next;
 		peekData[i] = cur->next->item;

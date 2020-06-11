@@ -479,12 +479,12 @@ void Packet::Init(int key, int code)
 
 Packet *Packet::Alloc()
 {
-	PRO_BEGIN(L"PACKET_ALLOC");
+	//PRO_BEGIN(L"PACKET_ALLOC");
 	Packet *ret = packetPool->Alloc();
 	ret->AllocTime = GetTickCount();
 	ret->Ref();
 
-	PRO_END(L"PACKET_ALLOC");
+	//PRO_END(L"PACKET_ALLOC");
 
 	return ret;
 }
@@ -493,15 +493,15 @@ Packet *Packet::Alloc()
 bool Packet::Free(Packet *p)
 {
 	bool ret;
-	PRO_BEGIN(L"PACKET_FREE");
+	//PRO_BEGIN(L"PACKET_FREE");
 	if (p->UnRef())
 	{
 		ret = packetPool->Free(p);
-		PRO_END(L"PACKET_FREE");
+		//PRO_END(L"PACKET_FREE");
 
 		return ret;
 	}
-	PRO_END(L"PACKET_FREE");
+	//PRO_END(L"PACKET_FREE");
 
 
 	return true;
@@ -512,7 +512,7 @@ void Packet::encode()
 	if (InterlockedExchange8((char *)&encodeFlag, true) == true)
 		return;
 
-	PRO_BEGIN(L"ENCODE");
+	//PRO_BEGIN(L"ENCODE");
 
 	InterlockedIncrement((LONG *)&encodeCount);
 	header.code = Packet::GetCode();
@@ -536,7 +536,7 @@ void Packet::encode()
 		buf[i] = p ^ (_key + i + 2 + buf[i - 1]);
 	}
 
-	PRO_END(L"ENCODE");
+	//PRO_END(L"ENCODE");
 }
 
 void Packet::decode()

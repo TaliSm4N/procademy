@@ -105,8 +105,8 @@ void Player::Game_Echo(Packet *p)
 
 	*sendPacket << (WORD)en_PACKET_CS_GAME_RES_ECHO << AccountNo << SendTick;
 
-	PRO_BEGIN(L"SEND_PACKET");
+	//PRO_BEGIN(L"SEND_PACKET");
 	SendPacket(sendPacket);
-	PRO_END(L"SEND_PACKET");
+	//PRO_END(L"SEND_PACKET");
 	Packet::Free(sendPacket);
 }

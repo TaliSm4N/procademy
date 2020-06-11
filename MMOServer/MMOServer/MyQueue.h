@@ -35,6 +35,9 @@ private:
 	int _useCount;
 	int _maxCount;
 
+	LONG testenq;
+	LONG testdeq;
+
 	MemoryPool<NODE> *queuePool;
 };
 
@@ -45,6 +48,9 @@ MyQueue<T>::MyQueue()
 	queuePool = new MemoryPool<NODE>();
 	_head = queuePool->Alloc();
 	_tail = _head;
+
+	testenq = 0;
+	testdeq = 0;
 }
 
 template<class T>
@@ -54,11 +60,19 @@ MyQueue<T>::MyQueue(int maxCount)
 	queuePool = new MemoryPool<NODE>(maxCount, true);
 	_head = queuePool->Alloc();
 	_tail->node = _head;
+
+	testenq = 0;
+	testdeq = 0;
 }
 
 template<class T>
 bool  MyQueue<T>::Enqueue(T data)
 {
+	if (InterlockedIncrement(&testenq) != 1)
+	{
+		CrashDump::Crash();
+	}
+
 	NODE *newNode = queuePool->Alloc();
 	newNode->item = data;
 
@@ -69,12 +83,19 @@ bool  MyQueue<T>::Enqueue(T data)
 	_tail = newNode;
 	InterlockedIncrement((LONG *)&_useCount);
 
+
+	InterlockedDecrement(&testenq);
 	return true;
 }
 
 template<class T>
 bool  MyQueue<T>::Dequeue(T *data)
 {
+	if (InterlockedIncrement(&testdeq) != 1)
+	{
+		CrashDump::Crash();
+	}
+
 	NODE *temp;
 	//isEmpty를 atomic할 수 있게
 	if (InterlockedDecrement((LONG *)&_useCount) < 0)
@@ -90,6 +111,8 @@ bool  MyQueue<T>::Dequeue(T *data)
 		*data = _head->item;
 
 	InterlockedDecrement((LONG *)&_useCount);
+
+	InterlockedDecrement(&testdeq);
 
 	return true;
 }

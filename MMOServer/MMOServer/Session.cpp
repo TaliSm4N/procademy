@@ -11,15 +11,16 @@ void Session::SendPacket(Packet *p)
 	p->encode();
 
 	p->Ref();
-	PRO_BEGIN(L"SEND_ENQ");
+	//PRO_BEGIN(L"SEND_ENQ");
 	_SendQ.Enqueue(p);
-	PRO_END(L"SEND_ENQ");
+	//PRO_END(L"SEND_ENQ");
 
 	return;
 }
 
 void Session::CloseSocket()
 {
+	//SYSLOG_LOG(L"Lib", LOG_WARNING, L"close socket pos : %d %d", iArrayIndex, _iSendPacketSize);
 	SOCKET sock = _ClientInfo.sock;
 	_closeSock = _ClientInfo.sock;
 	InterlockedExchange(&_ClientInfo.sock, INVALID_SOCKET);
@@ -34,9 +35,11 @@ void Session::Reset()
 {
 	Packet *temp;
 
-	CloseSocket();
 
 	_Mode = MODE_NONE;
+
+	CloseSocket();
+	//closesocket(_ClientInfo.sock);
 
 	_RecvQ.Reset();
 
@@ -69,17 +72,18 @@ void Session::Reset()
 	_bAuthToGameFlag = false;
 	_iSendPacketCnt = 0;
 	_iSendPacketSize = 0;
-	_lSendIO = 0;
+	//_lSendIO = 0;
+	InterlockedExchange(&_lSendIO, false);
 	//_IOCount = 0;
 
 
-	logSend = 0;
-	logIOCP = 0;
-	logRecv = 0;
-	logAccept = 0;
-
-	Senderr = 0;
-	Recverr = 0;
+	//logSend = 0;
+	//logIOCP = 0;
+	//logRecv = 0;
+	//logAccept = 0;
+	//
+	//Senderr = 0;
+	//Recverr = 0;
 	
 	//closesocket(_closeSock);
 }
@@ -87,11 +91,13 @@ void Session::Reset()
 void Session::Disconnect()
 {
 	//_bLogoutFlag = true;
+	//shutdown(_ClientInfo.sock, SD_BOTH);
 	CloseSocket();
 }
 
 void Session::Logout()
 {
+	//SYSLOG_LOG(L"Lib", LOG_WARNING, L"llogout : %d - %d %d", iArrayIndex,Recverr,Senderr);
 	//_lSendIO = true;//logout중 send를 막기위해 send 중 상황으로 간주
 	_bLogoutFlag = true;
 }

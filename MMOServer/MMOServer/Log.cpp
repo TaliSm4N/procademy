@@ -49,7 +49,7 @@ void CLog::Log(const WCHAR *szType, LOG_LEVEL LogLevel, const WCHAR *szStringFor
 
 	if (err != 0)
 	{
-		wprintf(L"fopen error %d\n",err);
+		//wprintf(L"fopen error %d\n",err);
 		return;
 	}
 

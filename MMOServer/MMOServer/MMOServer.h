@@ -100,6 +100,7 @@ private:
 	HANDLE		_hAcceptThread;
 
 	LockFreeQueue<CLIENT_CONNECT_INFO *>	_AcceptSocketQueue;			// 신규접속 Socket 큐
+	//MyQueue<CLIENT_CONNECT_INFO *>	_AcceptSocketQueue;			// 신규접속 Socket 큐
 	MemoryPool<CLIENT_CONNECT_INFO>	_MemoryPool_ConnectInfo;
 
 	//----------------------------------------------------------------------------
@@ -200,12 +201,6 @@ public:
 	long		_Monitor_Transferred_Zero;
 
 	long		_Monitor_Counter_Recv;
-
-	//debug용 함수
-private:
-	long GET_AUTHCOUNT();
-	long GET_GAMECOUNT();
-	long GET_USERCOUNT();
 
 private:
 	HANDLE _sendThreadEvent;

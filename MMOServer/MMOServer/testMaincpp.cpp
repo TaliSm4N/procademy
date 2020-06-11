@@ -8,14 +8,15 @@ void ServerControl();
 int main()
 {
 	CrashDump();
-	SYSLOG_LEVEL(LOG_DEBUG);
+	SYSLOG_LEVEL(LOG_WARNING);
 	ProfileInit();
 
 	 EchoServer *test;
 
 	 test = new EchoServer(20000);
 
-	 test->Start(NULL, 40000, 3, true, 119, 50);
+	 if (!test->Start(NULL, 40000, 3, true, 119, 50))
+		 return 0;
 
 	 while (1)
 	 {
@@ -42,12 +43,14 @@ int main()
 		 wprintf(L"GameCnt       : %8d\n", test->_Monitor_SessionGameMode);
 		 //wprintf(L"AuthToGameCnt : %8d\n", test->_Monitor_SessionAuthToGameMode);
 		 wprintf(L"----------------------------------\n");
+		 wprintf(L"Over Session  : %8d\n", test->_Monitor_SessionAllMode - test->_Monitor_SessionAuthMode - test->_Monitor_SessionGameMode);
 		 wprintf(L"recvOverlap   : %8d\n",test->_Monitor_RecvOverlap);
 		 wprintf(L"sendOverlap   : %8d\n",test->_Monitor_SendOverlap);
-		 wprintf(L"LogOut Cnt    : %8d\n", test->_Monitor_Logout_Counter);
+		// wprintf(L"LogOut Cnt    : %8d\n", test->_Monitor_Logout_Counter);
 		 wprintf(L"Discon Cnt    : %8d\n", test->_Monitor_Disconnect_Counter);
-		 wprintf(L"TransZero Cnt : %8d\n", test->_Monitor_Transferred_Zero);
-		 wprintf(L"Recv Packet   : %8d\n", test->_Monitor_Counter_Recv);
+		 //wprintf(L"TransZero Cnt : %8d\n", test->_Monitor_Transferred_Zero);
+		 //wprintf(L"Recv Packet   : %8d\n", test->_Monitor_Counter_Recv);
+
 		 
 
 		 ServerControl();
