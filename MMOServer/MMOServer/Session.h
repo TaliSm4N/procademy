@@ -4,6 +4,7 @@ class CMMOServer;
 
 enum en_SESSION_MODE {MODE_NONE=0,MODE_AUTH,MODE_AUTH_TO_GAME,MODE_GAME,MODE_LOGOUT_IN_AUTH,MODE_LOGOUT_IN_GAME,WAIT_LOGOUT};
 
+enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 
 class Session
 {
@@ -40,6 +41,14 @@ public:
 	SOCKET &Socket() { return _ClientInfo.sock; }
 
 	bool ValidMode(en_SESSION_MODE mode);
+
+private:
+	int CompleteRecv(int transferred);
+	PROCRESULT CompleteRecvPacket();
+	int CompleteSend(int transferred);
+
+	bool ProcSend();
+	bool ProcRecv();
 public:
 	virtual void OnAuth_ClientJoin();
 	virtual void OnAuth_ClientLeave();
@@ -78,6 +87,7 @@ private:
 	LONG64				_IOCount;
 
 	SOCKET _closeSock;
+	Packet *sendPacketArray[100];
 
 	//debug¿ë
 public:

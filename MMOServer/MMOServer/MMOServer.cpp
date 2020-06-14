@@ -1,7 +1,5 @@
 #include "MMOLib.h"
 
-#define SIO_KEEPALIVE_VALS    _WSAIOW(IOC_VENDOR, 4)
-
 
 CMMOServer::CMMOServer(int iMaxSession,bool monitoring)
 	:_monitoring(monitoring),_maxSession(iMaxSession)
@@ -21,7 +19,6 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 
 	//변수 초기화
 	timeBeginPeriod(1);
-	//memcpy(_szListenIP, szListenIP, sizeof(WCHAR) * 16);
 
 	if(szListenIP!=NULL)
 		wcscpy_s(_szListenIP, szListenIP);
@@ -46,7 +43,6 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 	_Monitor_Counter_PacketProc=0;
 	_Monitor_Counter_PacketSend=0;
 
-	_Monitor_SessionAuthToGameMode = 0;
 
 	_sendThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
 	_gameThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
@@ -59,7 +55,7 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 	//세션리스트 설정
 	//contents에서 하도록 유도하기
 	
-	for (int i = 0; i < _maxSession; i++)
+	for (int i = _maxSession-1; i >0 ; i--)
 	{
 		_BlankSessionStack.Push(i);
 	}
@@ -67,7 +63,7 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return false;
 
-	_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+	_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 5);
 
 	if (_hIOCP == NULL) return false;
 
@@ -75,10 +71,23 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 
 
 
-	_ListenSocket = socket(AF_INET, SOCK_STREAM, 0);
+	_ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (_ListenSocket == INVALID_SOCKET)
 	{
 		SYSLOG_LOG(L"Lib", LOG_ERROR, L"Listen Sock Error");
+		return false;
+	}
+
+	ZeroMemory(&sockAddr, sizeof(sockAddr));
+	sockAddr.sin_family = AF_INET;
+	sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	sockAddr.sin_port = htons(_iListenPort);
+
+	int retval = bind(_ListenSocket, (SOCKADDR *)&sockAddr, sizeof(sockAddr));
+
+	if (retval == SOCKET_ERROR)
+	{
+		SYSLOG_LOG(L"Lib", LOG_ERROR, L"bind Error");
 		return false;
 	}
 
@@ -90,33 +99,36 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 	//
 	//WSAIoctl(_ListenSocket, SIO_KEEPALIVE_VALS, &keep, sizeof(tcp_keepalive), NULL, 0, NULL, NULL, NULL);
 
-	int optval = 0;
-	int retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
-	if (retval == SOCKET_ERROR)
-	{
-		SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
-		int err = GetLastError();
-		InterlockedIncrement(&_Monitor_AcceptFail);
-		closesocket(_ListenSocket);
-		return false;
-		//return -1;
-	}
+	//int optval = 0;
+	//retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	//if (retval == SOCKET_ERROR)
+	//{
+	//	SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
+	//	int err = GetLastError();
+	//	InterlockedIncrement(&_Monitor_AcceptFail);
+	//	closesocket(_ListenSocket);
+	//	return false;
+	//	//return -1;
+	//}
 
-	optval = 0;
-	retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
-	if (retval == SOCKET_ERROR)
-	{
-		SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
-		int err = GetLastError();
-		InterlockedIncrement(&_Monitor_AcceptFail);
-		closesocket(_ListenSocket);
-		return false;
-		//return -1;
-	}
+	//optval = 0;
+	//retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
+	//if (retval == SOCKET_ERROR)
+	//{
+	//	SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
+	//	int err = GetLastError();
+	//	InterlockedIncrement(&_Monitor_AcceptFail);
+	//	closesocket(_ListenSocket);
+	//	return false;
+	//	//return -1;
+	//}
 
 	//optval = bEnableNagle;
-	if(!bEnableNagle)
-		retval = setsockopt(_ListenSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&bEnableNagle, sizeof(bEnableNagle));
+	if (!bEnableNagle)
+	{
+		BOOL opt=TRUE;
+		retval = setsockopt(_ListenSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&opt, sizeof(opt));
+	}
 	if (retval == SOCKET_ERROR)
 	{
 		SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
@@ -127,17 +139,8 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 		//return -1;
 	}
 
-	ZeroMemory(&sockAddr, sizeof(sockAddr));
-	sockAddr.sin_family = AF_INET;
-	sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	sockAddr.sin_port = htons(_iListenPort);
-	retval = bind(_ListenSocket, (SOCKADDR *)&sockAddr, sizeof(sockAddr));
-
-	if (retval == SOCKET_ERROR)
-	{
-		SYSLOG_LOG(L"Lib", LOG_ERROR, L"bind Error");
-		return false;
-	}
+	
+	
 
 	retval = listen(_ListenSocket, SOMAXCONN);
 	if (retval == SOCKET_ERROR)
@@ -183,10 +186,10 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 	LARGE_INTEGER liDueTime;
 	liDueTime.QuadPart = -100000LL;
 
-	SetWaitableTimer(_sendThreadEvent, &liDueTime, 20, NULL, NULL, FALSE);
-	SetWaitableTimer(_gameThreadEvent, &liDueTime, 5, NULL, NULL, FALSE);
-	SetWaitableTimer(_authThreadEvent, &liDueTime, 10, NULL, NULL, FALSE);
-	SetWaitableTimer(_monitorThreadEvent, &liDueTime, 1000, NULL, NULL, FALSE);
+	//SetWaitableTimer(_sendThreadEvent, &liDueTime, 10, NULL, NULL, FALSE);
+	//SetWaitableTimer(_gameThreadEvent, &liDueTime, 5, NULL, NULL, FALSE);
+	//SetWaitableTimer(_authThreadEvent, &liDueTime, 10, NULL, NULL, FALSE);
+	//SetWaitableTimer(_monitorThreadEvent, &liDueTime, 1000, NULL, NULL, FALSE);
 
 	return true;
 }
@@ -230,7 +233,7 @@ bool				CMMOServer::AcceptThread_update(void)
 		if (connectInfo->sock == INVALID_SOCKET)
 		{
 			int err = WSAGetLastError();
-			SYSLOG_LOG(L"Lib", LOG_ERROR, L"accept Error %d",err);
+			LOG(L"Lib", LOG_ERROR, L"accept Error %d",err);
 			InterlockedIncrement(&_Monitor_AcceptFail);
 			continue;
 		}
@@ -253,10 +256,10 @@ bool				CMMOServer::AuthThread_update(void)
 {
 	while (1)
 	{
-		if (WaitForSingleObject(_authThreadEvent, INFINITE) != WAIT_OBJECT_0)
-		{
-			CrashDump::Crash();
-		}
+		//if (WaitForSingleObject(_authThreadEvent, INFINITE) != WAIT_OBJECT_0)
+		//{
+		//	CrashDump::Crash();
+		//}
 
 		//PRO_BEGIN(L"Auth");
 		ProcAuth_Accept();
@@ -266,7 +269,7 @@ bool				CMMOServer::AuthThread_update(void)
 
 		InterlockedIncrement(&_Counter_AuthUpdate);
 		//PRO_END(L"Auth");
-		
+		Sleep(10);
 	}
 
 	return true;
@@ -310,15 +313,14 @@ void CMMOServer::ProcAuth_Accept()
 		InterlockedIncrement(&_Monitor_SessionAuthMode);
 
 		
-		RecvPost(session);
+		//RecvPost(session);
+		session->ProcRecv();
 
 
 		if (InterlockedDecrement64(&session->_IOCount) == 0)
 		{
-			//session->logAccept++;
 			session->Logout();
-			SYSLOG_LOG(L"Lib", LOG_WARNING, L"Logout accept : %d", session->GetIndex());
-			//InterlockedIncrement(&_Monitor_Logout_Counter);
+			SYSLOG_LOG(L"Lib", LOG_WARNING, L"Logout accept : %d", session->iArrayIndex);
 		}
 	}
 	//
@@ -342,7 +344,7 @@ void CMMOServer::ProcAuth_Packet()
 
 		if (session->_bLogoutFlag)
 		{
-			if (InterlockedExchange(&session->_lSendIO, true))
+			if (InterlockedCompareExchange(&session->_lSendIO, true, false))
 				continue;
 
 			session->_Mode=MODE_LOGOUT_IN_AUTH;
@@ -356,14 +358,12 @@ void CMMOServer::ProcAuth_Packet()
 		count = AUTH_PROC_PACKET_MAX;
 		while (count-- > 0&& session->_Mode==MODE_AUTH)
 		{
-
 			if (!session->_CompletePacket.Dequeue(&p))
 				break;
 			session->OnAuth_Packet(p);
 
 			p->FreeTime = GetTickCount();
 
-			InterlockedDecrement(&_Monitor_Counter_Recv);
 			Packet::Free(p);
 		}
 	}
@@ -378,15 +378,12 @@ void CMMOServer::ProcAuth_StatusChange(void)
 		session = _pSessionArray[i];
 		if (session == NULL)
 		{
-			SYSLOG_LOG(L"Lib", LOG_WARNING, L"NULL Session Auth_StatusChange pos : %d", i);
+			LOG(L"Lib", LOG_WARNING, L"NULL Session Auth_StatusChange pos : %d", i);
 			continue;
 		}
 
 		if (session->_Mode == MODE_LOGOUT_IN_AUTH)
 		{
-			//if (session->SendFlag())
-			//if (InterlockedExchange(&session->SendFlag(), true))
-			//	continue;
 
 			InterlockedDecrement(&_Monitor_SessionAuthMode);
 			session->_Mode=WAIT_LOGOUT;
@@ -398,7 +395,6 @@ void CMMOServer::ProcAuth_StatusChange(void)
 			{
 				InterlockedDecrement(&_Monitor_SessionAuthMode);
 				session->_Mode=MODE_AUTH_TO_GAME;
-				InterlockedIncrement(&_Monitor_SessionAuthToGameMode);
 			}
 		}
 
@@ -416,10 +412,10 @@ bool CMMOServer::GameUpdateThread_update(void)
 {
 	while (1)
 	{
-		if (WaitForSingleObject(_gameThreadEvent, INFINITE) != WAIT_OBJECT_0)
-		{
-			CrashDump::Crash();
-		}
+		//if (WaitForSingleObject(_gameThreadEvent, INFINITE) != WAIT_OBJECT_0)
+		//{
+		//	CrashDump::Crash();
+		//}
 
 		//PRO_BEGIN(L"Game");
 		ProcGame_AuthToGame();
@@ -430,7 +426,7 @@ bool CMMOServer::GameUpdateThread_update(void)
 
 		InterlockedIncrement(&_Counter_GameUpdate);
 		//PRO_END(L"Game");
-		//Sleep(5);
+		Sleep(0);
 	}
 
 	return true;
@@ -452,7 +448,6 @@ void CMMOServer::ProcGame_AuthToGame()
 
 		if (session->_Mode == MODE_AUTH_TO_GAME)
 		{
-			InterlockedDecrement(&_Monitor_SessionAuthToGameMode);
 			session->_Mode=MODE_GAME;
 			InterlockedIncrement(&_Monitor_SessionGameMode);
 			session->OnGame_ClientJoin();
@@ -460,9 +455,7 @@ void CMMOServer::ProcGame_AuthToGame()
 
 		if (session->_bLogoutFlag&&session->_Mode==MODE_GAME)
 		{
-			//session->SetLogoutFlag(false);
-
-			if (InterlockedExchange(&session->_lSendIO, true))
+			if (InterlockedCompareExchange(&session->_lSendIO, true, false))
 				continue;
 			
 			session->_Mode=MODE_LOGOUT_IN_GAME;
@@ -494,24 +487,14 @@ void CMMOServer::ProcGame_Packet()
 		if (session->_CompletePacket.GetUseCount() <= 0)
 			continue;
 
-		//if (session->CompletePacketQ().empty())
-		//	continue;
-		//
-		//p = session->CompletePacketQ().front();
-		//if (p == NULL)
-		//	continue;
-		//session->CompletePacketQ().pop();
-		//count = session->CompletePacketQ().GetUseCount();
 		count = GAME_PROC_PACKET_MAX;
 
 		while (count-- > 0 && session->_Mode==MODE_GAME)
 		{
-
 			if (!session->_CompletePacket.Dequeue(&p))
 				break;
 			session->OnGame_Packet(p);
 
-			InterlockedDecrement(&_Monitor_Counter_Recv);
 			Packet::Free(p);
 		}
 	}
@@ -534,10 +517,6 @@ void CMMOServer::ProcGame_Logout()
 			continue;
 		}
 
-		//if (session->SendFlag())
-		//if (InterlockedExchange(&session->SendFlag(), true))
-		//	continue;
-
 		InterlockedDecrement(&_Monitor_SessionGameMode);
 
 		session->_Mode=WAIT_LOGOUT;
@@ -559,19 +538,12 @@ void CMMOServer::ProcGame_Release()
 
 		if (session->_Mode != WAIT_LOGOUT)
 			continue;
-		//SYSLOG_LOG(L"Lib", LOG_WARNING, L"Session Game_Release pos : %d", session->GetIndex());
+
 		session->OnGame_ClientRelease();
 
-		InterlockedAdd(&_Monitor_Counter_Recv, -session->_CompletePacket.GetUseCount());
-
-		//if (session->Socket() != INVALID_SOCKET)
-		//{
-		//	LOG(L"Lib", LOG_DEBUG, L"Not invalid socket %d sessionID %d", session->Socket(), session->iArrayIndex);
-		//	//CrashDump::Crash();
-		//}
 
 		session->Reset();
-		InterlockedIncrement(&_Monitor_Disconnect_Counter);
+		//InterlockedIncrement(&_Monitor_Disconnect_Counter);
 
 		InterlockedDecrement(&_Monitor_SessionAllMode);
 
@@ -589,11 +561,13 @@ unsigned __stdcall	CMMOServer::IOCPWorkerThread(void *pParam)
 bool				CMMOServer::IOCPWorkerThread_update(void)
 {
 	int ret;
+	int cnt;
 	Session *session;
 	OVERLAPPED *pOverlapped;
 	DWORD transferred;
 	while (1)
 	{
+		cnt = 0;
 		transferred = 0;
 		session = NULL;
 		pOverlapped = NULL;
@@ -611,96 +585,28 @@ bool				CMMOServer::IOCPWorkerThread_update(void)
 			CrashDump::Crash();
 		}
 
-		if (transferred == 0)
+		
+		if (pOverlapped == &session->_RecvOverlapped)
 		{
-			session->Disconnect();
-			//session->Logout();
-			//InterlockedIncrement(&_Monitor_Transferred_Zero);
-
-			if (pOverlapped == &session->_SendOverlapped)
-			{
-				//session->endRecvTime = GetTickCount();
-				//SYSLOG_LOG(L"Lib", LOG_WARNING, L"disconnect send: %d", session->GetIndex());
-				InterlockedExchange(&session->_lSendIO, false);
-			}
-			//else
-			//{
-			//	session->endSendTime = GetTickCount();
-			//	SYSLOG_LOG(L"Lib", LOG_WARNING, L"disconnect recv: %d", session->GetIndex());
-			//}
-
-		}
-		else if (pOverlapped == &session->_RecvOverlapped)
-		{
-			//session->endRecvTime = GetTickCount();
-			//recv
-			InterlockedDecrement(&_Monitor_RecvOverlap);
-
-			session->_RecvQ.MoveWritePos(transferred);
-
-			PROCRESULT result;
-
-			while (1)
-			{
-				result = CompleteRecvPacket(session);
-				if (result != SUCCESS)
-				{
-					break;
-				}
-			}
-
-			if (result != FAIL&& !session->_bLogoutFlag)
-			{
-				RecvPost(session);
-			}
+			cnt =session->CompleteRecv(transferred);
+			InterlockedAdd(&_Monitor_PacketProc, cnt);
 		}
 		else if (pOverlapped == &session->_SendOverlapped)
 		{
-			InterlockedDecrement(&_Monitor_SendOverlap);
-
-			if (session->_iSendPacketSize != transferred)
-			{
-				SYSLOG_LOG(L"Lib", LOG_WARNING, L"not equal transferred %d : %d %d", session->iArrayIndex, session->_iSendPacketSize, transferred);
-			}
-	
-			for (int i = 0; i < session->_iSendPacketCnt; i++)
-			{
-				Packet *temp;
-				session->_SendQ.Dequeue(&temp);
-				//temp->FreeTime = GetTickCount();
-				//_Monitor_Send_Time += temp->FreeTime - temp->AllocTime;
-				Packet::Free(temp);
-			}
-			session->_iSendPacketCnt=0;
-
-			//if(!session->GetLogoutFlag())
-
-			
-			InterlockedExchange(&session->_lSendIO, false);
+			cnt = session->CompleteSend(transferred);
+			InterlockedAdd(&_Monitor_PacketSend, cnt);
 		}
 
 		if (InterlockedDecrement64(&session->_IOCount) == 0)
 		{
-			//session->Disconnect();
-			//session->logIOCP++;
-			//if (pOverlapped == &session->_SendOverlapped)
-			//{
-			//	SYSLOG_LOG(L"Lib", LOG_WARNING, L"Logout iocp send: %d %d  - %d %d", session->GetIndex(), transferred, session->endRecvTime - session->recvTime, session->endSendTime - session->sendTime);
-			//	//InterlockedExchange(&session->SendFlag(), false);
-			//}
-			//else
-			//{
-			//	SYSLOG_LOG(L"Lib", LOG_WARNING, L"Logout iocp recv: %d %d  - %d %d", session->GetIndex(), transferred, session->endRecvTime - session->recvTime, session->endSendTime - session->sendTime);
-			//}
-			
 			session->Logout();
-			//InterlockedIncrement(&_Monitor_Logout_Counter);
 		}
 	}
 
 	return true;
 }
 
+//사용안함
 PROCRESULT CMMOServer::CompleteRecvPacket(Session *session)
 {
 	int recvQSize = session->_RecvQ.GetUseSize();
@@ -758,17 +664,15 @@ PROCRESULT CMMOServer::CompleteRecvPacket(Session *session)
 		return FAIL;
 	}
 
-	//session->CompletePacketQ().push(payload);
 
-	InterlockedIncrement(&_Monitor_Counter_Recv);
 
 	session->_CompletePacket.Enqueue(payload);
 	InterlockedIncrement(&_Monitor_PacketProc);
-	//Packet::Free(payload);
 
 	return SUCCESS;
 }
 
+//사용안함
 bool CMMOServer::RecvPost(Session *session, bool first)
 {
 	RingBuffer *recvQ = &session->_RecvQ;
@@ -784,8 +688,6 @@ bool CMMOServer::RecvPost(Session *session, bool first)
 
 	
 	ZeroMemory(&session->_RecvOverlapped, sizeof(OVERLAPPED));
-	//PRO_BEGIN(L"WSARecv");
-	//session->recvTime = GetTickCount();
 	int retval = WSARecv(session->Socket(), wsabuf, 2, NULL, &flags, (OVERLAPPED *)&session->_RecvOverlapped, NULL);
 	
 
@@ -794,23 +696,15 @@ bool CMMOServer::RecvPost(Session *session, bool first)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			//PRO_END(L"WSARecv");
-
-			//session->Recverr = err;
 
 			if (InterlockedDecrement64(&session->_IOCount) == 0)
 			{
-				//SYSLOG_LOG(L"Lib", LOG_WARNING, L"Logout recv : %d", session->GetIndex());
-				//session->logRecv++;
 				session->Logout();
-				//InterlockedIncrement(&_Monitor_Logout_Counter);
 			}
 			
 			return false;
 		}
 	}
-	//PRO_END(L"WSARecv");
-	InterlockedIncrement(&_Monitor_RecvOverlap);
 
 	return true;
 }
@@ -833,10 +727,10 @@ bool				CMMOServer::SendThread_update(void)
 
 	while (1)
 	{
-		if (WaitForSingleObject(_sendThreadEvent, INFINITE) != WAIT_OBJECT_0)
-		{
-			CrashDump::Crash();
-		}
+		//if (WaitForSingleObject(_sendThreadEvent, INFINITE) != WAIT_OBJECT_0)
+		//{
+		//	CrashDump::Crash();
+		//}
 		
 		for (int i = 0; i < _maxSession; i++)
 		{
@@ -847,122 +741,16 @@ bool				CMMOServer::SendThread_update(void)
 				continue;
 			}
 
-			if (session->_bLogoutFlag)
-				continue;
-
-			mode = session->_Mode;
-			if (mode != MODE_AUTH && mode != MODE_GAME)
-			{
-				continue;
-			}
-
-			sendQ = &session->_SendQ;
-
-			if (InterlockedCompareExchange(&session->_lSendIO, true, false))
-			{
-				continue;
-			}
-
-			mode = session->_Mode;
-			if (mode != MODE_AUTH && mode != MODE_GAME)
-			{
-
-				InterlockedCompareExchange(&session->_lSendIO, false, true);
-				continue;
-			}
-
-			//if (session->SendQ().GetUseCount() <= 0)
-			if(sendQ->GetUseCount() <= 0)
-			{
-
-				InterlockedCompareExchange(&session->_lSendIO, false, true);
-				continue;
-			}
-
-			
-
-			//if (session->SendFlag())
-			//{
-			//	continue;
-			//}
-			//InterlockedExchange(&session->SendFlag(), true);
-
-			
-
-
-			
-			peekCnt = sendQ->Peek(peekData, peekCnt);
-
-			if (peekCnt == 0)
-			{
-
-				InterlockedCompareExchange(&session->_lSendIO, false, true);
-				continue;
-			}
-
-			session->_iSendPacketSize = 0;
-
-			for (int i = 0; i < peekCnt; i++)
-			{
-				wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
-				//wsabuf[i].len = 0;
-				wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
-				session->_iSendPacketSize += wsabuf[i].len;
-			}
-
-			if (session->_iSendPacketSize == 0)
-			{
-				InterlockedCompareExchange(&session->_lSendIO, false, true);
-				continue;
-			}
-
-			//session->SetSendCnt(peekCnt);
-			session->_iSendPacketCnt = peekCnt;
-
-			InterlockedAdd(&_Monitor_PacketSend, peekCnt);
-
-			ZeroMemory(&session->_SendOverlapped, sizeof(OVERLAPPED));
-			//PRO_BEGIN(L"WSASend");
-			InterlockedIncrement64(&session->_IOCount);
-			//session->sendTime = GetTickCount();
-			int retval = WSASend(session->Socket(), wsabuf, peekCnt, NULL, flags, (OVERLAPPED *)&session->_SendOverlapped, NULL);
-
-			
-			if (retval == SOCKET_ERROR)
-			{
-				int err;
-				if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
-				{
-					//PRO_END(L"WSASend");
-
-					//session->Senderr = err;
-
-					
-
-					InterlockedCompareExchange(&session->_lSendIO, false, true);
-
-					if (InterlockedDecrement64(&session->_IOCount) == 0)
-					{
-						//SYSLOG_LOG(L"Lib", LOG_WARNING, L"Logout send : %d", session->GetIndex());
-						//session->logSend++;
-						session->Logout();
-						//InterlockedIncrement(&_Monitor_Logout_Counter);
-						
-					}
-
-					
-					
-					continue;
-				}
-			}
-			//PRO_END(L"WSASend");
-
-			InterlockedIncrement(&_Monitor_SendOverlap);
+			session->ProcSend();
 		}
 		InterlockedIncrement(&_Counter_SendUpdate);
-		//Sleep(5);
+		Sleep(10);
 	}
 }
+
+
+
+
 
 unsigned __stdcall	CMMOServer::MonitorThread(void *pParam)
 {
@@ -973,13 +761,12 @@ unsigned __stdcall	CMMOServer::MonitorThread(void *pParam)
 bool				CMMOServer::MonitorThread_update(void)
 {
 	long beforeAccept=0;
-	long temp;
 	while (1)
 	{
-		if (WaitForSingleObject(_monitorThreadEvent, INFINITE) != WAIT_OBJECT_0)
-		{
-			CrashDump::Crash();
-		}
+		//if (WaitForSingleObject(_monitorThreadEvent, INFINITE) != WAIT_OBJECT_0)
+		//{
+		//	CrashDump::Crash();
+		//}
 
 		_Monitor_Counter_Accept = _Monitor_AcceptSocket - beforeAccept;
 		beforeAccept = _Monitor_AcceptSocket;
@@ -1005,7 +792,7 @@ bool				CMMOServer::MonitorThread_update(void)
 
 		_Monitor_Counter_Packet = Packet::PacketUseCount();
 
-		//Sleep(1000);
+		Sleep(1000);
 	}
 
 	return true;

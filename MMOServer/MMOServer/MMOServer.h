@@ -5,7 +5,7 @@
 #define GAME_PROC_PACKET_MAX 5
 #define AUTH_PROC_PACKET_MAX 5
 
-enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
+//enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 
 class CMMOServer
 {
@@ -171,8 +171,6 @@ public:
 	long		_Monitor_SessionAuthMode;
 	long		_Monitor_SessionGameMode;
 
-	long		_Monitor_SessionAuthToGameMode;
-
 	long		_Monitor_Counter_AuthUpdate;
 	long		_Monitor_Counter_GameUpdate;
 	long		_Monitor_Counter_SendUpdate;
@@ -188,19 +186,9 @@ public:
 	long		_Counter_GameUpdate;
 	long		_Counter_SendUpdate;
 
-	long		_Monitor_RecvOverlap;
-	long		_Monitor_SendOverlap;
 	
-	long		_Monitor_AcctionDelay;
-	long		_Monitor_AcctionDelay_Counter;
-	long		_Monitor_Packet_Survive_Time;
-	long		_Monitor_Packet_Survive_Time_Counter;
+	//long		_Monitor_Disconnect_Counter;
 
-	long		_Monitor_Logout_Counter;
-	long		_Monitor_Disconnect_Counter;
-	long		_Monitor_Transferred_Zero;
-
-	long		_Monitor_Counter_Recv;
 
 private:
 	HANDLE _sendThreadEvent;

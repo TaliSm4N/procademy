@@ -1,7 +1,7 @@
 #ifndef __LUMO_PACKET__
 #define __LUMO_PACKET__
 
-#define DEFAULT_PACKET_SIZE 500
+#define DEFAULT_PACKET_SIZE 256
 
 
 enum PacketMode {ERROR_MODE=0, THROW_MODE};

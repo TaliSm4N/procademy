@@ -27,6 +27,7 @@ struct CLIENT_CONNECT_INFO
 	DWORD ID;
 };
 
+#include "Log.h"
 #include "header.h"
 #include "CrashDump.h"
 #include "MemoryPool.h"
@@ -40,5 +41,4 @@ struct CLIENT_CONNECT_INFO
 #include "Session.h"
 #include "TextParser.h"
 #include "Profiler.h"
-#include "Log.h"
 #include "MMOServer.h"

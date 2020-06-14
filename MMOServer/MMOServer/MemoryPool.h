@@ -2,7 +2,6 @@
 
 #include <Windows.h>
 #include <new.h>
-#define TOP_BUMP 0xffffffff
 #define BOTTOM_BUMP 0xfefefefe
 
 
@@ -48,21 +47,19 @@ public:
 	int GetUseCount() { return _useCount; }
 
 private:
-	TOP *_topNode;
+	TOP _topNode;
 	int _useCount;
 	int _maxCapacity;
 	bool _maxLimit;
 	int _freeCount;
 	unsigned long long _checkNum;
 
-public:
-	int test;
 };
 
 
 template <class T>
 MemoryPool<T>::MemoryPool(int blockNum, bool maxLimit)
-	:_maxCapacity(blockNum), _checkNum(0), test(0), _freeCount(blockNum)
+	:_maxCapacity(blockNum), _checkNum(0), _freeCount(blockNum)
 {
 	NODE *temp;
 	if (blockNum == 0)
@@ -74,34 +71,37 @@ MemoryPool<T>::MemoryPool(int blockNum, bool maxLimit)
 		_maxLimit = maxLimit;
 	}
 
-	_topNode = new TOP();
+	//_topNode = new TOP();
+	_topNode.node = NULL;
 
 	for (int i = 0; i < blockNum; i++)
 	{
 		temp = (NODE *)malloc(sizeof(NODE));
 		temp->_bottomBump = BOTTOM_BUMP;
 		//temp = new NODE();
+		temp->NextBlock = _topNode.node;
+		_topNode.node = temp;
 
-		if (_topNode->node == nullptr)
-		{
-			temp->NextBlock = nullptr;
-			_topNode->node = temp;
-		}
-		else
-		{
-			temp->NextBlock = _topNode->node;
-			_topNode->node = temp;
-		}
+		//if (_topNode->node == nullptr)
+		//{
+		//	temp->NextBlock = nullptr;
+		//	_topNode->node = temp;
+		//}
+		//else
+		//{
+		//	temp->NextBlock = _topNode->node;
+		//	_topNode->node = temp;
+		//}
 		//if(_placeMent)
 		//	new (&(temp->item)) T();
 	}
-	_topNode->check = 0;
+	_topNode.check = 0;
 }
 
 template <class T>
 MemoryPool<T>::~MemoryPool()
 {
-	NODE *cur = _topNode->node;
+	NODE *cur = _topNode.node;
 	NODE *temp;
 	while (cur != NULL)
 	{
@@ -110,7 +110,7 @@ MemoryPool<T>::~MemoryPool()
 
 		delete temp;
 	}
-	delete _topNode;
+	//delete _topNode;
 }
 
 template<class T>
@@ -121,9 +121,6 @@ T *MemoryPool<T>::Alloc(bool placement)
 	TOP t;
 	unsigned long long checkNum;
 
-
-
-	InterlockedIncrement((LONG *)&test);
 
 	//if (_maxCapacity < InterlockedIncrement((LONG *)&_useCount))
 	if (InterlockedDecrement((LONG *)&_freeCount) < 0)
@@ -149,16 +146,15 @@ T *MemoryPool<T>::Alloc(bool placement)
 			return &(ret->item);
 		}
 
-		volatile int test = 1;
 	}
 
 	checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 pop행위의 checkNum은 함수 시작 시에 결정
 
-	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)newTop, (LONG64 *)&t))
+	while (!InterlockedCompareExchange128((LONG64 *)&_topNode, (LONG64)checkNum, (LONG64)newTop, (LONG64 *)&t))
 	{
-		newTop = (NODE *)_topNode->node->NextBlock;
+		newTop = (NODE *)_topNode.node->NextBlock;
 
-		ret = _topNode->node;
+		ret = _topNode.node;
 	}
 
 	if (ret == NULL)
@@ -186,7 +182,7 @@ bool MemoryPool<T>::Free(T *data)
 
 	checkNum = InterlockedIncrement64((LONG64 *)&_checkNum);//이 push행위의 checkNum은 함수 시작 시에 결정
 
-	while (!InterlockedCompareExchange128((LONG64 *)_topNode, (LONG64)checkNum, (LONG64)temp, (LONG64 *)&t))
+	while (!InterlockedCompareExchange128((LONG64 *)&_topNode, (LONG64)checkNum, (LONG64)temp, (LONG64 *)&t))
 	{
 		temp->NextBlock = t.node;
 	}

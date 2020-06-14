@@ -70,7 +70,7 @@ template<class T>
 LockFreeQueue<T>::LockFreeQueue()
 	:_headCheckNum(0), _tailCheckNum(0), _useCount(0), _maxCount(0)
 {
-	queuePool = new MemoryPool<NODE>(1000, false);
+	queuePool = new MemoryPool<NODE>(256, false);
 	_head = new END_NODE;
 	_head->node = queuePool->Alloc();
 	_tail = new END_NODE;
