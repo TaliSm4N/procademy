@@ -44,7 +44,7 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	sock = s;
 	sockAddr = sAddr;
 	sessionID = ID;
-	sendFlag = 1;
+	//sendFlag = 1;
 	//sockActive = FALSE;
 	sendPacketCnt = 0;
 	
@@ -61,7 +61,15 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	//sendQ.Reset();
 	recvQ.Reset();
 
-	InitializeSRWLock(&sessionLock);
+	acc = 0;
+	io = 0;
+	se = 0;
+	io_out = 0;
+	se_out = 0;
+	trans_z = 0;
+	re = 0;
+
+	//InitializeSRWLock(&sessionLock);
 }
 
 Session::~Session()
@@ -83,10 +91,7 @@ bool Session::Disconnect()
 
 BOOL Session::Release()
 {
-	if (InterlockedExchange8((CHAR *)&sockActive, FALSE))
-	{
-		closesocket(sock);
-	}
+	Disconnect();
 
 	delete IOBlock;
 	delete sendQ;

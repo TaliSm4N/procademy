@@ -77,6 +77,17 @@ public:
 	DWORD beforeID;
 	DWORD bbeforeID;
 
+public:
+	long acc;
+	long io;
+	long se;
+
+	long io_out;
+	long se_out;
+	long trans_z;
+
+	long re;
+
 
 	//자동화 테스트용
 //public:

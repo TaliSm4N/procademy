@@ -29,6 +29,8 @@ long playerID = 1;
 
 long DBTPS=0;
 
+DBConnect db;
+
 int main()
 {
 	HANDLE updateThread[2];
@@ -154,10 +156,15 @@ void msgNewPlayer(st_DBQUERY_MSG_PLAYER *msg, char *query)
 
 unsigned __stdcall	DBThread(void *pParam)
 {
-	DB_CONNECT("root", "unity");
-	DB_QUERY("TRUNCATE `account`");
-	DB_QUERY("TRUNCATE `clearstage`");
-	DB_QUERY("TRUNCATE `player`");
+	db.connect("127.0.0.1", "root", "1234", "unity");
+	//DB_CONNECT("127.0.0.1","root", "1234","unity");
+	char test[20] = "account";
+	db.Query("TRUNCATE `%s`", "account");
+	db.Query("TRUNCATE `%s`", "clearstage");
+	db.Query("TRUNCATE `%s`", "player");
+	//DB_QUERY("TRUNCATE `account`");
+	//DB_QUERY("TRUNCATE `clearstage`");
+	//DB_QUERY("TRUNCATE `player`");
 
 	DBMsg *msg;
 	char query[1000];
@@ -188,12 +195,12 @@ unsigned __stdcall	DBThread(void *pParam)
 		}
 		do
 		{
-			DB_QUERY("BEGIN");
-			result = DB_QUERY(query);
+			db.Query("BEGIN");
+			result = db.Query(query);
 
-			if (result != 0)
+			if (!result)
 			{
-				unsigned int err = DB_ERRORNO();
+				unsigned int err = db.GetLastErrNo();
 				unsigned int test = 0;
 
 				if (err == CR_SOCKET_CREATE_ERROR ||
@@ -205,7 +212,7 @@ unsigned __stdcall	DBThread(void *pParam)
 					err == CR_INVALID_CONN_HANDLE)
 				{
 					printf("reconnect--------\n");
-					DB_CONNECT("root", "unity");
+					db.connect();
 				}
 				else
 				{
@@ -216,10 +223,12 @@ unsigned __stdcall	DBThread(void *pParam)
 
 				
 			}
-		} while (result!=0);
-		DB_QUERY("COMMIT");
+		} while (!result);
+		db.Query("COMMIT");
+		//DB_QUERY("COMMIT");
 		MsgPool.Free(msg);
 		InterlockedIncrement(&DBTPS);
 	}
-	DB_CLOSE();
+	db.Close();
+	//DB_CLOSE();
 }

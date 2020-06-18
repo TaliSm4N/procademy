@@ -1,6 +1,6 @@
 #define _WINSOCKAPI_
 #include <Windows.h>
-#include "header.h"
+//#include "header.h"
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
 #include "Packet.h"
@@ -113,7 +113,7 @@ int Packet::PutData(char *chpSrc, int iSrcSize)
 		return -1;
 	}
 
-	memcpy(GetBufferPtr() + rear, chpSrc, iSrcSize);
+	memcpy(buf + rear, chpSrc, iSrcSize);
 	rear += iSrcSize;
 
 	return iSrcSize;
@@ -457,17 +457,17 @@ Packet &Packet::operator >> (UINT &iValue)
 	return *this;
 }
 
-void Packet::GetHeader(HEADER *desheader)
+void Packet::GetHeader(char *desheader)
 {
 	//헤더 종류에 따라 코드 수정필요
-	memcpy(desheader, &header, sizeof(HEADER));
+	memcpy(desheader, buf, sizeof(headerSize));
 }
 
-void Packet::PutHeader(HEADER *srcheader)
+void Packet::PutHeader(char *srcheader)
 {
 	//헤더 종류에 따라 코드 수정필요
 	//header.len = srcheader->len;
-	memcpy(&header, srcheader, sizeof(HEADER));
+	memcpy(&buf, srcheader, sizeof(headerSize)+1);
 }
 
 void Packet::Init(int key, int code)
@@ -477,11 +477,26 @@ void Packet::Init(int key, int code)
 	_code = code;
 }
 
-Packet *Packet::Alloc()
+Packet *Packet::Alloc(PacketType type)
 {
 	Packet *ret = packetPool->Alloc();
 	ret->Ref();
 
+	switch (type)
+	{
+	case LOCAL_TYPE:
+		ret->_type = LOCAL_TYPE;
+		ret->front = 2;
+		ret->rear = 2;
+		ret->headerSize = 2;
+		break;
+	case NET_TYPE:
+		ret->_type = NET_TYPE;
+		ret->front = 5;
+		ret->rear = 5;
+		ret->headerSize = 5;
+		break;
+	}
 
 	return ret;
 }
@@ -499,65 +514,80 @@ bool Packet::Free(Packet *p)
 
 void Packet::encode()
 {
+	WORD len;
+	if (_type != NET_TYPE)
+		return;
+
 	if (InterlockedExchange8((char *)&encodeFlag, true) == true)
 		return;
 	InterlockedIncrement((LONG *)&encodeCount);
-	header.code = Packet::GetCode();
-	header.len = GetDataSize();
-	header.RandKey = (BYTE)rand() % 256;
-	header.CheckSum = 0;
-	for (int i = 0; i < header.len; i++)
+	buf[0] = Packet::GetCode();
+	len = GetDataSize();
+	*((WORD *)&buf[1]) = len;
+	buf[3] = (BYTE)rand() % 256;
+	buf[4] = 0;
+	//header.code = Packet::GetCode();
+	//header.len = GetDataSize();
+	//header.RandKey = (BYTE)rand() % 256;
+	//header.CheckSum = 0;
+	for (int i = headerSize; i <len+headerSize; i++)
 	{
-		header.CheckSum += *(GetBufferPtr() + i)%256;
+		buf[4] += buf[i]%256;
 	}
-	header.CheckSum %= 256;
+	buf[4] %= 256;
 
 	char p = 0;
 
-	p = header.CheckSum ^ (header.RandKey + p + 1);
-	header.CheckSum = p ^ (_key + 1);
+	p = buf[4] ^ (buf[3] + p + 1);
+	buf[4] = p ^ (_key + 1);
 
-	for (int i = 0; i <= header.len; i++)
+	for (int i = headerSize; i <= len+headerSize; i++)
 	{
-		p = buf[i] ^ (header.RandKey + p + i + 2);
-		buf[i] = p ^ (_key + i + 2 + buf[i - 1]);
+		p = buf[i] ^ (buf[3] + p + i + 2 - headerSize);
+		buf[i] = p ^ (_key + i + 2 - headerSize + buf[i - 1]);
 	}
 }
 
 void Packet::decode()
 {
+	if (_type != NET_TYPE)
+		return;
+
 	if (InterlockedExchange8((char *)&encodeFlag, false) == false)
 		return;
 
+	WORD len = *((WORD *)&buf[1]);
 	char p = 0;
 	char before_p = 0;
 	char before_e = 0;
 
-	p = header.CheckSum ^ (_key + 1);
+	p = buf[4] ^ (_key + 1);
 	before_p = p;
-	before_e = header.CheckSum;
-	header.CheckSum = p ^ (header.RandKey + 1);
+	before_e = buf[4];
+	buf[4] = p ^ (buf[3] + 1);
 
-	for (int i = 0; i <= header.len; i++)
+	for (int i = headerSize; i <= len + headerSize; i++)
 	{
 		before_p = p;
-		p = buf[i] ^ (before_e + _key + i + 2);
+		p = buf[i] ^ (before_e + _key + i + 2 - headerSize);
 		before_e = buf[i];
-		buf[i] = p ^ (before_p + header.RandKey + i + 2);
+		buf[i] = p ^ (before_p + buf[3] + i + 2 - headerSize);
 	}
+
+	volatile int test = 1;
 }
 
 bool Packet::VerifyCheckSum()
 {
 	BYTE check = 0x0;
-
-	for (int i = 0; i < header.len; i++)
+	WORD len = *((WORD *)&buf[1]);
+	for (int i = headerSize; i < len + headerSize; i++)
 	{
-		check += buf[i] % 256;
+		check += (BYTE)buf[i] % 0x100;
 	}
 	check %= 256;
 
-	if (check != header.CheckSum)
+	if (check != (unsigned char)buf[4])
 	{
 		return false;
 	}

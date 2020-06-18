@@ -26,7 +26,7 @@ void CMyServer::OnClientJoin(DWORD sessionID)
 	Player *player = new Player(sessionID);
 
 
-	Packet *p = Packet::Alloc();
+	Packet *p = Packet::Alloc(LOCAL_TYPE);
 
 	*p << 0x7fffffffffffffff;
 

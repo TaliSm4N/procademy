@@ -51,7 +51,7 @@ bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	Packet::Init();
 	if (WSAStartup(MAKEWORD(2, 2), &_wsa) != 0) return false;
 
-	_hcp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+	_hcp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 3);
 
 	if (_hcp == NULL) return false;
 
@@ -407,7 +407,7 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 			CrashDump::Crash();
 		}
 
-		
+		session->acc++;
 		if (_this->RecvPost(session,true))
 		{ 
 			//_this->Disconnect(session->GetID());
@@ -420,17 +420,30 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 
 		//recvPost이후부터 release가 가능하도록
 		InterlockedExchange64(&session->GetReleaseFlag(), 0);
+
+		
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
-			//InterlockedExchange((LONG *)&session->b_status, session->status);
-			//InterlockedExchange((LONG *)&session->status, 1);
-			//끊기
-			_this->ReleaseSession(session,uniqueID);
+			_this->ReleaseSession(session, uniqueID);
 		}
 
-		if (session->GetIOCount() == -1)
-			CrashDump::Crash();
+		if (session->GetIOCount() < 0)
+		{
+			LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+		}
+
+		//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+		//if (test == 0)
+		//{
+		//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+		//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+		//	//InterlockedExchange((LONG *)&session->status, 1);
+		//	//끊기
+		//	_this->ReleaseSession(session,uniqueID);
+		//}
+		//
+		//if (test == -1)
+		//	CrashDump::Crash();
 
 		idCount++;
 		uniqueID = -1;
@@ -451,10 +464,10 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 	MyOverlapped *pOverlapped;
 	DWORD transferred;
 
+	DWORD id;
 	
 	while (1)
 	{
-		int test = 10;
 		//이 두가지는 GetQueuedCompletionStatus가 실패하거나 하면 세팅되지 않음
 		//이전 루프에서의 값을 보존하고 있음
 		//이 경우 올바르지 않은 대상을 끊어낼 수 있는 문제가 생길 수 있음
@@ -496,9 +509,17 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			//InterlockedExchange((LONG *)&session->status, 3);
 			//closesocket(session->GetSocket());
 			//_this->Disconnect(session->GetID());
+			InterlockedIncrement(&session->trans_z);
 
-			if(pOverlapped==&session->GetSendOverlap())
+			if (pOverlapped == &session->GetSendOverlap())
+			{
+				InterlockedIncrement(&session->se_out);
 				InterlockedExchange8(&session->GetSendFlag(), 1);
+			}
+			else
+			{
+				InterlockedIncrement(&session->io_out);
+			}
 
 			session->Disconnect();
 		}
@@ -519,16 +540,12 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 				if (result != SUCCESS)
 					break;
 			}
+
+			InterlockedIncrement(&session->io_out);
 			
 			if (result != FAIL)
 			{
 				_this->RecvPost(session);
-			}
-			else
-			{
-				//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
-				//InterlockedExchange((LONG *)&session->b_status, session->status);
-				//InterlockedExchange((LONG *)&session->status, 6);
 			}
 				
 		}
@@ -573,6 +590,8 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			}
 			session->SetSendPacketCnt(0);
 
+			InterlockedIncrement(&session->se_out);
+
 			InterlockedExchange8(&session->GetSendFlag(), 1);
 
 			_this->SendPost(session);
@@ -580,7 +599,22 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			_this->OnSend(session->GetID(),transferred);
 		}
 
-		DWORD id = session->GetID();
+		id = session->GetID();
+
+		//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+		//if (test == 0)
+		//{
+		//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+		//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+		//	//InterlockedExchange((LONG *)&session->status, 1);
+		//	//끊기
+		//	InterlockedIncrement(&session->re);
+		//	_this->ReleaseSession(session, id);
+		//}
+		//
+		//if (test == -1)
+		//	CrashDump::Crash();
+
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
 			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
@@ -589,9 +623,12 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			//_this->Disconnect(session->GetID());
 			_this->ReleaseSession(session,id);
 		}
-
+		
 		if (session->GetIOCount() == -1)
-			CrashDump::Crash();
+		{
+			LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+			//CrashDump::Crash();
+		}
 	}
 
 
@@ -669,22 +706,22 @@ PROCRESULT CNetServer::CompleteRecvPacket(Session *session)
 	int recvQSize = session->GetRecvQ().GetUseSize();
 	
 	Packet *payload;
-	HEADER header;// = payload->GetHeaderPtr();
+	NetServerHeader header;// = payload->GetHeaderPtr();
 
-	if (sizeof(HEADER) > recvQSize)
+	if (sizeof(NetServerHeader) > recvQSize)
 	{
 		//Packet::Free(payload);
 		return NONE;
 	}
 
-	session->GetRecvQ().Peek((char *)&header, sizeof(HEADER));
+	session->GetRecvQ().Peek((char *)&header, sizeof(NetServerHeader));
 
 	if (header.len > DEFAULT_PACKET_SIZE)
 	{
 		return FAIL;
 	}
 
-	if (recvQSize < header.len + sizeof(HEADER))
+	if (recvQSize < header.len + sizeof(NetServerHeader))
 	{
 		//Packet::Free(payload);
 		return NONE;
@@ -695,7 +732,7 @@ PROCRESULT CNetServer::CompleteRecvPacket(Session *session)
 		return FAIL;
 	}
 
-	session->GetRecvQ().MoveReadPos(sizeof(HEADER));
+	session->GetRecvQ().MoveReadPos(sizeof(NetServerHeader));
 
 	payload = Packet::Alloc();
 	payload->RecvEncode();
@@ -707,7 +744,7 @@ PROCRESULT CNetServer::CompleteRecvPacket(Session *session)
 		return FAIL;
 	}
 
-	payload->PutHeader(&header);
+	payload->PutHeader((char *)&header);
 
 	payload->decode();
 
@@ -808,9 +845,22 @@ bool CNetServer::RecvPost(Session *session,bool first)
 
 	if (session->GetSocket() == INVALID_SOCKET)
 	{
+		//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+		//if (test == 0)
+		//{
+		//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+		//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+		//	//InterlockedExchange((LONG *)&session->status, 1);
+		//	//끊기
+		//	ReleaseSession(session, session->GetID());
+		//}
+		//
+		//if (test == -1)
+		//	CrashDump::Crash();
+
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-
+		
 			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 			//InterlockedExchange((LONG *)&session->b_status, session->status);
 			//InterlockedExchange((LONG *)&session->status, 13);
@@ -818,6 +868,13 @@ bool CNetServer::RecvPost(Session *session,bool first)
 			//Disconnect(session->GetID());
 			//SessionRelease(session);
 		}
+
+		if (session->GetIOCount() == -1)
+		{
+			LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+			//CrashDump::Crash();
+		}
+
 		return false;
 	}
 
@@ -830,9 +887,23 @@ bool CNetServer::RecvPost(Session *session,bool first)
 		if (err != ERROR_IO_PENDING)
 		{
 			DWORD id = session->GetID();
+
+			//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+			//if (test == 0)
+			//{
+			//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+			//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+			//	//InterlockedExchange((LONG *)&session->status, 1);
+			//	//끊기
+			//	ReleaseSession(session, id);
+			//}
+			//
+			//if (test == -1)
+			//	CrashDump::Crash();
+
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-
+			
 				//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 				//InterlockedExchange((LONG *)&session->b_status, session->status);
 				//InterlockedExchange((LONG *)&session->status, 13);
@@ -841,12 +912,15 @@ bool CNetServer::RecvPost(Session *session,bool first)
 				//SessionRelease(session);
 			}
 			if (session->GetIOCount() == -1)
-				CrashDump::Crash();
+			{
+				LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+				//CrashDump::Crash();
+			}
 			//LOG(L"DEBUG", LOG_DEBUG, L"WSARecv error %d sessionid %d SOCK %d", err, session->GetID(),session->GetSocket());
 			return false;
 		}
 	}
-
+	InterlockedIncrement(&session->io);
 	InterlockedIncrement64(&_recvOverlap);
 
 	return true;
@@ -927,7 +1001,7 @@ bool CNetServer::SendPost(Session *session)
 	for (int i = 0; i < peekCnt; i++)
 	{
 		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
-		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
+		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(NetServerHeader);
 	}
 
 	session->SetSendPacketCnt(peekCnt);
@@ -941,9 +1015,22 @@ bool CNetServer::SendPost(Session *session)
 
 	if (session->GetSocket() == INVALID_SOCKET)
 	{
+		//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+		//if (test == 0)
+		//{
+		//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+		//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+		//	//InterlockedExchange((LONG *)&session->status, 1);
+		//	//끊기
+		//	ReleaseSession(session, session->GetID());
+		//}
+		//
+		//if (test == -1)
+		//	CrashDump::Crash();
+
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-
+		
 			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 			//InterlockedExchange((LONG *)&session->b_status, session->status);
 			//InterlockedExchange((LONG *)&session->status, 13);
@@ -951,6 +1038,13 @@ bool CNetServer::SendPost(Session *session)
 			//Disconnect(session->GetID());
 			//SessionRelease(session);
 		}
+
+		if (session->GetIOCount() == -1)
+		{
+			LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+			//CrashDump::Crash();
+		}
+
 		return false;
 	}
 
@@ -963,19 +1057,34 @@ bool CNetServer::SendPost(Session *session)
 		{
 			//InterlockedExchange8(&session->GetSendFlag(), 1);
 			DWORD id = session->GetID();
+			//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+			//if (test == 0)
+			//{
+			//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+			//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+			//	//InterlockedExchange((LONG *)&session->status, 1);
+			//	//끊기
+			//	ReleaseSession(session, id);
+			//}
+			//
+			//if (test == -1)
+			//	CrashDump::Crash();
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
 				//Disconnect(session->GetID());
 				ReleaseSession(session,id);
 			}
 			if (session->GetIOCount() == -1)
-				CrashDump::Crash();
+			{
+				LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+				//CrashDump::Crash();
+			}
 			//wprintf(L"%d-----------\n", err);
 			//LOG(L"DEBUG", LOG_DEBUG, L"WSASend error %d sessionid %d", err, session->GetID());
 			return false;
 		}
 	}
-
+	InterlockedIncrement(&session->se);
 	InterlockedIncrement64(&_sendOverlap);
 
 	return true;
@@ -1002,9 +1111,21 @@ Session *CNetServer::GetSession(DWORD sessionID)
 	//get session이 연속으로 2번 들어오면 iocount가 0이였던 session들도 이단계를 통과할 수 있는 위험이 있음
 	if (InterlockedIncrement64(&session->GetIOCount()) == 1)
 	{
+		//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+		//if (test == 0)
+		//{
+		//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+		//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+		//	//InterlockedExchange((LONG *)&session->status, 1);
+		//	//끊기
+		//	ReleaseSession(session, sessionID);
+		//}
+		//
+		//if (test == -1)
+		//	CrashDump::Crash();
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-
+		
 			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 			//InterlockedExchange((LONG *)&session->b_status, session->status);
 			//InterlockedExchange((LONG *)&session->status, 15);
@@ -1013,9 +1134,12 @@ Session *CNetServer::GetSession(DWORD sessionID)
 			ReleaseSession(session,sessionID);
 			
 		}
-
+		
 		if (session->GetIOCount() == -1)
-			CrashDump::Crash();
+		{
+			LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+			//CrashDump::Crash();
+		}
 
 		return NULL;
 	}
@@ -1025,9 +1149,21 @@ Session *CNetServer::GetSession(DWORD sessionID)
 	//여기 들어가면 down client발생	
 	if (session->GetReleaseFlag())
 	{
+		//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+		//if (test == 0)
+		//{
+		//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+		//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+		//	//InterlockedExchange((LONG *)&session->status, 1);
+		//	//끊기
+		//	ReleaseSession(session, sessionID);
+		//}
+		//
+		//if (test == -1)
+		//	CrashDump::Crash();
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-
+		
 			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 			//InterlockedExchange((LONG *)&session->b_status, session->status);
 			//InterlockedExchange((LONG *)&session->status, 17);
@@ -1036,18 +1172,33 @@ Session *CNetServer::GetSession(DWORD sessionID)
 			ReleaseSession(session,sessionID);
 			//CrashDump::Crash();
 		}
-
+		
 		if (session->GetIOCount() == -1)
-			CrashDump::Crash();
+		{
+			LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+			//CrashDump::Crash();
+		}
 	
 		return NULL;
 	}
 
 	if (session->GetID() != sessionID)
 	{
+		//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+		//if (test == 0)
+		//{
+		//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+		//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+		//	//InterlockedExchange((LONG *)&session->status, 1);
+		//	//끊기
+		//	ReleaseSession(session, sessionID);
+		//}
+		//
+		//if (test == -1)
+		//	CrashDump::Crash();
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-
+		
 			//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
 			//InterlockedExchange((LONG *)&session->b_status, session->status);
 			//InterlockedExchange((LONG *)&session->status, 16);
@@ -1055,11 +1206,14 @@ Session *CNetServer::GetSession(DWORD sessionID)
 			//Disconnect(sessionID);
 			ReleaseSession(session, sessionID);
 			//CrashDump::Crash();
-
+		
 		}
-
+		
 		if (session->GetIOCount() == -1)
-			CrashDump::Crash();
+		{
+			LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+			//CrashDump::Crash();
+		}
 
 		return NULL;
 	}
@@ -1070,6 +1224,18 @@ Session *CNetServer::GetSession(DWORD sessionID)
 }
 void CNetServer::PutSession(Session *session)
 {
+	//DWORD test = InterlockedDecrement64(&session->GetIOCount());
+	//if (test == 0)
+	//{
+	//	//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
+	//	//InterlockedExchange((LONG *)&session->b_status, session->status);
+	//	//InterlockedExchange((LONG *)&session->status, 1);
+	//	//끊기
+	//	ReleaseSession(session, session->GetID());
+	//}
+	//
+	//if (test == -1)
+	//	CrashDump::Crash();
 	if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 	{
 		//InterlockedExchange((LONG *)&session->bb_status, session->b_status);
@@ -1078,9 +1244,12 @@ void CNetServer::PutSession(Session *session)
 		//끊기
 		ReleaseSession(session,session->GetID());
 	}
-
+	
 	if (session->GetIOCount() == -1)
-		CrashDump::Crash();
+	{
+		LOG(L"test", LOG_ERROR, L"fucking %d %d", session->GetID(), session->GetIOCount());
+		//CrashDump::Crash();
+	}
 
 	InterlockedDecrement64(&_sessionGetCount);
 }

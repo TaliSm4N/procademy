@@ -218,14 +218,14 @@ int  RingBuffer::Dequeue(Packet *p,int iSize)
 	temp = DirectDequeueSize();
 	if (temp < iSize)
 	{
-		p->PutData(_buf + _front, temp);
+		p->PutData(_buf+_front, temp);
 		MoveFront(temp);
 		p->PutData(_buf + _front, iSize - temp);
 		MoveFront(iSize - temp);
 	}
 	else
 	{
-		p->PutData(_buf + _front, iSize);
+		p->PutData(_buf+_front, iSize);
 		MoveFront(iSize);
 	}
 

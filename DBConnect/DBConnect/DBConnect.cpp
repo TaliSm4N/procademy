@@ -1,11 +1,20 @@
+#include <strsafe.h>
 #pragma comment(lib,"mysqlclient.lib")
 #include "include/mysql.h"
 #include "include/errmsg.h"
 
 #include "DBConnect.h"
 
-DBConnect *connecter=nullptr;
-DBConnect *DBConnect::_db = nullptr;
+//DBConnect *connecter=nullptr;
+//DBConnect *DBConnect::_db = nullptr;
+
+void WCharToChar(const WCHAR *wChr, char *chr)
+{
+	int len = wcslen(wChr) + 1;
+
+	wcstombs_s(NULL, chr, len, wChr, len);
+}
+
 
 
 DBConnect::DBConnect()
@@ -14,19 +23,24 @@ DBConnect::DBConnect()
 	mysql_init(&conn);
 }
 
-DBConnect *DBConnect::GetInstance()
-{
-	if (_db == nullptr)
-	{
-		_db = new DBConnect();
-	}
+//DBConnect *DBConnect::GetInstance()
+//{
+//	if (_db == nullptr)
+//	{
+//		_db = new DBConnect();
+//	}
+//
+//	return _db;
+//}
 
-	return _db;
-}
-
-bool DBConnect::connect(const char *host, const char *db)
+bool DBConnect::connect(const char *ip,const char *user,const char *password, const char *db,int port)
 {
-	connection = mysql_real_connect(&conn, "127.0.0.1", host, "1234", db, 3306, (char *)NULL, 0);
+	strcpy_s(_szDBIP, ip);
+	strcpy_s(_szDBUser, user);
+	strcpy_s(_szDBPassword, password);
+	strcpy_s(_szDBName, db);
+	_iDBPort = port;
+	connection = mysql_real_connect(&conn, _szDBIP, _szDBUser, _szDBPassword, _szDBName, _iDBPort, (char *)NULL, 0);
 	if (connection == NULL)
 		return false;
 
@@ -35,19 +49,56 @@ bool DBConnect::connect(const char *host, const char *db)
 	return true;
 }
 
-const char *DBConnect::error()
+bool DBConnect::connect()
 {
-	return mysql_error(connection);
+	connection = mysql_real_connect(&conn, _szDBIP, _szDBUser, _szDBPassword, _szDBName, _iDBPort, (char *)NULL, 0);
+	if (connection == NULL)
+	{
+		strcpy_s(_LastErrorMsg, mysql_error(connection));
+		_iLastError = mysql_errno(connection);
+		
+		return false;
+	}
+
+	mysql_set_character_set(connection, "utf8");
+
+	return true;
 }
 
-unsigned int DBConnect::errorno()
+const char *DBConnect::GetLastError()
 {
-	return mysql_errno(connection);
+	return _LastErrorMsg;
 }
 
-int DBConnect::Query(const char *query)
+unsigned int DBConnect::GetLastErrNo()
 {
-	return mysql_query(connection, query);
+	return _iLastError;
+}
+
+bool DBConnect::Query(const char *query, ...)
+{
+	va_list va;
+
+	va_start(va, query);
+
+	StringCchVPrintfA(_szQueryUTF8, eQUERY_MAX_LEN, query,va);
+
+	char *t =va_arg(va, char *);
+
+	va_end(va);
+
+
+	int result = mysql_query(connection, _szQueryUTF8);
+
+	if (result != 0)
+	{
+		strcpy_s(_LastErrorMsg, mysql_error(connection));
+		_iLastError = mysql_errno(connection);
+
+		return false;
+	}
+
+	return true;
 }
 
 MYSQL_RES *DBConnect::GetResults()

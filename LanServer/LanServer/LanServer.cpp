@@ -381,30 +381,32 @@ PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
 {
 	int recvQSize = session->GetRecvQ().GetUseSize();
 
-	Packet *payload = Packet::Alloc();
-	HEADER *header=payload->GetHeaderPtr();
+	Packet *payload = Packet::Alloc(LOCAL_TYPE);
+	LanServerHeader header;// = payload->GetHeaderPtr();
 
-	if (sizeof(HEADER) > recvQSize)
+	if (sizeof(LanServerHeader) > recvQSize)
 	{
 		Packet::Free(payload);
 		return NONE;
 	}
 
-	session->GetRecvQ().Peek((char *)header, sizeof(HEADER));
+	session->GetRecvQ().Peek((char *)&header, sizeof(LanServerHeader));
 
-	if (recvQSize < header->len + sizeof(HEADER))
+	if (recvQSize < header.len + sizeof(LanServerHeader))
 	{
 		Packet::Free(payload);
 		return NONE;
 	}
 
-	session->GetRecvQ().MoveReadPos(sizeof(HEADER));
+	session->GetRecvQ().MoveReadPos(sizeof(LanServerHeader));
 
-	if (session->GetRecvQ().Dequeue(payload, header->len) != header->len)
+	if (session->GetRecvQ().Dequeue(payload, header.len) != header.len)
 	{
 		Packet::Free(payload);
 		return FAIL;
 	}
+
+	payload->PutHeader((char *)&header);
 
 	OnRecv(session->GetID(), payload);
 	Packet::Free(payload);
@@ -417,7 +419,7 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	LanServerHeader header;
 
 	header.len = p->GetDataSize();
-	p->PutHeader(&header);
+	p->PutHeader((char *)&header);
 
 	Session *session = GetSession(sessionID);
 
@@ -517,7 +519,7 @@ bool CLanServer::SendPost(Session *session)
 	for (int i = 0; i < peekCnt; i++)
 	{
 		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
-		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
+		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(LanServerHeader);
 	}
 
 	session->SetSendPacketCnt(peekCnt);

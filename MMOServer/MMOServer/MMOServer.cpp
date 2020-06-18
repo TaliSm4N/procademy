@@ -44,10 +44,10 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 	_Monitor_Counter_PacketSend=0;
 
 
-	_sendThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
-	_gameThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
-	_authThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
-	_monitorThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
+	//_sendThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
+	//_gameThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
+	//_authThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
+	//_monitorThreadEvent = CreateWaitableTimer(NULL, FALSE, NULL);
 
 	//packet 초기화
 	Packet::Init(byPacketKey, byPacketCode);
@@ -99,29 +99,35 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 	//
 	//WSAIoctl(_ListenSocket, SIO_KEEPALIVE_VALS, &keep, sizeof(tcp_keepalive), NULL, 0, NULL, NULL, NULL);
 
-	//int optval = 0;
-	//retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
-	//if (retval == SOCKET_ERROR)
-	//{
-	//	SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
-	//	int err = GetLastError();
-	//	InterlockedIncrement(&_Monitor_AcceptFail);
-	//	closesocket(_ListenSocket);
-	//	return false;
-	//	//return -1;
-	//}
 
-	//optval = 0;
-	//retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
-	//if (retval == SOCKET_ERROR)
-	//{
-	//	SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
-	//	int err = GetLastError();
-	//	InterlockedIncrement(&_Monitor_AcceptFail);
-	//	closesocket(_ListenSocket);
-	//	return false;
-	//	//return -1;
-	//}
+	//둘다 켜는게 옳은 것인지는 모르겠음
+	//다만 SO_SNDBUF를 0으로 변경 시 Non-paged pool의 사용량이 유의미하게 줄어들음
+	//RCVBUF의 경우 거의 차이가 없음
+	int optval = 0;
+	retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR)
+	{
+		SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
+		int err = GetLastError();
+		InterlockedIncrement(&_Monitor_AcceptFail);
+		closesocket(_ListenSocket);
+		return false;
+		//return -1;
+	}
+
+	optval = 0;
+	retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR)
+	{
+		SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
+		int err = GetLastError();
+		InterlockedIncrement(&_Monitor_AcceptFail);
+		closesocket(_ListenSocket);
+		return false;
+		//return -1;
+	}
+
+
 
 	//optval = bEnableNagle;
 	if (!bEnableNagle)
@@ -266,6 +272,11 @@ bool				CMMOServer::AuthThread_update(void)
 		ProcAuth_Packet();
 		OnAuth_Update();
 		ProcAuth_StatusChange();
+
+
+		//release의 주체를 auth로 옮김
+		//-> auth가 하는 일이 많지 않으므로 game thread의 부담을 덜어줌
+		ProcGame_Release();
 
 		InterlockedIncrement(&_Counter_AuthUpdate);
 		//PRO_END(L"Auth");
@@ -422,7 +433,7 @@ bool CMMOServer::GameUpdateThread_update(void)
 		ProcGame_Packet();
 		OnAuth_Update();
 		ProcGame_Logout();
-		ProcGame_Release();
+		//ProcGame_Release();
 
 		InterlockedIncrement(&_Counter_GameUpdate);
 		//PRO_END(L"Game");
