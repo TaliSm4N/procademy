@@ -1,7 +1,4 @@
 
-
-
-#include <iostream>
 #include "LanServerLib.h"
 
 CLanServer::CLanServer()
@@ -9,6 +6,199 @@ CLanServer::CLanServer()
 {
 	//packetPool = new MemoryPoolTLS<Packet>(10000, true);
 	Packet::Init();
+}
+
+bool CLanServer::Config(const WCHAR *configFile,const WCHAR *block)
+{
+	TextParser parser;
+
+	if (!parser.init(configFile))
+		return false;
+	
+	if(!parser.SetCurBlock(block))
+		return false;
+
+	std::wstring str;
+
+	if(!parser.SetCurBlock(L"SERVER"))
+		return false;
+
+	if (!parser.findItem(L"BIND_PORT", str))
+		return false;
+	_port = std::stoi(str);
+	str.clear();
+	
+
+	if (parser.findItem(L"IOCP_WORKER_THREAD", str))
+	{
+		_workerCnt = std::stoi(str);
+		str.clear();
+	}
+	else
+	{
+		_workerCnt = 5;
+	}
+	
+
+	if (parser.findItem(L"IOCP_ACTIVE_THREAD", str))
+	{
+		_activeCnt = std::stoi(str);
+		str.clear();
+	}
+	else
+	{
+		_activeCnt = _workerCnt / 2;
+	}
+	
+
+	if (parser.findItem(L"CLIENT_MAX", str))
+	{
+		_maxUser = std::stoi(str);
+		str.clear();
+	}
+	else
+	{
+		_maxUser = 10000;
+	}
+	
+
+
+	//packet
+	if (!parser.findItem(L"PACKET_CODE", str))
+	{
+		return false;
+	}
+	int code = std::stoi(str);
+	str.clear();
+
+	if (!parser.findItem(L"PACKET_KEY", str))
+	{
+		return false;
+	}
+	int key = std::stoi(str);
+	str.clear();
+
+	if (parser.findItem(L"LOG_LEVEL", str))
+	{
+		std::wstring logLevel = str;
+		str.clear();
+	}
+	
+
+	if (wcscmp(str.c_str(), L"\"DEBUG\"")==0)
+	{
+		SYSLOG_LEVEL(LOG_DEBUG);
+	}
+	else if (wcscmp(str.c_str(), L"\"WARNING\"") == 0)
+	{
+		SYSLOG_LEVEL(LOG_DEBUG);
+	}
+	else if (wcscmp(str.c_str(), L"\"ERROR\"") == 0)
+	{
+		SYSLOG_LEVEL(LOG_DEBUG);
+	}
+
+	return true;
+}
+
+bool CLanServer::Start()
+{
+	timeBeginPeriod(1);
+
+	//monitoring 초기화
+	_sessionCount = 0;
+	_acceptTotal = 0;
+	_acceptTPS = 0;
+	_recvPacketTPS = 0;
+	_sendPacketTPS = 0;
+	_packetPoolAlloc = 0;
+	_packetPoolUse = 0;
+	_acceptFail = 0;
+
+	_disconnectCount = 0;
+	_releaseCount = 0;
+	_recvOverlap = 0;
+	_sendOverlap = 0;
+	_sessionGetCount = 0;
+
+
+	//sessionList설정
+	_sessionList = new LanSession[_maxUser];
+
+	_sessionIndexStack = new LockFreeStack<int>();
+
+	for (int i = _maxUser - 1; i >= 0; i--)
+	{
+		//_unUsedSessionStack.push(i);
+		_sessionIndexStack->Push(i);
+	}
+
+
+	if (WSAStartup(MAKEWORD(2, 2), &_wsa) != 0) return false;
+
+	_hcp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+
+	if (_hcp == NULL) return false;
+
+	//InitializeSRWLock(&_usedSessionLock);
+
+
+
+	_listenSock = socket(AF_INET, SOCK_STREAM, 0);
+	if (_listenSock == INVALID_SOCKET)
+	{
+		return -1;
+	}
+
+	int optval = 0;
+	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR)
+	{
+		InterlockedIncrement((LONG *)&_acceptFail);
+		closesocket(_listenSock);
+		return -1;
+	}
+
+	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
+	_sockAddr.sin_family = AF_INET;
+	_sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	_sockAddr.sin_port = htons(_port);
+	retval = bind(_listenSock, (SOCKADDR *)&_sockAddr, sizeof(_sockAddr));
+
+	if (retval == SOCKET_ERROR)
+	{
+		return -1;
+	}
+
+	retval = listen(_listenSock, SOMAXCONN);
+	if (retval == SOCKET_ERROR)
+	{
+		return -1;
+	}
+
+
+	if (_nagle)
+	{
+		int optVal = true;
+		setsockopt(_listenSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optVal, sizeof(optVal));
+	}
+
+	if (_monitoring)
+	{
+		_hMonitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, (unsigned int *)&_dwMonitorThreadID);
+	}
+
+	_hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, this, 0, (unsigned int *)&_dwAcceptThreadID);
+
+	_hWokerThreads = new HANDLE[_workerCnt];
+	_dwWOrkerThreadIDs = new DWORD[_workerCnt];
+
+	for (int i = 0; i < _workerCnt; i++)
+	{
+		_hWokerThreads[i] = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, this, 0, (unsigned int *)&_dwWOrkerThreadIDs[i]);
+
+		if (_hWokerThreads[i] == NULL) return false;
+	}
 }
 
 bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monitoring)
@@ -40,10 +230,11 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	_recvOverlap = 0;
 	_sendOverlap = 0;
 	_sessionGetCount = 0;
+	_nagle = nagle;
 
 
 	//sessionList설정
-	_sessionList = new Session[_maxUser];
+	_sessionList = new LanSession[_maxUser];
 
 	_sessionIndexStack = new LockFreeStack<int>();
 
@@ -96,7 +287,6 @@ bool CLanServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 		return -1;
 	}
 
-	_nagle = nagle;
 
 	if (_nagle)
 	{
@@ -156,7 +346,7 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 {
 	CLanServer *_this = (CLanServer *)lpParam;
 
-	Session *session;
+	LanSession *session;
 	SOCKET sock;
 	SOCKADDR_IN sockAddr;
 	int addrLen;
@@ -232,7 +422,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 	int retVal;
 	CLanServer *_this = (CLanServer *)lpParam;
 
-	Session *session;
+	LanSession *session;
 	MyOverlapped *pOverlapped;
 	DWORD transferred;
 
@@ -324,7 +514,7 @@ unsigned int WINAPI CLanServer::WorkerThread(LPVOID lpParam)
 
 bool CLanServer::Disconnect(DWORD sessionID)
 {
-	Session *session = GetSession(sessionID);
+	LanSession *session = GetSession(sessionID);
 
 	if (session == NULL)
 	{
@@ -377,34 +567,36 @@ unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 }
 
 //수정중
-PROCRESULT CLanServer::CompleteRecvPacket(Session *session)
+CLanServer::PROCRESULT CLanServer::CompleteRecvPacket(LanSession *session)
 {
 	int recvQSize = session->GetRecvQ().GetUseSize();
 
-	Packet *payload = Packet::Alloc();
-	HEADER *header=payload->GetHeaderPtr();
+	Packet *payload = Packet::Alloc(LOCAL_TYPE);
+	LanServerHeader header;// = payload->GetHeaderPtr();
 
-	if (sizeof(HEADER) > recvQSize)
+	if (sizeof(LanServerHeader) > recvQSize)
 	{
 		Packet::Free(payload);
 		return NONE;
 	}
 
-	session->GetRecvQ().Peek((char *)header, sizeof(HEADER));
+	session->GetRecvQ().Peek((char *)&header, sizeof(LanServerHeader));
 
-	if (recvQSize < header->len + sizeof(HEADER))
+	if (recvQSize < header.len + sizeof(LanServerHeader))
 	{
 		Packet::Free(payload);
 		return NONE;
 	}
 
-	session->GetRecvQ().MoveReadPos(sizeof(HEADER));
+	session->GetRecvQ().MoveReadPos(sizeof(LanServerHeader));
 
-	if (session->GetRecvQ().Dequeue(payload, header->len) != header->len)
+	if (session->GetRecvQ().Dequeue(payload, header.len) != header.len)
 	{
 		Packet::Free(payload);
 		return FAIL;
 	}
+
+	payload->PutHeader((char *)&header);
 
 	OnRecv(session->GetID(), payload);
 	Packet::Free(payload);
@@ -417,9 +609,9 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	LanServerHeader header;
 
 	header.len = p->GetDataSize();
-	p->PutHeader(&header);
+	p->PutHeader((char *)&header);
 
-	Session *session = GetSession(sessionID);
+	LanSession *session = GetSession(sessionID);
 
 	if (session == NULL)
 	{
@@ -443,7 +635,7 @@ bool CLanServer::SendPacket(DWORD sessionID, Packet *p)
 	return true;
 }
 
-bool CLanServer::RecvPost(Session *session)
+bool CLanServer::RecvPost(LanSession *session)
 {
 
 	if (!session->GetSocketActive())
@@ -482,7 +674,7 @@ bool CLanServer::RecvPost(Session *session)
 
 	return true;
 }
-bool CLanServer::SendPost(Session *session)
+bool CLanServer::SendPost(LanSession *session)
 {
 	if (!session->GetSocketActive())
 	{
@@ -517,7 +709,7 @@ bool CLanServer::SendPost(Session *session)
 	for (int i = 0; i < peekCnt; i++)
 	{
 		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
-		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
+		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(LanServerHeader);
 	}
 
 	session->SetSendPacketCnt(peekCnt);
@@ -546,10 +738,10 @@ bool CLanServer::SendPost(Session *session)
 	return true;
 }
 
-Session *CLanServer::GetSession(DWORD sessionID)
+LanSession *CLanServer::GetSession(DWORD sessionID)
 {
 	
-	Session *session = &_sessionList[sessionID & 0xffff];
+	LanSession *session = &_sessionList[sessionID & 0xffff];
 
 	if (InterlockedIncrement64(&session->GetIOCount()) == 1)
 	{
@@ -591,7 +783,7 @@ Session *CLanServer::GetSession(DWORD sessionID)
 
 	return session;
 }
-void CLanServer::PutSession(Session *session)
+void CLanServer::PutSession(LanSession *session)
 {
 	if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 	{
@@ -601,7 +793,7 @@ void CLanServer::PutSession(Session *session)
 	InterlockedDecrement64(&_sessionGetCount);
 }
 
-void CLanServer::ReleaseSession(Session *session)
+void CLanServer::ReleaseSession(LanSession *session)
 {
 	IOChecker checker;
 	DWORD id;
@@ -658,7 +850,7 @@ void CLanServer::ReleaseSession(Session *session)
 
 bool CLanServer::OldDisconnect(DWORD sessionID)
 {
-	Session *session = &_sessionList[sessionID&0xffff];// = GetSession(sessionID);
+	LanSession *session = &_sessionList[sessionID&0xffff];// = GetSession(sessionID);
 
 	OnClientLeave(session->GetID());
 

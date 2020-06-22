@@ -54,6 +54,7 @@ int main()
 		InterlockedAdd(&DBTPS, -tps);
 		printf("DB TPS     : %8d\n",tps);
 		printf("Queue Size : %8d\n",DBQueue->GetUseCount());
+		
 
 		if (update)
 		{

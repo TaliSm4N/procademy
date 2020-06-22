@@ -12,6 +12,24 @@ ChatServer::ChatServer()
 	//InitializeSRWLock(&playerLock);
 }
 
+bool ChatServer::Start()
+{
+	_updateMsgPoolCount = 0;
+	_updateMsgQCount = 0;
+
+	_playerCount = 0;
+	_playerPoolCount = 0;
+
+	_updateMsgPool = new MemoryPoolTLS<st_UPDATE_MESSAGE>(100);
+	_playerPool = new MemoryPoolTLS<st_PLAYER>(GetMaxUser() / 200 + 1);
+	CNetServer::Start();
+
+	_msgHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
+
+	_updateThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, this, 0, (unsigned int *)&_updateThreadID);
+
+	return true;
+}
 
 bool ChatServer::Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring)
 {
@@ -96,6 +114,7 @@ void ChatServer::OnError(int errorcode, WCHAR *)
 void ChatServer::Join(DWORD sessionID)
 {
 	st_PLAYER *player = _playerPool->Alloc();
+	//InitializeSRWLock(&player->lock);
 
 	player->SessionID = sessionID;
 
@@ -119,6 +138,8 @@ void ChatServer::Join(DWORD sessionID)
 void ChatServer::Leave(DWORD sessionID)
 {
 	st_PLAYER *player;
+
+	//AcquireSRWLockExclusive(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 	
 
@@ -128,6 +149,8 @@ void ChatServer::Leave(DWORD sessionID)
 	}
 
 	player = iter->second;
+	//AcquireSRWLockExclusive(&player->lock);
+	//ReleaseSRWLockExclusive(&playerLock);
 	player->login = false;
 	//InterlockedExchange8((char *)&player->connect, false);
 
@@ -140,7 +163,9 @@ void ChatServer::Leave(DWORD sessionID)
 	if(player->SessionID!=sessionID)
 		SYSLOG_LOG(L"test", LOG_DEBUG, L"leave player sessionID %d accountno %d player_sessionID %d", sessionID, player->AccountNo,player->SessionID);
 	_playerMap->erase(iter);
+	
 
+	//ReleaseSRWLockExclusive(&player->lock);
 	_playerPool->Free(player);
 	
 	_playerCount--;
@@ -258,6 +283,7 @@ unsigned int ChatServer::MonitorThreadRun()
 void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 {
 	//동기화에 대해 확신이 안섬 테스트후 필요시 동기화
+	//AcquireSRWLockShared(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 
 	if (iter == _playerMap->end())
@@ -266,6 +292,10 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 	}
 
 	st_PLAYER *player = iter->second;
+
+	//AcquireSRWLockShared(&player->lock);
+
+	//ReleaseSRWLockShared(&playerLock);
 
 	if (player->login)
 	{
@@ -303,6 +333,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 		player->login = false;
 		Disconnect(sessionID);
 
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -312,7 +343,8 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		
+
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 	//Packet::Free(p);
@@ -325,6 +357,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 	
 	//SendPacket(sessionID, sendPacket);
 	SendUnicast(player, sendPacket);
+	//ReleaseSRWLockShared(&player->lock);
 
 	Packet::Free(sendPacket);
 }
@@ -332,6 +365,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 {
 	//동기화에 대해 확신이 안섬 테스트후 필요시 동기화
+	//AcquireSRWLockShared(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 
 	if (iter == _playerMap->end())
@@ -340,6 +374,8 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	}
 
 	st_PLAYER *player = iter->second;
+	//AcquireSRWLockShared(&player->lock);
+	//ReleaseSRWLockShared(&playerLock);
 	INT64 account;
 	*p >> account;
 
@@ -349,7 +385,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -365,7 +401,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -384,7 +420,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 		_attackDisconCount++;
 		player->login = false;
 		Disconnect(sessionID);
-
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -394,7 +430,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -413,6 +449,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	
 
 	SendUnicast(player, sendPacket);
+	//ReleaseSRWLockShared(&player->lock);
 	
 	Packet::Free(sendPacket);
 }
@@ -420,6 +457,8 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 {
 	//동기화에 대해 확신이 안섬 테스트후 필요시 동기화
+
+	//AcquireSRWLockShared(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 
 	if (iter == _playerMap->end())
@@ -428,6 +467,8 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 	}
 
 	st_PLAYER *player = iter->second;
+	//AcquireSRWLockShared(&player->lock);
+	//ReleaseSRWLockShared(&playerLock);
 	INT64 account;
 	WORD msgLen;
 
@@ -439,7 +480,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -452,7 +493,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -462,7 +503,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -479,6 +520,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 	//SendPacket(sessionID, sendPacket);
 	SendSectorAround(player->shSectorX, player->shSectorY, sendPacket);
 	//SendBroadcast(sendPacket);
+	//ReleaseSRWLockShared(&player->lock);
 
 	Packet::Free(sendPacket);
 }

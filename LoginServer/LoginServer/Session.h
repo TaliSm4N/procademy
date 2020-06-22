@@ -1,5 +1,10 @@
 #pragma once
 
+
+
+#ifndef __SESSION__STRUCT__
+#define __SESSION__STRUCT__
+
 enum TYPE { SEND = 0, RECV };
 
 struct MyOverlapped
@@ -13,6 +18,8 @@ struct IOChecker
 	LONG64 IOCount;
 	LONG64 releaseFlag;
 };
+
+#endif // !__SESSION__STRUCT__
 
 class Session
 {
@@ -76,6 +83,17 @@ public:
 	
 	DWORD beforeID;
 	DWORD bbeforeID;
+
+public:
+	long acc;
+	long io;
+	long se;
+
+	long io_out;
+	long se_out;
+	long trans_z;
+
+	long re;
 
 
 	//자동화 테스트용

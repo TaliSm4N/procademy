@@ -173,12 +173,14 @@
   <ItemGroup>
     <ClCompile Include="CrashDump.cpp" />
     <ClCompile Include="LanClient.cpp" />
+    <ClCompile Include="Log.cpp" />
     <ClCompile Include="MyClient.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PacketPtr.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="testMain.cpp" />
+    <ClCompile Include="TextParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CrashDump.h" />
@@ -187,6 +189,7 @@
     <ClInclude Include="LanClientLib.h" />
     <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="LockFreeStack.h" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="MemoryPoolTLS.h" />
     <ClInclude Include="MyClient.h" />
@@ -194,6 +197,7 @@
     <ClInclude Include="PacketPtr.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="TextParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

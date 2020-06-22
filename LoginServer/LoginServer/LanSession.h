@@ -1,6 +1,11 @@
 #pragma once
 
+
+#ifndef __SESSION__STRUCT__
+#define __SESSION__STRUCT__
+
 enum TYPE { SEND = 0, RECV };
+
 
 struct MyOverlapped
 {
@@ -14,14 +19,19 @@ struct IOChecker
 	LONG64 releaseFlag;
 };
 
-class Session
+#endif // !__SESSION__STRUCT__
+
+class LanSession
 {	
 public:
-	Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD ID);
-	Session();
+
+	
+
+	LanSession(SOCKET s, SOCKADDR_IN &sAddr,DWORD ID);
+	LanSession();
 
 	void SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID);
-	~Session();
+	~LanSession();
 
 	LONG64 &GetIOCount() { return IOBlock->IOCount; }
 	IOChecker *GetIOBlock() { return IOBlock; }

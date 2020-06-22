@@ -460,14 +460,14 @@ Packet &Packet::operator >> (UINT &iValue)
 void Packet::GetHeader(char *desheader)
 {
 	//헤더 종류에 따라 코드 수정필요
-	memcpy(desheader, buf, sizeof(headerSize));
+	memcpy(desheader, buf, headerSize);
 }
 
 void Packet::PutHeader(char *srcheader)
 {
 	//헤더 종류에 따라 코드 수정필요
 	//header.len = srcheader->len;
-	memcpy(&buf, srcheader, sizeof(headerSize)+1);
+	memcpy(&buf, srcheader, headerSize);
 }
 
 void Packet::Init(int key, int code)

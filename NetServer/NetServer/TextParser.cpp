@@ -12,16 +12,17 @@ TextParser::TextParser()
 bool TextParser::init(const WCHAR *filename)
 {
 	WCHAR line[256];
-	file.open(filename);
+	errno_t err;
+	err =_wfopen_s(&file, filename, L"r,ccs=UTF-16LE");
 
-	if (!file.is_open())
+	if (err != 0)
 	{
 		return false;
 	}
-
-	while (!file.eof())
+	
+	while (!feof(file))
 	{
-		file.getline(line, 256);
+		fgetws(line, 256, file);
 
 		for (WCHAR *c = line; *c; c++)
 		{
@@ -42,7 +43,37 @@ bool TextParser::init(const WCHAR *filename)
 		}
 	}
 
+	//file.open(filename);
+	//
+	//if (!file.is_open())
+	//{
+	//	return false;
+	//}
+	//
+	//while (!file.eof())
+	//{
+	//	file.getline(line, 256);
+	//
+	//	for (WCHAR *c = line; *c; c++)
+	//	{
+	//		if (*c == CONFIG)
+	//		{
+	//			blockRead(c + 1);
+	//		}
+	//		else if (*c == '\t' || *c == ' ')
+	//		{
+	//			continue;
+	//		}
+	//		else if (*c == '\\'&&*(c + 1) == '\\')
+	//		{
+	//			break;
+	//		}
+	//		else
+	//			break;
+	//	}
+	//}
 
+	fclose(file);
 	return true;
 }
 
@@ -61,7 +92,7 @@ void TextParser::blockRead(WCHAR *blockName)
 	c = blockName;
 	for (; *c; c++)
 	{
-		if (*c == ' ' || *c == '\t')
+		if (*c == ' ' || *c == '\t'||*c=='\n')
 		{
 			*c = '\0';
 			break;
@@ -69,7 +100,8 @@ void TextParser::blockRead(WCHAR *blockName)
 	}
 	block->blockName += blockName;
 
-	file.getline(line, 256);
+	fgetws(line, 256, file);
+	//file.getline(line, 256);
 	c = line;
 
 	if (*c != BLOCK_START)
@@ -79,7 +111,8 @@ void TextParser::blockRead(WCHAR *blockName)
 
 	while (1)
 	{
-		file.getline(line, 256);
+		fgetws(line, 256, file);
+		//file.getline(line, 256);
 		c = line;
 
 		if (*c == BLOCK_END)
@@ -107,13 +140,21 @@ void TextParser::blockRead(WCHAR *blockName)
 			{
 				*c = '\0';
 			}
+			else if (*c == '/')
+			{
+				if (*(c + 1) == '/')
+				{
+					value = NULL;
+					break;
+				}
+			}
 		}
 
 		if (value != NULL)
 		{
 			for (; *value; value++)
 			{
-				if (*value == ' ' || *value == '\t'||*value=='\"')
+				if (*value == ' ' || *value == '\t'||*value=='/')
 				{
 					*value = '\0';
 					continue;
@@ -125,10 +166,18 @@ void TextParser::blockRead(WCHAR *blockName)
 
 			for (; *c; c++)
 			{
-				if (*c == ' ' || *c == '\t' || *c == '\"')
+				if (*c == ' ' || *c == '\t' ||*c=='\n')
 				{
 					*c = '\0';
 					break;
+				}
+				else if (*c == '/')
+				{
+					if (*(c + 1) == '/')
+					{
+						*c = '\0';
+						break;
+					}
 				}
 			}
 

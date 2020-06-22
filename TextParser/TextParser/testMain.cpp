@@ -10,5 +10,10 @@ int main()
 
 	parser.init(L"test.txt");
 
+	parser.SetCurBlock(L"SERVER");
+
+	std::wstring str;
+
+
 	system("pause");
 }

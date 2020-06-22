@@ -47,6 +47,8 @@ struct st_PLAYER
 	bool login;
 
 	ULONGLONG	LastRecvPacket;
+
+	//SRWLOCK lock;
 };
 
 
@@ -54,6 +56,7 @@ class ChatServer :public CNetServer
 {
 public:
 	ChatServer();
+	bool Start();
 	bool Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring = true);
 	bool ConfigStart(const WCHAR *configFile);
 

@@ -27,9 +27,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Session.h">
-      <Filter>헤더 파일\lib</Filter>
-    </ClInclude>
     <ClInclude Include="LanServer.h">
       <Filter>헤더 파일\lib</Filter>
     </ClInclude>
@@ -69,11 +66,17 @@
     <ClInclude Include="Packet.h">
       <Filter>헤더 파일\lib</Filter>
     </ClInclude>
+    <ClInclude Include="LanSession.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="TextParser.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="Log.h">
+      <Filter>헤더 파일\lib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Session.cpp">
-      <Filter>소스 파일\lib</Filter>
-    </ClCompile>
     <ClCompile Include="LanServer.cpp">
       <Filter>소스 파일\lib</Filter>
     </ClCompile>
@@ -96,6 +99,15 @@
       <Filter>소스 파일\lib</Filter>
     </ClCompile>
     <ClCompile Include="Packet.cpp">
+      <Filter>소스 파일\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="LanSession.cpp">
+      <Filter>소스 파일\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="TextParser.cpp">
+      <Filter>소스 파일\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="Log.cpp">
       <Filter>소스 파일\lib</Filter>
     </ClCompile>
   </ItemGroup>

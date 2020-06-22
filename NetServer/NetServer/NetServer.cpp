@@ -13,6 +13,202 @@ CNetServer::CNetServer()
 	
 }
 
+bool CNetServer::Config(const WCHAR *configFile, const WCHAR *block)
+{
+	TextParser parser;
+
+	if (!parser.init(configFile))
+		return false;
+
+	if (!parser.SetCurBlock(block))
+		return false;
+
+	std::wstring str;
+
+	if (!parser.SetCurBlock(block))
+		return false;
+
+	if (!parser.findItem(L"BIND_PORT", str))
+		return false;
+	_port = std::stoi(str);
+	str.clear();
+
+
+	if (parser.findItem(L"IOCP_WORKER_THREAD", str))
+	{
+		_workerCnt = std::stoi(str);
+		str.clear();
+	}
+	else
+	{
+		_workerCnt = 5;
+	}
+
+
+	if (parser.findItem(L"IOCP_ACTIVE_THREAD", str))
+	{
+		_activeCnt = std::stoi(str);
+		str.clear();
+	}
+	else
+	{
+		_activeCnt = _workerCnt / 2;
+	}
+
+
+	if (parser.findItem(L"CLIENT_MAX", str))
+	{
+		_maxUser = std::stoi(str);
+		str.clear();
+	}
+	else
+	{
+		_maxUser = 10000;
+	}
+
+	//packet
+	if (!parser.findItem(L"PACKET_CODE", str))
+	{
+		return false;
+	}
+	int code = std::stoi(str);
+	str.clear();
+
+	if (!parser.findItem(L"PACKET_KEY", str))
+	{
+		return false;
+	}
+	int key = std::stoi(str);
+	str.clear();
+
+	Packet::Init(key, code);
+
+	if (parser.findItem(L"LOG_LEVEL", str))
+	{
+
+		if (wcscmp(str.c_str(), L"\"DEBUG\"") == 0)
+		{
+			SYSLOG_LEVEL(LOG_DEBUG);
+		}
+		else if (wcscmp(str.c_str(), L"\"WARNING\"") == 0)
+		{
+			SYSLOG_LEVEL(LOG_WARNING);
+		}
+		else if (wcscmp(str.c_str(), L"\"ERROR\"") == 0)
+		{
+			SYSLOG_LEVEL(LOG_ERROR);
+		}
+		str.clear();
+	}
+
+	_nagle = true;
+	
+}
+bool CNetServer::Start()
+{
+	timeBeginPeriod(1);
+	_nagle = true;
+	_monitoring = true;
+
+	//monitoring 초기화
+	_sessionCount = 0;
+	_acceptTotal = 0;
+	_acceptTPS = 0;
+	_recvPacketTPS = 0;
+	_sendPacketTPS = 0;
+	_packetPoolAlloc = 0;
+	_packetPoolUse = 0;
+	_acceptFail = 0;
+
+	_disconnectCount = 0;
+	_releaseCount = 0;
+	_recvOverlap = 0;
+	_sendOverlap = 0;
+	_sessionGetCount = 0;
+	_releaseClose = 0;
+
+	//sessionList설정
+	_sessionList = new Session[_maxUser];
+
+	_sessionIndexStack = new LockFreeStack<int>();
+
+	for (int i = _maxUser - 1; i > 0; i--)
+	{
+		//_unUsedSessionStack.push(i);
+		_sessionIndexStack->Push(i);
+	}
+
+
+	if (WSAStartup(MAKEWORD(2, 2), &_wsa) != 0) return false;
+
+	_hcp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, _activeCnt);
+
+	if (_hcp == NULL) return false;
+
+	//InitializeSRWLock(&_usedSessionLock);
+
+
+
+	_listenSock = socket(AF_INET, SOCK_STREAM, 0);
+	if (_listenSock == INVALID_SOCKET)
+	{
+		return -1;
+	}
+
+	int optval = 0;
+	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR)
+	{
+		int err = GetLastError();
+		InterlockedIncrement((LONG *)&_acceptFail);
+		closesocket(_listenSock);
+		return -1;
+		//return -1;
+	}
+
+	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
+	_sockAddr.sin_family = AF_INET;
+	_sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	_sockAddr.sin_port = htons(_port);
+	retval = bind(_listenSock, (SOCKADDR *)&_sockAddr, sizeof(_sockAddr));
+
+	if (retval == SOCKET_ERROR)
+	{
+		return -1;
+	}
+
+	retval = listen(_listenSock, SOMAXCONN);
+	if (retval == SOCKET_ERROR)
+	{
+		return -1;
+	}
+
+
+
+	if (_nagle)
+	{
+		int optVal = true;
+		setsockopt(_listenSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optVal, sizeof(optVal));
+	}
+
+	if (_monitoring)
+	{
+		_hMonitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, (unsigned int *)&_dwMonitorThreadID);
+	}
+
+	_hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, this, 0, (unsigned int *)&_dwAcceptThreadID);
+
+	_hWokerThreads = new HANDLE[_workerCnt];
+	_dwWOrkerThreadIDs = new DWORD[_workerCnt];
+
+	for (int i = 0; i < _workerCnt; i++)
+	{
+		_hWokerThreads[i] = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, this, 0, (unsigned int *)&_dwWOrkerThreadIDs[i]);
+
+		if (_hWokerThreads[i] == NULL) return false;
+	}
+}
+
 bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monitoring)
 {
 	////////////////DEBUG
@@ -511,17 +707,17 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			//_this->Disconnect(session->GetID());
 			InterlockedIncrement(&session->trans_z);
 
+			session->Disconnect();
 			if (pOverlapped == &session->GetSendOverlap())
 			{
 				InterlockedIncrement(&session->se_out);
-				InterlockedExchange8(&session->GetSendFlag(), 1);
+				//InterlockedExchange8(&session->GetSendFlag(), 1);
 			}
 			else
 			{
 				InterlockedIncrement(&session->io_out);
 			}
 
-			session->Disconnect();
 		}
 		else if (pOverlapped == &session->GetRecvOverlap())
 		{
@@ -1269,8 +1465,10 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 	//	
 	//}
 
+
 	if (!InterlockedCompareExchange128((LONG64 *)session->GetIOBlock(), (LONG64)true, (LONG64)0, (LONG64 *)&checker))
 	{
+		InterlockedIncrement64(&session->GetIOCount());
 		//InterlockedExchange64(&session->GetReleaseFlag(), false);
 		//
 		//if (session->GetIOCount() == 0)
@@ -1292,7 +1490,6 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 	session->bbeforeID = session->beforeID;
 	session->beforeID = id;
 	session->GetID() = 0;
-	OnClientLeave(id);
 
 	//if (InterlockedExchange8((CHAR *)&session->GetSocketActive(), FALSE))
 	//{
@@ -1305,6 +1502,7 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 		InterlockedIncrement64(&_releaseClose);
 	//}
 
+	OnClientLeave(id);
 	
 
 	//남은 send Packet 제거

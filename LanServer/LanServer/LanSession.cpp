@@ -3,7 +3,7 @@
 
 #include "LanServerLib.h"
 
-Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
+LanSession::LanSession(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	:sock(s),sockAddr(sAddr),sendFlag(1), sockActive(FALSE),sessionID(id)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
@@ -19,7 +19,7 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	//_IOChecker.releaseFlag = false;
 }
 
-Session::Session()
+LanSession::LanSession()
 	:sendFlag(1), sockActive(FALSE)
 {
 	sendQ = new LockFreeQueue<Packet *>(1000);
@@ -30,7 +30,7 @@ Session::Session()
 	//_IOChecker.releaseFlag = false;
 }
 
-void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
+void LanSession::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 {
 	sock = s;
 	sockAddr = sAddr;
@@ -52,12 +52,12 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	InitializeSRWLock(&sessionLock);
 }
 
-Session::~Session()
+LanSession::~LanSession()
 {
 	Release();
 }
 
-BOOL Session::Release()
+BOOL LanSession::Release()
 {
 	if (InterlockedExchange8((CHAR *)&sockActive, FALSE))
 	{
@@ -70,11 +70,11 @@ BOOL Session::Release()
 	return TRUE;
 }
 
-void Session::Lock()
+void LanSession::Lock()
 {
 	AcquireSRWLockExclusive(&sessionLock);
 }
-void Session::Unlock()
+void LanSession::Unlock()
 {
 	ReleaseSRWLockExclusive(&sessionLock);
 }

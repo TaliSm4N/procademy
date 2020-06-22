@@ -1,13 +1,17 @@
 #pragma once
 
-enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
+
 
 
 class CNetServer
 {
+private:
+	enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 public:
 	CNetServer();
 	bool ConfigStart(const WCHAR *configFile);
+	bool Config(const WCHAR *configFile, const WCHAR *block);
+	bool Start();
 	bool Start(int port, int workerCnt, bool nagle, int maxUser,bool monitoring=true);
 	void Stop();
 	
@@ -54,6 +58,7 @@ private:
 	SOCKADDR_IN _sockAddr;
 	int _port;
 	int _workerCnt;
+	int _activeCnt;
 	bool _nagle;
 	int _maxUser;
 	HANDLE _hcp;

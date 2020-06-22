@@ -16,7 +16,10 @@ int main()
 
 	ChatServer test;
 
-	test.ConfigStart(L"ChatServer.cnf");
+	//test.ConfigStart(L"ChatServer.cnf");
+
+	test.Config(L"ChatServer.cnf", L"SERVER");
+	test.Start();
 
 	while (1)
 	{

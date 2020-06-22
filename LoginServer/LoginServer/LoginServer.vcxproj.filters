@@ -27,9 +27,6 @@
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="EchoServer.cpp">
-      <Filter>Lib\Source</Filter>
-    </ClCompile>
     <ClCompile Include="Log.cpp">
       <Filter>Lib\Source</Filter>
     </ClCompile>
@@ -39,9 +36,6 @@
     <ClCompile Include="PacketPtr.cpp">
       <Filter>Lib\Source</Filter>
     </ClCompile>
-    <ClCompile Include="player.cpp">
-      <Filter>Lib\Source</Filter>
-    </ClCompile>
     <ClCompile Include="Profiler.cpp">
       <Filter>Lib\Source</Filter>
     </ClCompile>
@@ -49,9 +43,6 @@
       <Filter>Lib\Source</Filter>
     </ClCompile>
     <ClCompile Include="Session.cpp">
-      <Filter>Lib\Source</Filter>
-    </ClCompile>
-    <ClCompile Include="testMaincpp.cpp">
       <Filter>Lib\Source</Filter>
     </ClCompile>
     <ClCompile Include="TextParser.cpp">
@@ -66,11 +57,23 @@
     <ClCompile Include="loginServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="LanServer.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="LanSession.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="LanClient.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="DBConnect.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerConnector.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EchoServer.h">
-      <Filter>Lib\Header</Filter>
-    </ClInclude>
     <ClInclude Include="header.h">
       <Filter>Lib\Header</Filter>
     </ClInclude>
@@ -93,9 +96,6 @@
       <Filter>Lib\Header</Filter>
     </ClInclude>
     <ClInclude Include="PacketPtr.h">
-      <Filter>Lib\Header</Filter>
-    </ClInclude>
-    <ClInclude Include="player.h">
       <Filter>Lib\Header</Filter>
     </ClInclude>
     <ClInclude Include="Profiler.h">
@@ -124,6 +124,27 @@
     </ClInclude>
     <ClInclude Include="NetServerLib.h">
       <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanServer.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanServerLib.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanSession.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanClient.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanClientLib.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="DBConnect.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerConnector.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -5,24 +5,26 @@
 #include "TextParser.h"
 
 TextParser::TextParser()
+	:curBlock(NULL)
 {
 }
 
 bool TextParser::init(const WCHAR *filename)
 {
-	char line[256];
-	file.open(filename);
+	WCHAR line[256];
+	errno_t err;
+	err =_wfopen_s(&file, filename, L"r,ccs=UTF-16LE");
 
-	if (!file.is_open())
+	if (err != 0)
 	{
 		return false;
 	}
-
-	while (!file.eof())
+	
+	while (!feof(file))
 	{
-		file.getline(line, 256);
+		fgetws(line, 256, file);
 
-		for (char *c = line; *c; c++)
+		for (WCHAR *c = line; *c; c++)
 		{
 			if (*c == CONFIG)
 			{
@@ -32,30 +34,65 @@ bool TextParser::init(const WCHAR *filename)
 			{
 				continue;
 			}
+			else if (*c == '\\'&&*(c + 1) == '\\')
+			{
+				break;
+			}
 			else
 				break;
 		}
 	}
 
+	//file.open(filename);
+	//
+	//if (!file.is_open())
+	//{
+	//	return false;
+	//}
+	//
+	//while (!file.eof())
+	//{
+	//	file.getline(line, 256);
+	//
+	//	for (WCHAR *c = line; *c; c++)
+	//	{
+	//		if (*c == CONFIG)
+	//		{
+	//			blockRead(c + 1);
+	//		}
+	//		else if (*c == '\t' || *c == ' ')
+	//		{
+	//			continue;
+	//		}
+	//		else if (*c == '\\'&&*(c + 1) == '\\')
+	//		{
+	//			break;
+	//		}
+	//		else
+	//			break;
+	//	}
+	//}
 
+	fclose(file);
 	return true;
 }
 
-void TextParser::blockRead(char *blockName)
+void TextParser::blockRead(WCHAR *blockName)
 {
 	Block *block = new Block();
 	//int len = strlen(blockName);
-	char line[256];
-	char *c;
-	char *key=NULL;
-	char *value=NULL;
-	std::string str;
+	WCHAR line[256];
+	WCHAR *c;
+	WCHAR *key=NULL;
+	WCHAR *value=NULL;
+	std::wstring str;
+	
 	
 
 	c = blockName;
 	for (; *c; c++)
 	{
-		if (*c == ' ' || *c == '\t')
+		if (*c == ' ' || *c == '\t'||*c=='\n')
 		{
 			*c = '\0';
 			break;
@@ -63,7 +100,8 @@ void TextParser::blockRead(char *blockName)
 	}
 	block->blockName += blockName;
 
-	file.getline(line, 256);
+	fgetws(line, 256, file);
+	//file.getline(line, 256);
 	c = line;
 
 	if (*c != BLOCK_START)
@@ -73,7 +111,8 @@ void TextParser::blockRead(char *blockName)
 
 	while (1)
 	{
-		file.getline(line, 256);
+		fgetws(line, 256, file);
+		//file.getline(line, 256);
 		c = line;
 
 		if (*c == BLOCK_END)
@@ -101,13 +140,21 @@ void TextParser::blockRead(char *blockName)
 			{
 				*c = '\0';
 			}
+			else if (*c == '/')
+			{
+				if (*(c + 1) == '/')
+				{
+					value = NULL;
+					break;
+				}
+			}
 		}
 
 		if (value != NULL)
 		{
 			for (; *value; value++)
 			{
-				if (*value == ' ' || *value == '\t'||*value=='\"')
+				if (*value == ' ' || *value == '\t'||*value=='/')
 				{
 					*value = '\0';
 					continue;
@@ -119,10 +166,18 @@ void TextParser::blockRead(char *blockName)
 
 			for (; *c; c++)
 			{
-				if (*c == ' ' || *c == '\t' || *c == '\"')
+				if (*c == ' ' || *c == '\t' ||*c=='\n')
 				{
 					*c = '\0';
 					break;
+				}
+				else if (*c == '/')
+				{
+					if (*(c + 1) == '/')
+					{
+						*c = '\0';
+						break;
+					}
 				}
 			}
 
@@ -132,4 +187,33 @@ void TextParser::blockRead(char *blockName)
 	}
 
 	blockMap.insert(std::make_pair(block->blockName, block));
+}
+
+bool TextParser::SetCurBlock(const WCHAR *blockName)
+{
+
+	auto iter =blockMap.find(blockName);
+	
+	
+	if (iter == blockMap.end())
+	{
+		return false;
+	}
+
+	curBlock = iter->second;
+}
+
+bool TextParser::findItem(const WCHAR *itemName, std::wstring &value)
+{
+	if (curBlock == NULL)
+		return false;
+
+	auto iter =curBlock->valueMap.find(itemName);
+
+	if (iter == curBlock->valueMap.end())
+		return false;
+
+	value += iter->second;
+
+	return true;
 }

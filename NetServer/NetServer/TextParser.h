@@ -19,7 +19,9 @@ public:
 	bool SetCurBlock(const WCHAR *blockName);
 	bool findItem(const WCHAR *itemName, std::wstring &value);
 private:
-	std::wifstream file;
+	FILE *file;
+
+	//std::wifstream file;
 	std::map<std::wstring, Block *> blockMap;
 	Block *curBlock;
 };

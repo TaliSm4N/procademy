@@ -7,13 +7,15 @@ class CLanServer
 {
 public:
 	CLanServer();
+	bool Config(const WCHAR *configFile, const WCHAR *block);
+	bool Start();
 	bool Start(int port, int workerCnt, bool nagle, int maxUser,bool monitoring=true);
 	void Stop();
 	
 	bool Disconnect(DWORD sessionID);
 
-	bool RecvPost(Session *session);
-	bool SendPost(Session *session);
+	bool RecvPost(LanSession *session);
+	bool SendPost(LanSession *session);
 
 	bool SendPacket(DWORD sessionID, Packet *p);
 
@@ -44,12 +46,15 @@ private:
 	static unsigned int WINAPI AcceptThread(LPVOID lpParam);
 	static unsigned int WINAPI WorkerThread(LPVOID lpParam);
 	static unsigned int WINAPI MonitorThread(LPVOID lpParam);
-	PROCRESULT CompleteRecvPacket(Session *session);
+	PROCRESULT CompleteRecvPacket(LanSession *session);
 private:
 	SOCKET _listenSock;
 	SOCKADDR_IN _sockAddr;
+	WCHAR _ip[16];
 	int _port;
 	int _workerCnt;
+	int _activeCnt;
+	LOG_LEVEL _logLevel;
 	bool _nagle;
 	int _maxUser;
 	HANDLE _hcp;
@@ -66,7 +71,7 @@ private:
 	SRWLOCK sessionListLock;
 	DWORD _sessionCount;
 
-	Session *_sessionList;
+	LanSession *_sessionList;
 	//std::stack<DWORD> _unUsedSessionStack;
 	//SRWLOCK _usedSessionLock;
 	LockFreeStack<int> *_sessionIndexStack;
@@ -90,9 +95,9 @@ public:
 
 	//새로운 디스커넥트 관련 테스트
 public:
-	Session *GetSession(DWORD sessionID);
-	void PutSession(Session *session);
-	void ReleaseSession(Session *session);
+	LanSession *GetSession(DWORD sessionID);
+	void PutSession(LanSession *session);
+	void ReleaseSession(LanSession *session);
 
 	bool OldDisconnect(DWORD sessionID);
 
