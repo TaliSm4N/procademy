@@ -98,6 +98,9 @@ bool CLanClient::Config(const WCHAR *configFile, const WCHAR *block)
 	}
 
 	_nagle = true;
+	_monitoring = true;
+
+	return true;
 }
 bool CLanClient::Start()
 {
@@ -200,65 +203,70 @@ bool CLanClient::Start(int workerCnt,bool nagle,bool monitoring)
 
 bool CLanClient::Connect()
 {
-
-	sendFlag = 1;
-
-	if (sendQ == NULL)
+	while (1)
 	{
-		sendQ = new LockFreeQueue<Packet *>(1000);
+		sendFlag = 1;
+
+		if (sendQ == NULL)
+		{
+			sendQ = new LockFreeQueue<Packet *>(1000);
+		}
+
+		_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (_sock == INVALID_SOCKET)
+		{
+			continue;
+			//return false;
+		}
+
+
+
+
+		_sockAddr.sin_port = htons(_port);
+
+
+
+		ZeroMemory(&_sockAddr, sizeof(_sockAddr));
+		_sockAddr.sin_family = AF_INET;
+		InetPton(AF_INET, _ip, &_sockAddr.sin_addr);
+		_sockAddr.sin_port = htons(_port);
+
+		int optval = 0;
+		int retval = setsockopt(_sock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
+		if (retval == SOCKET_ERROR)
+		{
+			InterlockedIncrement((LONG *)&_acceptFail);
+			closesocket(_sock);
+			//return false;
+			continue;
+		}
+
+
+		if (_nagle)
+		{
+			int optVal = true;
+			setsockopt(_sock, IPPROTO_TCP, TCP_NODELAY, (char *)&optVal, sizeof(optVal));
+		}
+
+		retval = connect(_sock, (SOCKADDR *)&_sockAddr, sizeof(SOCKADDR_IN));
+
+		if (retval == SOCKET_ERROR)
+		{
+			closesocket(_sock);
+			//return false;
+			continue;
+		}
+
+		CreateIoCompletionPort((HANDLE)_sock, _hcp, NULL, 0);
+		InterlockedIncrement(&IOCount);
+		OnServerJoin();
+
+		RecvPost();
+
+		InterlockedDecrement(&IOCount);
+
+		return true;
 	}
-
-	_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (_sock == INVALID_SOCKET)
-	{
-		return false;
-	}
-
-
-
-	
-	_sockAddr.sin_port = htons(_port);
-
-	
-
-	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
-	_sockAddr.sin_family = AF_INET;
-	InetPton(AF_INET, _ip, &_sockAddr.sin_addr);
-	_sockAddr.sin_port = htons(_port);
-
-	int optval = 0;
-	int retval = setsockopt(_sock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
-	if (retval == SOCKET_ERROR)
-	{
-		InterlockedIncrement((LONG *)&_acceptFail);
-		closesocket(_sock);
-		return false;
-	}
-
-
-	if (_nagle)
-	{
-		int optVal = true;
-		setsockopt(_sock, IPPROTO_TCP, TCP_NODELAY, (char *)&optVal, sizeof(optVal));
-	}
-
-	retval = connect(_sock, (SOCKADDR *)&_sockAddr, sizeof(SOCKADDR_IN));
-
-	if (retval == SOCKET_ERROR)
-	{
-		closesocket(_sock);
-		return false;
-	}
-
-	CreateIoCompletionPort((HANDLE)_sock, _hcp, NULL, 0);
-	InterlockedIncrement(&IOCount);
-	OnServerJoin();
-
-	RecvPost();
-
-	InterlockedDecrement(&IOCount);
-
-	return true;
 }
 
 void CLanClient::Stop()

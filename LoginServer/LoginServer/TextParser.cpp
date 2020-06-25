@@ -201,6 +201,8 @@ bool TextParser::SetCurBlock(const WCHAR *blockName)
 	}
 
 	curBlock = iter->second;
+
+	return true;
 }
 
 bool TextParser::findItem(const WCHAR *itemName, std::wstring &value)

@@ -74,9 +74,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="header.h">
-      <Filter>Lib\Header</Filter>
-    </ClInclude>
     <ClInclude Include="LockFreeQueue.h">
       <Filter>Lib\Header</Filter>
     </ClInclude>

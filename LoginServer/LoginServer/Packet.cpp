@@ -12,17 +12,17 @@ int Packet::_code = 0;
 
 
 Packet::Packet()
-	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE),encodeFlag(false), encodeCount(0), refCnt(0)
+	:mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(DEFAULT_PACKET_SIZE),encodeFlag(false), encodeCount(0), refCnt(0), disconnectFlag(false)
 {
 }
 
 Packet::Packet(int iBufferSize)
-	: mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(iBufferSize), encodeFlag(false), encodeCount(0), refCnt(0)
+	: mode(ERROR_MODE), err(E_NOERROR), front(0), rear(0), size(iBufferSize), encodeFlag(false), encodeCount(0), refCnt(0), disconnectFlag(false)
 {
 }
 
 Packet::Packet(int iBufferSize, int Mode)
-	: mode(Mode), err(E_NOERROR), front(0), rear(0), size(iBufferSize), encodeFlag(false), encodeCount(0),refCnt(0)
+	: mode(Mode), err(E_NOERROR), front(0), rear(0), size(iBufferSize), encodeFlag(false), encodeCount(0),refCnt(0), disconnectFlag(false)
 {
 }
 

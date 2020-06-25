@@ -99,11 +99,6 @@ bool LockFreeStack<T>::Push(T data)
 
 	newNode->item = data;
 
-	if (data == NULL)
-	{
-		CrashDump::Crash();
-		volatile int test = 1;
-	}
 
 	//추적용
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);
@@ -186,11 +181,6 @@ bool LockFreeStack<T>::Pop(T *data)
 		
 	} 
 
-	if (popData == 0)
-	{
-		CrashDump::Crash();
-		volatile int test = 1;
-	}
 
 	//추적용
 	//ULONG trackTemp = InterlockedIncrement((LONG *)&trackCur);

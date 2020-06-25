@@ -190,6 +190,9 @@ public:
 
 	int GetHeaderSize() { return headerSize; }
 
+	void SetDisconnect() { disconnectFlag = true; }
+	bool GetDisconnectFlag() { return disconnectFlag; }
+
 private:
 	BYTE mode;
 	int err;
@@ -198,6 +201,7 @@ private:
 	int rear;
 	int refCnt;
 	bool encodeFlag;
+	bool disconnectFlag;
 
 	int encodeCount;
 	PacketType _type;

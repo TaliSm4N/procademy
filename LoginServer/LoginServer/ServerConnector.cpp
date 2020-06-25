@@ -28,7 +28,6 @@ bool ServerConnector::OnConnectionRequest(WCHAR *ClientIP, int Port)
 {
 	//내부 server white ip를 등록해서 그것만 통과되도록 설정?
 
-	printf("con\n");
 	return true;
 }
 void ServerConnector::OnRecv(DWORD sessionID, Packet *p)
@@ -47,12 +46,14 @@ void ServerConnector::OnRecv(DWORD sessionID, Packet *p)
 		break;
 	}
 }
+
 void ServerConnector::OnSend(DWORD sessionID, int sendsize)
 {}
+
 void ServerConnector::OnClientJoin(DWORD sessionID)
 {
 	ConnectedServer *server = new ConnectedServer;
-	//server->sessionID = sessionID;
+	server->sessionID = sessionID;
 
 	AcquireSRWLockExclusive(&_serverMapLock);
 	_serverMap.insert(std::make_pair(sessionID, server));
@@ -61,6 +62,14 @@ void ServerConnector::OnClientJoin(DWORD sessionID)
 void ServerConnector::OnClientLeave(DWORD sessionID)
 {
 	AcquireSRWLockExclusive(&_serverMapLock);
+
+	auto iter = _serverMap.find(sessionID);
+
+	if (iter != _serverMap.end())
+	{
+		_loginServer->ServerDownMsg(iter->second->type);
+	}
+
 	_serverMap.erase(sessionID);
 	ReleaseSRWLockExclusive(&_serverMapLock);
 }

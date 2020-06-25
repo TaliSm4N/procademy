@@ -1,12 +1,10 @@
 #pragma once
 
-
+enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 
 
 class CNetServer
 {
-private:
-	enum PROCRESULT { SUCCESS = 0, NONE, FAIL };
 public:
 	CNetServer();
 	bool ConfigStart(const WCHAR *configFile);
@@ -17,7 +15,7 @@ public:
 	
 	bool Disconnect(DWORD sessionID);
 
-	bool RecvPost(Session *session,bool first=false);
+	bool RecvPost(Session *session);
 	bool SendPost(Session *session);
 
 	bool SendPacket(DWORD sessionID, Packet *p);
@@ -88,16 +86,6 @@ public:
 	DWORD GetWorkerThreadCount() const { return _workerCnt; }
 	DWORD GetMaxUser() const { return _maxUser; }
 	//monitoring
-public:
-	LONG64 GetAcceptTotal() const { return _acceptTotal; }
-	LONG64 GettAcceptTPS() const { return _acceptTPS; }
-	LONG64 GetRecvPacketTPS() const { return _recvPacketTPS; }
-	LONG64 GetSendPacketTPS() const { return _sendPacketTPS; }
-	LONG64 GetAcceptFail() const { return _acceptFail; }
-	LONG64 GetConnectionRequestFail() const { return _connectionRequestFail; }
-	LONG64 GetPacketCount() const { return _packetCount; }
-
-	
 
 	//새로운 디스커넥트 관련 테스트
 public:
@@ -106,7 +94,8 @@ public:
 	void ReleaseSession(Session *session,DWORD sessionID = NULL);
 
 	
-private://monitoring
+//monitoring
+public:
 	LONG64 _acceptTotal;
 	LONG64 _acceptTPS;
 	LONG64 _recvPacketTPS;
@@ -118,14 +107,6 @@ private://monitoring
 	LONG64 _acceptFail;
 	LONG64 _connectionRequestFail;
 	LONG64 _packetCount;
-	
-public:
-	LONG64 _disconnectCount;
-	LONG64 _releaseCount;
-	LONG64 _recvOverlap;
-	LONG64 _sendOverlap;
-	LONG64 _sessionGetCount;
-	LONG64 _releaseClose;
 
 //public:
 //	bool AutoSendPacket(DWORD sessionID, PacketPtr *p);

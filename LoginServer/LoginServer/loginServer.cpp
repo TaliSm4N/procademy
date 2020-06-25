@@ -24,12 +24,51 @@ LoginServer::LoginServer()
 bool LoginServer::Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring)
 {
 	accountDB.connect("127.0.0.1", "root", "1234", "accountdb");
+	accountDB.Query("UPDATE `status` SET `status` = 0");
 
 	_connecter.Start(5000, 5, true, 10);
 
-	accountDB.Query("UPDATE `status` SET `status` = 0");
 
 	return CNetServer::Start(port,workerCnt,nagle,maxUser,monitoring);
+}
+
+bool LoginServer::Start()
+{
+	accountDB.connect("127.0.0.1", "root", "1234", "accountdb");
+	accountDB.Query("UPDATE `status` SET `status` = 0");
+
+	
+	_connecter.Start();
+
+
+	return CNetServer::Start();
+}
+
+bool LoginServer::Config(const WCHAR *configFile, const WCHAR *block)
+{
+	TextParser parser;
+	std::wstring str;
+
+	if (!parser.init(configFile))
+		return false;
+
+	if (!parser.SetCurBlock(block))
+		return false;
+
+	if (!parser.findItem(L"CHAT_IP", str))
+		return false;
+	wcscpy_s(ChatIP, str.c_str());
+	str.clear();
+
+	if (!parser.findItem(L"CHAT_PORT", str))
+		return false;
+	ChatPort = std::stoi(str);
+	str.clear();
+
+	_connecter.Config(configFile, L"CONNECTOR");
+
+
+	return CNetServer::Config(configFile, L"SERVER");
 }
 
 bool LoginServer::OnConnectionRequest(WCHAR *ClientIP, int Port)
@@ -57,16 +96,16 @@ void LoginServer::OnClientJoin(DWORD sessionID)
 }
 void LoginServer::OnClientLeave(DWORD sessionID)
 {
-	AcquireSRWLockShared(&waiterLock);
+	AcquireSRWLockExclusive(&waiterLock);
 	auto iter = _WaiterMap.find(sessionID);
 
 	if (iter == _WaiterMap.end())
 	{
-		ReleaseSRWLockShared(&waiterLock);
+		ReleaseSRWLockExclusive(&waiterLock);
 		return;
 	}
 	_WaiterMap.erase(iter);
-	ReleaseSRWLockShared(&waiterLock);
+	ReleaseSRWLockExclusive(&waiterLock);
 }
 void LoginServer::OnError(int errorcode, WCHAR *)
 {}
@@ -112,6 +151,47 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 		return false;
 	}
 
+	if (row[1] == NULL)
+	{
+		Packet *pk = MakeLoginResponse(accountNo, dfLOGIN_STATUS_ACCOUNT_MISS, NULL, NULL);
+		SendPacket(sessionID, pk);
+		Packet::Free(pk);
+
+		accountDB.FreeResult();
+
+		ReleaseSRWLockExclusive(&dbLock);
+		return false;
+	}
+
+
+	//status 체크
+	if (row[3] == NULL)
+	{
+		Packet *pk = MakeLoginResponse(accountNo, dfLOGIN_STATUS_STATUS_MISS, NULL, NULL);
+		SendPacket(sessionID, pk);
+		Packet::Free(pk);
+
+		accountDB.FreeResult();
+
+		ReleaseSRWLockExclusive(&dbLock);
+		return false;
+	}
+	else
+	{
+		if (atoi(row[3]) != 0)
+		{
+			Packet *pk = MakeLoginResponse(accountNo, dfLOGIN_STATUS_GAME, NULL, NULL);
+			
+			SendPacket(sessionID, pk);
+			Packet::Free(pk);
+
+			accountDB.FreeResult();
+
+			ReleaseSRWLockExclusive(&dbLock);
+			return false;
+		}
+	}
+
 
 	//dummy일 때 조건 생략
 	if (accountNo > 100000)
@@ -120,6 +200,7 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 		{
 			//실패
 			Packet *pk = MakeLoginResponse(accountNo, dfLOGIN_STATUS_FAIL, NULL, NULL);
+
 			SendPacket(sessionID, pk);
 			Packet::Free(pk);
 
@@ -160,7 +241,7 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 	if (!_connecter.ClientLoginReq_ss(accountNo, sessionKey, sessionID, dfSERVER_TYPE_CHAT))
 	{
 		//실패
-		Packet *pk = MakeLoginResponse(accountNo, dfLOGIN_STATUS_FAIL, NULL, NULL);
+		Packet *pk = MakeLoginResponse(accountNo, dfLOGIN_STATUS_NOSERVER, NULL, NULL);
 		SendPacket(sessionID, pk);
 		Packet::Free(pk);
 
@@ -202,13 +283,16 @@ Packet *LoginServer::MakeLoginResponse(INT64 accountNo, BYTE status, WCHAR *id, 
 	}
 
 	//gameServer Ip 생략
-	p->MoveWritePos(16 * sizeof(WCHAR) + sizeof(USHORT));
-	
-	WCHAR ip[16] = L"127.0.0.1";
-	p->PutData((char *)ip, 16*sizeof(WCHAR));
-	*p << (USHORT)6000;
-	//port
+	//p->MoveWritePos(16 * sizeof(WCHAR) + sizeof(USHORT));
 
+	p->PutData((char *)GameIP, 16 * sizeof(WCHAR));
+	*p << GamePort;
+	
+
+	p->PutData((char *)ChatIP, 16*sizeof(WCHAR));
+	*p << ChatPort;
+	//port
+	p->SetDisconnect();
 	return p;
 }
 
@@ -219,29 +303,44 @@ bool LoginServer::ClientLoginRes_ss(INT64 accountNo, INT64 parameter, int type)
 	//game 서버에 대한 연결이 추가되면 이에대한 처리는 추가되어야함
 
 	//parameter는 현재 sessionID로 사용중
-	AcquireSRWLockShared(&waiterLock);
+	AcquireSRWLockExclusive(&waiterLock);
 	auto iter = _WaiterMap.find(parameter);
 
 	if (iter == _WaiterMap.end())
 	{
-		ReleaseSRWLockShared(&waiterLock);
+		ReleaseSRWLockExclusive(&waiterLock);
 		return false;
 	}
 
 	Waiter *waiter = iter->second;
 	_WaiterMap.erase(iter);
-	ReleaseSRWLockShared(&waiterLock);
-
-	Packet *p = MakeLoginResponse(waiter->AccountNo, dfLOGIN_STATUS_OK, waiter->id, waiter->nick);
+	ReleaseSRWLockExclusive(&waiterLock);
 
 
 	//체크 부분
-	//
+	//파라미터로 sessionID를 사용
+	if (parameter != waiter->SessionID)
+	{
+		//실패
+		Packet *p = MakeLoginResponse(accountNo, dfLOGIN_STATUS_FAIL, NULL, NULL);
+		SendPacket(waiter->SessionID, p);
+		Packet::Free(p);
+
+		return false;
+	}
+
+	Packet *p = MakeLoginResponse(waiter->AccountNo, dfLOGIN_STATUS_OK, waiter->id, waiter->nick);
+	
+
+	
+
+	
 
 	SendPacket(waiter->SessionID, p);
+	Packet::Free(p);
 
 	waiter->endTime = timeGetTime();
-
+	
 	InterlockedAdd64(&loginAll, waiter->endTime - waiter->startTime);
 
 	if (waiter->endTime - waiter->startTime > loginMax)
@@ -249,15 +348,35 @@ bool LoginServer::ClientLoginRes_ss(INT64 accountNo, INT64 parameter, int type)
 		InterlockedExchange(&loginMax, waiter->endTime - waiter->startTime);
 	}
 
+	
 	if (waiter->endTime - waiter->startTime < loginMin)
 	{
 		InterlockedExchange(&loginMin, waiter->endTime - waiter->startTime);
 	}
 
 	_waiterPool.Free(waiter);
-	Packet::Free(p);
 	InterlockedIncrement(&successCnt);
+	InterlockedIncrement(&successCntTPS);
 	
 
 	return true;
+}
+
+void LoginServer::ServerDownMsg(BYTE type)
+{
+	AcquireSRWLockShared(&waiterLock);
+
+	for (auto iter = _WaiterMap.begin(); iter != _WaiterMap.end(); iter++)
+	{
+		Waiter *waiter = iter->second;
+		Packet *p = MakeLoginResponse(waiter->AccountNo, dfLOGIN_STATUS_NOSERVER, waiter->id, waiter->nick);
+
+
+		SendPacket(waiter->SessionID, p);
+		Packet::Free(p);
+	}
+
+	_WaiterMap.clear();
+
+	ReleaseSRWLockShared(&waiterLock);
 }

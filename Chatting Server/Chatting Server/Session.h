@@ -34,15 +34,12 @@ public:
 
 	CHAR &GetSendFlag() { return sendFlag; }
 	SOCKET &GetSocket() { return sock; }
-	BOOL &GetSocketActive() { return sockActive; }
 	DWORD &GetID() { return sessionID; }
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }
 	MyOverlapped &GetRecvOverlap() { return recvOverlap; }
 
 	bool Disconnect();
 	BOOL Release();
-	void Lock();
-	void Unlock();
 
 	void SetSendPacketCnt(int cnt) { InterlockedExchange((LONG *)&sendPacketCnt, cnt); }
 	int GetSendPacketCnt() { return sendPacketCnt; }
@@ -63,8 +60,6 @@ private:
 	LockFreeQueue<Packet *> *sendQ;
 	RingBuffer recvQ;
 	CHAR sendFlag;
-	BOOL sockActive;
-	SRWLOCK sessionLock;
 	int sendPacketCnt;
 
 	//DWORD IOCount;
@@ -73,20 +68,6 @@ private:
 	
 public:
 	SOCKET _closeSocket;
-	
-	DWORD beforeID;
-	DWORD bbeforeID;
-
-public:
-	long acc;
-	long io;
-	long se;
-
-	long io_out;
-	long se_out;
-	long trans_z;
-
-	long re;
 
 
 	//자동화 테스트용

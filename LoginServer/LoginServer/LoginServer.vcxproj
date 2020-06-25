@@ -194,7 +194,6 @@
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="CrashDump.h" />
     <ClInclude Include="DBConnect.h" />
-    <ClInclude Include="header.h" />
     <ClInclude Include="LanClient.h" />
     <ClInclude Include="LanClientLib.h" />
     <ClInclude Include="LanServer.h" />

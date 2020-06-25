@@ -104,7 +104,7 @@ public:
 	bool OldDisconnect(DWORD sessionID);
 
 	
-private://monitoring
+public://monitoring
 	LONG64 _acceptTotal;
 	LONG64 _acceptTPS;
 	LONG64 _recvPacketTPS;

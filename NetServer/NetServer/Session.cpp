@@ -4,7 +4,7 @@
 #include "NetServerLib.h"
 
 Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
-	:sock(s),sockAddr(sAddr),sendFlag(1), sockActive(FALSE),sessionID(id)
+	:sock(s),sockAddr(sAddr),sendFlag(1),sessionID(id)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
@@ -20,7 +20,7 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 }
 
 Session::Session()
-	:sendFlag(1), sockActive(FALSE),sock(INVALID_SOCKET)
+	:sendFlag(1),sock(INVALID_SOCKET)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
@@ -61,14 +61,6 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	//sendQ.Reset();
 	recvQ.Reset();
 
-	acc = 0;
-	io = 0;
-	se = 0;
-	io_out = 0;
-	se_out = 0;
-	trans_z = 0;
-	re = 0;
-
 	//InitializeSRWLock(&sessionLock);
 }
 
@@ -79,13 +71,14 @@ Session::~Session()
 
 bool Session::Disconnect()
 {
-	SOCKET closeSock = sock;
-	if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
-	{
-		_closeSocket = closeSock;
-		closesocket(closeSock);
-	}
-
+	shutdown(sock, SD_BOTH);
+	//SOCKET closeSock = sock;
+	//if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
+	//{
+	//	_closeSocket = closeSock;
+	//	closesocket(closeSock);
+	//}
+	//
 	return true;
 }
 
@@ -97,13 +90,4 @@ BOOL Session::Release()
 	delete sendQ;
 
 	return TRUE;
-}
-
-void Session::Lock()
-{
-	AcquireSRWLockExclusive(&sessionLock);
-}
-void Session::Unlock()
-{
-	ReleaseSRWLockExclusive(&sessionLock);
 }

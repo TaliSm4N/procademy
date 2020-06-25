@@ -10,7 +10,7 @@ ChatServer::ChatServer()
 {
 	_playerMap = new std::unordered_map<DWORD, st_PLAYER *>;
 	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(5000);
-	InitializeSRWLock(&playerLock);
+	//InitializeSRWLock(&playerLock);
 	InitializeSRWLock(&_keyLock);
 	_connector.Init(this);
 }
@@ -122,7 +122,7 @@ void ChatServer::OnError(int errorcode, WCHAR *)
 void ChatServer::Join(DWORD sessionID)
 {
 	st_PLAYER *player = _playerPool->Alloc();
-	InitializeSRWLock(&player->lock);
+	//InitializeSRWLock(&player->lock);
 
 	player->SessionID = sessionID;
 
@@ -137,9 +137,9 @@ void ChatServer::Join(DWORD sessionID)
 	//InterlockedExchange8((char *)&player->connect, true);
 	player->login = false;
 	//playerMap에 등록
-	AcquireSRWLockExclusive(&playerLock);
+	//AcquireSRWLockExclusive(&playerLock);
 	_playerMap->insert(std::make_pair(sessionID, player));
-	ReleaseSRWLockExclusive(&playerLock);
+	//ReleaseSRWLockExclusive(&playerLock);
 	_playerCount++;
 }
 
@@ -147,7 +147,7 @@ void ChatServer::Leave(DWORD sessionID)
 {
 	st_PLAYER *player;
 
-	AcquireSRWLockExclusive(&playerLock);
+	//AcquireSRWLockExclusive(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 	
 
@@ -157,8 +157,8 @@ void ChatServer::Leave(DWORD sessionID)
 	}
 
 	player = iter->second;
-	AcquireSRWLockExclusive(&player->lock);
-	ReleaseSRWLockExclusive(&playerLock);
+	//AcquireSRWLockExclusive(&player->lock);
+	//ReleaseSRWLockExclusive(&playerLock);
 	player->login = false;
 	//InterlockedExchange8((char *)&player->connect, false);
 
@@ -173,7 +173,7 @@ void ChatServer::Leave(DWORD sessionID)
 	_playerMap->erase(iter);
 	
 
-	ReleaseSRWLockExclusive(&player->lock);
+	//ReleaseSRWLockExclusive(&player->lock);
 	_playerPool->Free(player);
 	
 	_playerCount--;
@@ -288,7 +288,7 @@ unsigned int ChatServer::MonitorThreadRun()
 void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 {
 	//동기화에 대해 확신이 안섬 테스트후 필요시 동기화
-	AcquireSRWLockShared(&playerLock);
+	//AcquireSRWLockShared(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 
 	if (iter == _playerMap->end())
@@ -298,9 +298,9 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 
 	st_PLAYER *player = iter->second;
 
-	AcquireSRWLockShared(&player->lock);
+	//AcquireSRWLockShared(&player->lock);
 
-	ReleaseSRWLockShared(&playerLock);
+	//ReleaseSRWLockShared(&playerLock);
 
 	if (player->login)
 	{
@@ -335,7 +335,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 		player->login = false;
 		Disconnect(sessionID);
 
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -345,7 +345,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 		player->login = false;
 		Disconnect(sessionID);
 
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -362,7 +362,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 		player->login = false;
 		Disconnect(sessionID);
 
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		ReleaseSRWLockShared(&_keyLock);
 		return;
 	}
@@ -377,7 +377,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 			player->login = false;
 			Disconnect(sessionID);
 
-			ReleaseSRWLockShared(&player->lock);
+			//ReleaseSRWLockShared(&player->lock);
 			ReleaseSRWLockShared(&_keyLock);
 			return;
 		}
@@ -397,7 +397,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 	
 	//SendPacket(sessionID, sendPacket);
 	SendUnicast(player, sendPacket);
-	ReleaseSRWLockShared(&player->lock);
+	//ReleaseSRWLockShared(&player->lock);
 
 	Packet::Free(sendPacket);
 }
@@ -405,7 +405,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 {
 	//동기화에 대해 확신이 안섬 테스트후 필요시 동기화
-	AcquireSRWLockShared(&playerLock);
+	//AcquireSRWLockShared(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 
 	if (iter == _playerMap->end())
@@ -414,8 +414,8 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	}
 
 	st_PLAYER *player = iter->second;
-	AcquireSRWLockShared(&player->lock);
-	ReleaseSRWLockShared(&playerLock);
+	//AcquireSRWLockShared(&player->lock);
+	//ReleaseSRWLockShared(&playerLock);
 	INT64 account;
 	*p >> account;
 
@@ -424,7 +424,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -439,7 +439,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -457,7 +457,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	{
 		player->login = false;
 		Disconnect(sessionID);
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -466,7 +466,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -485,7 +485,7 @@ void ChatServer::ReqSectorMove(DWORD sessionID, Packet *p)
 	
 
 	SendUnicast(player, sendPacket);
-	ReleaseSRWLockShared(&player->lock);
+	//ReleaseSRWLockShared(&player->lock);
 	
 	Packet::Free(sendPacket);
 }
@@ -494,7 +494,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 {
 	//동기화에 대해 확신이 안섬 테스트후 필요시 동기화
 
-	AcquireSRWLockShared(&playerLock);
+	//AcquireSRWLockShared(&playerLock);
 	auto iter = _playerMap->find(sessionID);
 
 	if (iter == _playerMap->end())
@@ -503,8 +503,8 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 	}
 
 	st_PLAYER *player = iter->second;
-	AcquireSRWLockShared(&player->lock);
-	ReleaseSRWLockShared(&playerLock);
+	//AcquireSRWLockShared(&player->lock);
+	//ReleaseSRWLockShared(&playerLock);
 	INT64 account;
 	WORD msgLen;
 
@@ -515,7 +515,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -527,7 +527,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -536,7 +536,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 		//InterlockedExchange8((char *)&player->connect, false);
 		player->login = false;
 		Disconnect(sessionID);
-		ReleaseSRWLockShared(&player->lock);
+		//ReleaseSRWLockShared(&player->lock);
 		return;
 	}
 
@@ -553,7 +553,7 @@ void ChatServer::ReqMessage(DWORD sessionID, Packet *p)
 	//SendPacket(sessionID, sendPacket);
 	SendSectorAround(player->shSectorX, player->shSectorY, sendPacket);
 	//SendBroadcast(sendPacket);
-	ReleaseSRWLockShared(&player->lock);
+	//ReleaseSRWLockShared(&player->lock);
 
 	Packet::Free(sendPacket);
 }

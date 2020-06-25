@@ -21,10 +21,17 @@ class LoginServer :public CNetServer
 public:
 	LoginServer();
 	bool Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring = true);
+	bool Start();
+	bool Config(const WCHAR *configFile, const WCHAR *block);
 	bool LoginRequest(DWORD sessionID,Packet *p);
 
 
 	bool ClientLoginRes_ss(INT64 accountNo, INT64 parameter, int type);
+
+	void ServerDownMsg(BYTE type);
+
+public:
+	ServerConnector &GetConnector() { return _connecter; }
 public:
 	virtual bool OnConnectionRequest(WCHAR *ClientIP, int Port);
 	virtual void OnRecv(DWORD sessionID, Packet *p);
@@ -37,6 +44,7 @@ public:
 	int GetLoginWait() { return _WaiterMap.size(); }
 
 	long successCnt;
+	long successCntTPS;
 
 
 	INT64 loginAll;
@@ -52,4 +60,10 @@ private:
 	SRWLOCK waiterLock;
 	ServerConnector _connecter;
 	MemoryPoolTLS<Waiter> _waiterPool;
+
+	WCHAR GameIP[16];
+	USHORT GamePort;
+	WCHAR ChatIP[16];
+	USHORT ChatPort;
+
 };

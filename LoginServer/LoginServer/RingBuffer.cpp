@@ -2,7 +2,6 @@
 #include <Windows.h>
 #include <string>
 
-#include "header.h"
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
 #include "Packet.h"

@@ -15,12 +15,10 @@ bool CLanServer::Config(const WCHAR *configFile,const WCHAR *block)
 	if (!parser.init(configFile))
 		return false;
 	
-	if(!parser.SetCurBlock(block))
-		return false;
 
 	std::wstring str;
 
-	if(!parser.SetCurBlock(L"SERVER"))
+	if(!parser.SetCurBlock(block))
 		return false;
 
 	if (!parser.findItem(L"BIND_PORT", str))
@@ -63,20 +61,7 @@ bool CLanServer::Config(const WCHAR *configFile,const WCHAR *block)
 	
 
 
-	//packet
-	if (!parser.findItem(L"PACKET_CODE", str))
-	{
-		return false;
-	}
-	int code = std::stoi(str);
-	str.clear();
 
-	if (!parser.findItem(L"PACKET_KEY", str))
-	{
-		return false;
-	}
-	int key = std::stoi(str);
-	str.clear();
 
 	if (parser.findItem(L"LOG_LEVEL", str))
 	{
@@ -103,6 +88,7 @@ bool CLanServer::Config(const WCHAR *configFile,const WCHAR *block)
 
 bool CLanServer::Start()
 {
+	_monitoring = true;
 	timeBeginPeriod(1);
 
 	//monitoring √ ±‚»≠
@@ -358,8 +344,6 @@ unsigned int WINAPI CLanServer::AcceptThread(LPVOID lpParam)
 	WCHAR IP[16];
 	int sessionPos;
 
-
-	wprintf(L"Accept thread On\n");
 
 	while (1)
 	{

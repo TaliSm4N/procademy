@@ -48,7 +48,7 @@ struct st_PLAYER
 
 	ULONGLONG	LastRecvPacket;
 
-	SRWLOCK lock;
+	//SRWLOCK lock;
 };
 
 
@@ -99,6 +99,8 @@ public:
 
 	void AddNewKey(INT64 accountNo,INT64 parameter, char *sessionKey);
 
+	Connector &GetConnector() { return _connector; }
+
 public:
 	void SendUnicast(st_PLAYER *player,Packet *p);
 	void SendSector(int x, int y,Packet *p);
@@ -108,7 +110,7 @@ public:
 	bool KeyCompare(char *a,char *b);
 private:
 	std::unordered_map<DWORD, st_PLAYER *> *_playerMap;
-	SRWLOCK playerLock;
+	//SRWLOCK playerLock;
 	HANDLE _updateThread;
 	DWORD _updateThreadID;
 	HANDLE _monitor;

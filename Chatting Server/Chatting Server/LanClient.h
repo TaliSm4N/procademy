@@ -107,7 +107,7 @@ private:
 	int sendPacketCnt;
 	LONG IOCount;
 	
-private://monitoring
+public://monitoring
 	LONG64 _acceptTotal;
 	LONG64 _acceptTPS;
 	LONG64 _recvPacketTPS;

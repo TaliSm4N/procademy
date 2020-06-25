@@ -113,6 +113,7 @@ void ChatServer::OnError(int errorcode, WCHAR *)
 
 void ChatServer::Join(DWORD sessionID)
 {
+
 	st_PLAYER *player = _playerPool->Alloc();
 	//InitializeSRWLock(&player->lock);
 
@@ -258,6 +259,7 @@ void ChatServer::PacketProc(st_UPDATE_MESSAGE *msg)
 		break;
 	case en_PACKET_CS_CHAT_REQ_MESSAGE:
 		ReqMessage(msg->SessionID, msg->pPacket);
+
 		break;
 	default:
 		_attackDisconCount++;
@@ -292,7 +294,6 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 	}
 
 	st_PLAYER *player = iter->second;
-
 	//AcquireSRWLockShared(&player->lock);
 
 	//ReleaseSRWLockShared(&playerLock);
@@ -319,6 +320,18 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 
 
 	*p >> player->AccountNo;
+
+	
+
+	for (auto iter = _playerMap->begin(); iter != _playerMap->end(); iter++)
+	{
+		if (player != iter->second && iter->second->AccountNo == player->AccountNo)
+		{
+			iter->second->login = false;
+			Disconnect(iter->first);
+			return;
+		}
+	}
 
 	
 

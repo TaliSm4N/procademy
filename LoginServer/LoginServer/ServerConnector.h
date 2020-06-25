@@ -29,7 +29,7 @@ private:
 	bool ServerLogin(DWORD sessionID,Packet *p);
 	
 	bool ClientLoginRes(DWORD sessionID, Packet *p);
-
+	
 	
 	ConnectedServer *GetServer(int type);
 
