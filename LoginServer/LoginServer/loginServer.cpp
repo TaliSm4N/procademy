@@ -364,7 +364,7 @@ bool LoginServer::ClientLoginRes_ss(INT64 accountNo, INT64 parameter, int type)
 
 void LoginServer::ServerDownMsg(BYTE type)
 {
-	AcquireSRWLockShared(&waiterLock);
+	AcquireSRWLockExclusive(&waiterLock);
 
 	for (auto iter = _WaiterMap.begin(); iter != _WaiterMap.end(); iter++)
 	{
@@ -378,5 +378,5 @@ void LoginServer::ServerDownMsg(BYTE type)
 
 	_WaiterMap.clear();
 
-	ReleaseSRWLockShared(&waiterLock);
+	ReleaseSRWLockExclusive(&waiterLock);
 }
