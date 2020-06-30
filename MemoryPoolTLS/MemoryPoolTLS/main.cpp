@@ -140,7 +140,7 @@ int main()
 	}
 	
 	delete memory;
-	memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(AMOUNT_MAX*threadCnt / 200 / 1000,false);
+	memoryTLS = new MemoryPoolTLS<st_TEST_DATA>(10,false);
 
 	for (int i = 0; i < threadCnt; i++)
 	{

@@ -45,24 +45,20 @@ public:
 
 	bool Free(T *data);
 
-	int GetUseCount() { return _useCount; }
+	int GetUseCount() { return _maxCapacity-_freeCount; }
 
 private:
 	TOP *_topNode;
-	int _useCount;
 	int _maxCapacity;
 	bool _maxLimit;
 	int _freeCount;
 	unsigned long long _checkNum;
-
-public:
-	int test;
 };
 
 
 template <class T>
 MemoryPool<T>::MemoryPool(int blockNum,bool maxLimit)
-	:_maxCapacity(blockNum),_checkNum(0),test(0),_freeCount(blockNum)
+	:_maxCapacity(blockNum),_checkNum(0),_freeCount(blockNum)
 {
 	NODE *temp;
 	if (blockNum == 0)
@@ -80,7 +76,6 @@ MemoryPool<T>::MemoryPool(int blockNum,bool maxLimit)
 	{
 		temp = (NODE *)malloc(sizeof(NODE));
 		temp->_bottomBump = BOTTOM_BUMP;
-		//temp = new NODE();
 
 		if (_topNode->node == nullptr)
 		{
@@ -92,8 +87,6 @@ MemoryPool<T>::MemoryPool(int blockNum,bool maxLimit)
 			temp->NextBlock = _topNode->node;
 			_topNode->node = temp;
 		}
-		//if(_placeMent)
-		//	new (&(temp->item)) T();
 	}
 	_topNode->check = 0;
 }
@@ -122,16 +115,11 @@ T *MemoryPool<T>::Alloc(bool placement)
 	unsigned long long checkNum;
 
 
-
-	InterlockedIncrement((LONG *)&test);
-
-	//if (_maxCapacity < InterlockedIncrement((LONG *)&_useCount))
 	if(InterlockedDecrement((LONG *)&_freeCount)<0)
 	{
 		//maxLimit가 true인 경우 새로운 node를 생성하지 않음
 		if (_maxLimit)
 		{
-			//InterlockedDecrement((LONG *)&_useCount);
 			return NULL;
 		}
 		else // maxLimit가 true가 아닌 경우 새로운 node를 생성해서 전달
@@ -139,16 +127,11 @@ T *MemoryPool<T>::Alloc(bool placement)
 
 			InterlockedIncrement((LONG *) &_maxCapacity);
 			InterlockedIncrement((LONG *)&_freeCount);
-			//ret = new NODE();
 			ret = (NODE *)malloc(sizeof(NODE));
 			ret->_bottomBump = BOTTOM_BUMP;
 			
 			if (placement)
 				new (&(ret->item)) T();
-			else
-			{
-				volatile int test = 1;
-			}
 
 			return &(ret->item);
 		}
@@ -162,7 +145,6 @@ T *MemoryPool<T>::Alloc(bool placement)
 	{
 		ret = _topNode->node;
 		newTop = ret->NextBlock;
-
 	}
 
 	if (ret == NULL)
@@ -177,8 +159,6 @@ T *MemoryPool<T>::Alloc(bool placement)
 template<class T>
 bool MemoryPool<T>::Free(T *data)
 {
-	//InterlockedIncrement((LONG *)&test);
-
 	NODE *temp = (NODE *)((LONG64)data-sizeof(NODE *));
 	TOP t;
 	unsigned long long checkNum;
@@ -194,7 +174,6 @@ bool MemoryPool<T>::Free(T *data)
 	{
 		temp->NextBlock = t.node;
 	}
-	//InterlockedDecrement((LONG *)&_useCount);
 	InterlockedIncrement((LONG *)&_freeCount);
 
 	return true;

@@ -22,7 +22,7 @@ public:
 	LoginServer();
 	bool Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring = true);
 	bool Start();
-	bool Config(const WCHAR *configFile, const WCHAR *block);
+	bool Config(const WCHAR *configFile);
 	bool LoginRequest(DWORD sessionID,Packet *p);
 
 
@@ -50,20 +50,21 @@ public:
 	INT64 loginAll;
 	unsigned long loginMax;
 	unsigned long loginMin;
+	long downMsg;
 
 private:
 	Packet *MakeLoginResponse( INT64 accountNo, BYTE status, WCHAR *id, WCHAR *nick);
 private:
-	DBConnect accountDB;
-	SRWLOCK dbLock;
+	DBConnectTLS accountDB;
+	//DBConnect accountDB;
+	//SRWLOCK dbLock;
 	std::unordered_map<DWORD, Waiter *> _WaiterMap;
 	SRWLOCK waiterLock;
 	ServerConnector _connecter;
-	MemoryPoolTLS<Waiter> _waiterPool;
+	MemoryPoolTLS<Waiter> *_waiterPool;
 
 	WCHAR GameIP[16];
 	USHORT GamePort;
 	WCHAR ChatIP[16];
 	USHORT ChatPort;
-
 };

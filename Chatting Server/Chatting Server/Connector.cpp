@@ -12,19 +12,23 @@ Connector::Connector()
 void Connector::Init(ChatServer *chat)
 {
 	_chatServer = chat;
+	_conn = false;
 }
 
 
 void Connector::OnServerJoin()
 {
 	Packet *p = MakeServerConnect(dfSERVER_TYPE_CHAT);
+	_conn = true;
 
 	SendPacket(p);
 
 	Packet::Free(p);
 }
 void Connector::OnServerLeave()
-{}
+{
+	_conn = false;
+}
 
 bool Connector::OnConnectionRequest(WCHAR *ClientIP, int Port)
 {

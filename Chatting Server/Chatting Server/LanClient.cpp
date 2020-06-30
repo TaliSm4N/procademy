@@ -34,7 +34,13 @@ bool CLanClient::Config(const WCHAR *configFile, const WCHAR *block)
 	if (!parser.SetCurBlock(block))
 		return false;
 
-	if (!parser.findItem(L"BIND_PORT", str))
+	if (!parser.findItem(L"IP", str))
+		return false;
+
+	wcscpy_s(_ip, str.c_str());
+	str.clear();
+
+	if (!parser.findItem(L"PORT", str))
 		return false;
 	_port = std::stoi(str);
 	str.clear();
@@ -62,22 +68,7 @@ bool CLanClient::Config(const WCHAR *configFile, const WCHAR *block)
 	}
 
 
-	//packet
-	if (!parser.findItem(L"PACKET_CODE", str))
-	{
-		return false;
-	}
-	int code = std::stoi(str);
-	str.clear();
-
-	if (!parser.findItem(L"PACKET_KEY", str))
-	{
-		return false;
-	}
-	int key = std::stoi(str);
-	str.clear();
-
-	Packet::Init(key, code);
+	Packet::Init();
 
 	if (parser.findItem(L"LOG_LEVEL", str))
 	{
@@ -205,7 +196,7 @@ bool CLanClient::Connect()
 {
 	while (1)
 	{
-		sendFlag = 1;
+		InterlockedExchange8(&sendFlag, 1);
 
 		if (sendQ == NULL)
 		{
@@ -263,7 +254,11 @@ bool CLanClient::Connect()
 
 		RecvPost();
 
-		InterlockedDecrement(&IOCount);
+		if (InterlockedDecrement(&IOCount) == 0)
+		{
+			Connect();
+			//_this->ReleaseSession(session);
+		}
 
 		return true;
 	}
@@ -358,21 +353,12 @@ unsigned int WINAPI CLanClient::WorkerThread_update()
 		}
 		else if (pOverlapped == &sendOverlap)
 		{
-			if (sendFlag == 1)
-			{
-				volatile int test = 1;
-			}
 
 			for (int i = 0; i < sendPacketCnt; i++)
 			{
 				Packet *temp;
 				sendQ->Dequeue(&temp);
 				Packet::Free(temp);
-			}
-
-			if (sendFlag == 1)
-			{
-				volatile int test = 1;
 			}
 
 			InterlockedExchange8(&sendFlag, 1);
@@ -414,8 +400,8 @@ bool CLanClient::Disconnect()
 	//}
 	//
 	//PutSession(session);
-
 	closesocket(_sock);
+	OnServerLeave();
 
 	return true;
 }

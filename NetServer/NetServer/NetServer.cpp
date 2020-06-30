@@ -162,6 +162,16 @@ bool CNetServer::Start()
 		//return -1;
 	}
 
+	retval = setsockopt(_listenSock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR)
+	{
+		int err = GetLastError();
+		InterlockedIncrement((LONG *)&_acceptFail);
+		closesocket(_listenSock);
+		return -1;
+		//return -1;
+	}
+
 	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
 	_sockAddr.sin_family = AF_INET;
 	_sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -410,6 +420,16 @@ bool CNetServer::ConfigStart(const WCHAR *configFile)
 		return -1;
 	}
 
+	retval = setsockopt(_listenSock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
+	if (retval == SOCKET_ERROR)
+	{
+		int err = GetLastError();
+		InterlockedIncrement((LONG *)&_acceptFail);
+		closesocket(_listenSock);
+		return -1;
+		//return -1;
+	}
+
 	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
 	_sockAddr.sin_family = AF_INET;
 	_sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -532,7 +552,8 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 		uniqueID <<= 16;
 		if (!_this->_sessionIndexStack->Pop(&sessionPos))
 		{
-			CrashDump::Crash();
+			closesocket(sock);
+			continue;
 		}
 
 		
@@ -562,8 +583,9 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 		
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			_this->ReleaseSession(session, uniqueID);
+			_this->ReleaseSession(session);
 		}
+
 
 		idCount++;
 		uniqueID = -1;
@@ -671,11 +693,10 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 
 		}
 
-		id = session->GetID();
 
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			_this->ReleaseSession(session,id);
+			_this->ReleaseSession(session);
 		}
 		
 	}
@@ -853,11 +874,10 @@ bool CNetServer::RecvPost(Session *session)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			DWORD id = session->GetID();
 
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-				ReleaseSession(session,id);
+				ReleaseSession(session);
 			}
 
 			return false;
@@ -917,11 +937,10 @@ bool CNetServer::SendPost(Session *session)
 		if ((err = WSAGetLastError()) != ERROR_IO_PENDING)
 		{
 			InterlockedExchange8(&session->GetSendFlag(), 1);
-			DWORD id = session->GetID();
 
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
-				ReleaseSession(session,id);
+				ReleaseSession(session);
 			}
 
 			return false;
@@ -954,7 +973,7 @@ Session *CNetServer::GetSession(DWORD sessionID)
 	{
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			ReleaseSession(session,sessionID);
+			ReleaseSession(session);
 			
 		}
 
@@ -966,7 +985,7 @@ Session *CNetServer::GetSession(DWORD sessionID)
 
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			ReleaseSession(session, sessionID);
+			ReleaseSession(session);
 
 		}
 
@@ -981,12 +1000,14 @@ Session *CNetServer::GetSession(DWORD sessionID)
 
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
-			ReleaseSession(session,sessionID);
+			ReleaseSession(session);
 
 		}
 	
 		return NULL;
 	}
+
+	
 
 	
 
@@ -997,11 +1018,12 @@ void CNetServer::PutSession(Session *session)
 {
 	if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 	{
-		ReleaseSession(session,session->GetID());
+		ReleaseSession(session);
 	}
+
 }
 
-void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
+void CNetServer::ReleaseSession(Session *session)
 {
 	IOChecker checker;
 	DWORD id;
@@ -1019,10 +1041,6 @@ void CNetServer::ReleaseSession(Session *session,DWORD sessionID)
 
 	
 	closesocket(session->GetSocket());
-	//session->Disconnect();
-
-	//id = session->GetID();
-	//session->GetID() = 0;
 
 	OnClientLeave(session->GetID());
 	

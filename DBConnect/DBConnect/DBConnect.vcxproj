@@ -176,10 +176,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DBConnect.cpp" />
+    <ClCompile Include="DBConnectTLS.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DBConnect.h" />
+    <ClInclude Include="DBConnectTLS.h" />
     <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="MemoryPoolTLS.h" />

@@ -38,6 +38,7 @@ public:
 	void Close();
 	int GetInsertID();
 	DWORD GetLastQueryTime() { return _queryTime; };
+	bool IsConnect();
 private:
 private:
 	MYSQL conn;

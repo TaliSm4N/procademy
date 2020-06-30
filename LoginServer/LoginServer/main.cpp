@@ -2,12 +2,14 @@
 #include <unordered_map>
 
 #include <strsafe.h>
+#include <list>
 #pragma comment(lib,"mysqlclient.lib")
 #include "include/mysql.h"
 #include "include/errmsg.h"
 
 #include "CommonProtocol.h"
 #include "DBConnect.h"
+#include "DBConnectTLS.h"
 #include "LanServerLib.h"
 #include "ServerConnector.h"
 #include "NetServerLib.h"
@@ -16,11 +18,13 @@
 
 int main()
 {
+	CrashDump();
+
 	LoginServer test;
 
 	//test.Start(30000, 10, true, 1000);
 
-	if (!test.Config(L"Login.cnf", L"LoginServer"))
+	if (!test.Config(L"Login.cnf"))
 	{
 		volatile int test = 1;
 	}
@@ -62,7 +66,7 @@ int main()
 		wprintf(L"conReqFail    : %8d\n", test.GetConnector()._connectionRequestFail);
 		wprintf(L"recvPacketTPS : %8d\n", test.GetConnector()._recvPacketTPS);
 		wprintf(L"sendPacketTPS : %8d\n", test.GetConnector()._sendPacketTPS);
-		wprintf(L"packetCount   : %8d\n", test.GetConnector()._packetCount);
+		wprintf(L"downMsg       : %8d\n",test.downMsg);
 		wprintf(L"----------------------------------\n");
 
 		test.successCntTPS = 0;

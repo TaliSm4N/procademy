@@ -48,10 +48,10 @@ private:
 
 		Chunk()
 		{
-			for (int i = 0; i < CHUNK_SIZE; i++)
-			{
-				block[i].pChunk = this;
-			}
+			//for (int i = 0; i < CHUNK_SIZE; i++)
+			//{
+			//	block[i].pChunk = this;
+			//}
 			AllocIndex = 0;
 			FreeCount = 0;
 			//pMemoryPool = _pool;
@@ -92,11 +92,9 @@ MemoryPoolTLS<T>::~MemoryPoolTLS()
 template<class T>
 T *MemoryPoolTLS<T>::Alloc()
 {
-	__declspec(thread) static Chunk *beforeChunk = NULL;
-	__declspec(thread) static int before = 0;
-	__declspec(thread) static int checker = 0;
 
 	Chunk *chunk = (Chunk *)TlsGetValue(_tlsIndex);
+	ChunkBlock *block;
 	T *ret;
 
 
@@ -107,7 +105,6 @@ T *MemoryPoolTLS<T>::Alloc()
 	if (chunk == NULL)
 	{
 		//PRO_BEGIN(L"CHUNK_ALLOC");
-		beforeChunk = chunk;
 		chunk = _pool->Alloc();//chunk는 반드시 placement new
 
 		if (chunk == NULL)
@@ -121,12 +118,14 @@ T *MemoryPoolTLS<T>::Alloc()
 		//InterlockedIncrement((LONG *)&_useChunkCount);
 		//printf("set Chunk\n");
 	}
-	int temp = chunk->AllocIndex;
 
 
 	//printf("%d\n", chunk->AllocIndex);
+	block = &chunk->block[chunk->AllocIndex++];
 
-	ret = &(chunk->block[chunk->AllocIndex++].item);
+	block->pChunk = chunk;
+	ret = &(block->item);
+	//ret = &(chunk->block[chunk->AllocIndex++].item);
 
 	if (_placementNew)
 	{
@@ -137,17 +136,10 @@ T *MemoryPoolTLS<T>::Alloc()
 
 	//ret = chunk->Alloc();
 
-	if (chunk->AllocIndex > CHUNK_SIZE)
-	{
-		volatile int test = 1;
-	}
-
-	checker = chunk->AllocIndex;
 
 	if (chunk->AllocIndex == CHUNK_SIZE)
 	{
 		//PRO_BEGIN(L"CHUNK_ALLOC");
-		beforeChunk = chunk;
 		chunk = _pool->Alloc();//chunk는 반드시 placement new
 
 		if (chunk == NULL)
@@ -161,7 +153,6 @@ T *MemoryPoolTLS<T>::Alloc()
 		//printf("newChunk\n");
 	}
 
-	before = chunk->AllocIndex;
 	InterlockedIncrement((LONG *)&_useCount);
 	return ret;
 }

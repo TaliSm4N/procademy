@@ -9,7 +9,7 @@
 ChatServer::ChatServer()
 {
 	_playerMap = new std::unordered_map<DWORD, st_PLAYER *>;
-	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(5000);
+	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(GetMaxUser()*2);
 	//InitializeSRWLock(&playerLock);
 	InitializeSRWLock(&_keyLock);
 	_connector.Init(this);
@@ -32,8 +32,9 @@ bool ChatServer::Start()
 
 	_updateThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, this, 0, (unsigned int *)&_updateThreadID);
 
-	_connector.initConnectInfo(L"127.0.0.1", 5000);
-	_connector.Start(10, true);
+	//_connector.initConnectInfo(L"127.0.0.1", 5000);
+	
+	_connector.Start();
 
 	return true;
 }
@@ -76,6 +77,15 @@ bool ChatServer::ConfigStart(const WCHAR *configFile)
 	_updateThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, this, 0, (unsigned int *)&_updateThreadID);
 
 	return true;
+}
+
+bool ChatServer::Config(const WCHAR *configFile)
+{
+	if (!CNetServer::Config(configFile, L"SERVER"))
+		return false;
+
+	if (!_connector.Config(configFile, L"CONNECTOR"))
+		return false;
 }
 
 bool ChatServer::OnConnectionRequest(WCHAR *ClientIP, int Port)
@@ -233,8 +243,6 @@ unsigned int ChatServer::UpdateThreadRun()
 			
 			_updateMsgPool->Free(msg);
 		}
-
-		volatile int test = 1;
 	}
 
 	return 0;
@@ -351,7 +359,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 
 
 	//sessionKey 체크
-	AcquireSRWLockShared(&_keyLock);
+	AcquireSRWLockExclusive(&_keyLock);
 
 	auto keyIter = _keyMap.find(player->AccountNo);
 
@@ -363,7 +371,7 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 		Disconnect(sessionID);
 
 		//ReleaseSRWLockShared(&player->lock);
-		ReleaseSRWLockShared(&_keyLock);
+		ReleaseSRWLockExclusive(&_keyLock);
 		return;
 	}
 	else
@@ -378,14 +386,16 @@ void ChatServer::ReqLogin(DWORD sessionID, Packet *p)
 			Disconnect(sessionID);
 
 			//ReleaseSRWLockShared(&player->lock);
-			ReleaseSRWLockShared(&_keyLock);
+			ReleaseSRWLockExclusive(&_keyLock);
 			return;
 		}
 
+
+		_keyPool->Free(keyIter->second);
 		_keyMap.erase(keyIter);
 	}
 
-	ReleaseSRWLockShared(&_keyLock);
+	ReleaseSRWLockExclusive(&_keyLock);
 
 	//Packet::Free(p);
 	//일단은 모두 성공가정

@@ -1,24 +1,9 @@
 #pragma once
 
 #include "MemoryPool.h"
-//#include "Profiler.h"
 
 #define CHUNK_SIZE 200
 #define BUMPER 0xffeeffee
-
-//최근 50000개만 기록한다
-//맨앞 숫자(16진수) 1일때 dequeue
-//맨앞 숫자(16진수) 0일때 enqueue
-//#define TRACK_MAX 100000
-//
-//void *track[TRACK_MAX];
-//int trackAlloc[TRACK_MAX];
-//unsigned long long trackCur = 0;
-//
-//#define TRACK_MAX 100000
-//
-//void *trackBlock[TRACK_MAX];
-//unsigned long long trackBlockCur = 0;
 
 template <class T>
 class MemoryPoolTLS
@@ -41,7 +26,6 @@ private:
 
 	class Chunk
 	{
-	//private:
 	public:
 		bool used;
 		int AllocIndex;
@@ -55,12 +39,6 @@ private:
 			AllocIndex = 0;
 			FreeCount = 0;
 			used = false;
-			//for (int i = 0; i < CHUNK_SIZE; i++)
-			//{
-			//	block[i].pChunk = this;
-			//}
-			
-			//pMemoryPool = _pool;
 		}
 
 		void init()
@@ -105,7 +83,7 @@ public:
 	~MemoryPoolTLS();
 	T *Alloc();
 	bool Free(T *data);
-	int GetChunkCount() { return _useChunkCount; }
+	int GetCount() { return _useCount; }
 private:
 	Chunk *chunkAlloc()
 	{
@@ -120,10 +98,6 @@ private:
 		{
 			chunk->init();
 		}
-		else
-		{
-			volatile int test = 1;
-		}
 
 		chunk->pMemoryPool = this;
 		TlsSetValue(_tlsIndex, chunk);
@@ -133,16 +107,15 @@ private:
 private:
 	DWORD _tlsIndex;
 	MemoryPool<Chunk> _pool;
-	int _useChunkCount;
 	bool _placementNew;
+	int _useCount;
 };
 
 template<class T>
 MemoryPoolTLS<T>::MemoryPoolTLS(int ChunkNum,bool placement)
-	:_useChunkCount(0),_placementNew(placement)
+	:_placementNew(placement)
 {
 	_tlsIndex = TlsAlloc();
-	//_pool = new MemoryPool<Chunk>(ChunkNum);
 }
 
 template<class T>
@@ -162,52 +135,15 @@ T *MemoryPoolTLS<T>::Alloc()
 	if (chunk == NULL)
 	{
 		chunk = chunkAlloc();
-		//PRO_BEGIN(L"CHUNK_ALLOC");
-		//chunk = _pool.Alloc();//chunk는 반드시 placement new
-		//
-		//if (chunk == NULL)
-		//{
-		//	return NULL;
-		//}
-		//
-		////PRO_END(L"CHUNK_ALLOC");
-		//chunk->pMemoryPool = this;
-		//TlsSetValue(_tlsIndex, chunk);
-		//InterlockedIncrement((LONG *)&_useChunkCount);
-		//printf("set Chunk\n");
 	}
-	
-
-	//printf("%d\n", chunk->AllocIndex);
-
-	//ret = &(chunk->block[chunk->AllocIndex++].item);
 
 	ret = chunk->Alloc();
 	
 	if (_placementNew)
 	{
-		//PRO_BEGIN(L"PLACE_NEW");
 		new (ret) T();
-		//PRO_END(L"PLACE_NEW");
 	}
-
-	//ret = chunk->Alloc();
-
-	//if (chunk->AllocIndex == CHUNK_SIZE)
-	//{
-	//	//PRO_BEGIN(L"CHUNK_ALLOC");
-	//	chunk = _pool.Alloc();//chunk는 반드시 placement new
-	//
-	//	if (chunk == NULL)
-	//	{
-	//		return NULL;
-	//	}
-	//	//PRO_END(L"CHUNK_ALLOC");
-	//	chunk->pMemoryPool = this;
-	//	TlsSetValue(_tlsIndex, chunk);
-	//	//InterlockedIncrement((LONG *)&_useChunkCount);
-	//	//printf("newChunk\n");
-	//}
+	InterlockedIncrement((LONG *)&_useCount);
 
 	return ret;
 }
@@ -226,23 +162,7 @@ bool MemoryPoolTLS<T>::Free(T *data)
 
 	 chunk = chunkBlock->pChunk;
 
+	 InterlockedDecrement((LONG *)&_useCount);
+
 	 return chunk->Free();
-
-	//chunk->FreeCount++;
-	//InterlockedIncrement((LONG *)&chunk->FreeCount);
-	//
-	//f (chunk->FreeCount == CHUNK_SIZE)
-	//
-	//	//해당 청크가 Free를 호출한 memoryPool에 속하지 않았을 경우가 있을 수 있으므로
-	//	//chunk내의 memoryPool을 통해 free해야한다.
-	//
-	//
-	//	if (!chunk->pMemoryPool->_pool->Free(chunk))
-	//	{
-	//		return false;
-	//	}
-	//	//InterlockedDecrement((LONG *)&chunk->pMemoryPool->_useChunkCount);
-	//
-
-	//return true;
 }

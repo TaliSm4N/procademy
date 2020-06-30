@@ -72,6 +72,9 @@
     <ClCompile Include="ServerConnector.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="DBConnectTLS.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LockFreeQueue.h">
@@ -142,6 +145,9 @@
     </ClInclude>
     <ClInclude Include="ServerConnector.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="DBConnectTLS.h">
+      <Filter>Lib\Header</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

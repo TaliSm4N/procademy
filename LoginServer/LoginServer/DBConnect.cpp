@@ -24,6 +24,14 @@ DBConnect::DBConnect()
 	mysql_init(&conn);
 }
 
+bool DBConnect::IsConnect() 
+{ 
+	if (connection != NULL) 
+		return true; 
+	return false; 
+}
+
+
 //DBConnect *DBConnect::GetInstance()
 //{
 //	if (_db == nullptr)
@@ -52,6 +60,7 @@ bool DBConnect::connect(const char *ip,const char *user,const char *password, co
 
 bool DBConnect::connect()
 {
+
 	connection = mysql_real_connect(&conn, _szDBIP, _szDBUser, _szDBPassword, _szDBName, _iDBPort, (char *)NULL, 0);
 	if (connection == NULL)
 	{

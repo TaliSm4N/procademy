@@ -2,11 +2,13 @@
 #include <process.h>
 #include <Windows.h>
 #include <time.h>
+#include <list>
 #include "message.h"
 #pragma comment(lib,"mysqlclient.lib")
 #include "include/mysql.h"
 #include "include/errmsg.h"
 #include "DBConnect.h"
+#include "DBConnectTLS.h"
 
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
@@ -29,7 +31,7 @@ long playerID = 1;
 
 long DBTPS=0;
 
-DBConnect db;
+DBConnectTLS db;
 
 int main()
 {

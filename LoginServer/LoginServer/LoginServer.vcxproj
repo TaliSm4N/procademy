@@ -172,6 +172,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DBConnectTLS.cpp" />
     <ClCompile Include="ServerConnector.cpp" />
     <ClCompile Include="CrashDump.cpp" />
     <ClCompile Include="DBConnect.cpp" />
@@ -190,6 +191,7 @@
     <ClCompile Include="TextParser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DBConnectTLS.h" />
     <ClInclude Include="ServerConnector.h" />
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="CrashDump.h" />

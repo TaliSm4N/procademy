@@ -36,11 +36,6 @@ Session::Session()
 
 void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 {
-	if (sock != INVALID_SOCKET)
-	{
-		volatile int test = 1;
-	}
-
 	sock = s;
 	sockAddr = sAddr;
 	sessionID = ID;

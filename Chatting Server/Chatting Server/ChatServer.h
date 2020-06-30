@@ -69,6 +69,8 @@ public:
 	bool Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring = true);
 	bool ConfigStart(const WCHAR *configFile);
 
+	bool Config(const WCHAR *configFile);
+
 
 	static unsigned int WINAPI UpdateThread(LPVOID lpParam);
 	static unsigned int WINAPI Monitor(LPVOID lpParam);

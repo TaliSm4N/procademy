@@ -20,7 +20,7 @@ int main()
 
 	//test.ConfigStart(L"ChatServer.cnf");
 
-	test.Config(L"ChatServer.cnf", L"SERVER");
+	test.Config(L"ChatServer.cnf");
 	test.Start();
 
 	while (1)
@@ -30,7 +30,7 @@ int main()
 		wprintf(L"----------------------------------\n");
 		wprintf(L"WoerkThread : %d MaxUser : %d\n", test.GetWorkerThreadCount(), test.GetMaxUser());
 		wprintf(L"----------------------------------\n");
-		wprintf(L"sessionCount   : %8d\n", test.GetSessionCount());
+		wprintf(L"sessionCount  : %8d\n", test.GetSessionCount());
 		wprintf(L"acceptTotal   : %8d\n", test._acceptTotal);
 		wprintf(L"acceptTPS     : %8d\n", test._acceptTPS);
 		wprintf(L"acceptFail    : %8d\n", test._acceptFail);
@@ -52,9 +52,17 @@ int main()
 		wprintf(L"----------------------------------\n");
 		wprintf(L"WoerkThread : %d\n", test.GetConnector().GetWorkerThreadCount());
 		wprintf(L"----------------------------------\n");
+		if (test.GetConnector().GetConnectFlag())
+		{
+		wprintf(L"Connect       : True\n");
+		}
+		else
+		{
+		wprintf(L"Connect       : False\n");
+		}
+
 		wprintf(L"recvPacketTPS : %8d\n", test.GetConnector()._recvPacketTPS);
 		wprintf(L"sendPacketTPS : %8d\n", test.GetConnector()._sendPacketTPS);
-		wprintf(L"packetCount   : %8d\n", test.GetConnector()._packetCount);
 		wprintf(L"----------------------------------\n");
 
 		Sleep(1000);

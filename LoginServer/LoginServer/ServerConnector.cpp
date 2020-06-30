@@ -1,10 +1,12 @@
 #include <WinSock2.h>
 #include <unordered_map>
+#include <list>
 #pragma comment(lib,"mysqlclient.lib")
 #include "include/mysql.h"
 #include "include/errmsg.h"
 
 #include "DBConnect.h"
+#include "DBConnectTLS.h"
 #include "CommonProtocol.h"
 #include "LanServerLib.h"
 #include "NetServerLib.h"

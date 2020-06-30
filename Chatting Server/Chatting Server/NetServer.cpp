@@ -106,6 +106,7 @@ bool CNetServer::Config(const WCHAR *configFile, const WCHAR *block)
 }
 bool CNetServer::Start()
 {
+	int retval;
 	timeBeginPeriod(1);
 	_nagle = true;
 	_monitoring = true;
@@ -150,7 +151,17 @@ bool CNetServer::Start()
 	}
 
 	int optval = 0;
-	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	//retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	//if (retval == SOCKET_ERROR)
+	//{
+	//	int err = GetLastError();
+	//	InterlockedIncrement((LONG *)&_acceptFail);
+	//	closesocket(_listenSock);
+	//	return -1;
+	//	//return -1;
+	//}
+
+	retval = setsockopt(_listenSock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR)
 	{
 		int err = GetLastError();
@@ -209,7 +220,7 @@ bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 
 	////////////////DEBUG
 	
-
+	int retval;
 	timeBeginPeriod(1);
 	_port = port;
 	_workerCnt = workerCnt;
@@ -256,7 +267,7 @@ bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 	}
 
 	int optval = 0;
-	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	retval = setsockopt(_listenSock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR)
 	{
 		int err = GetLastError();
@@ -312,7 +323,7 @@ bool CNetServer::Start(int port,int workerCnt,bool nagle,int maxUser, bool monit
 bool CNetServer::ConfigStart(const WCHAR *configFile)
 {
 	TextParser parser;
-
+	int retval;
 	parser.init(configFile);
 
 	parser.SetCurBlock(L"SERVER");
@@ -396,13 +407,23 @@ bool CNetServer::ConfigStart(const WCHAR *configFile)
 	}
 
 	int optval = 0;
-	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	//retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	//if (retval == SOCKET_ERROR)
+	//{
+	//	int err = GetLastError();
+	//	InterlockedIncrement((LONG *)&_acceptFail);
+	//	closesocket(_listenSock);
+	//	return -1;
+	//}
+
+	retval = setsockopt(_listenSock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR)
 	{
 		int err = GetLastError();
 		InterlockedIncrement((LONG *)&_acceptFail);
 		closesocket(_listenSock);
 		return -1;
+		//return -1;
 	}
 
 	ZeroMemory(&_sockAddr, sizeof(_sockAddr));
@@ -697,14 +718,14 @@ bool CNetServer::Disconnect(DWORD sessionID)
 unsigned int WINAPI CNetServer::MonitorThread(LPVOID lpParam)
 {
 	CNetServer *_this = (CNetServer *)lpParam;
-	int tick = timeGetTime();
+	//int tick = timeGetTime();
 	LONG64 acceptBefore = 0;
 
 	while (1)
 	{
-		if (timeGetTime() - tick >= 1000)
-		{
-			tick += 1000;
+		//if (timeGetTime() - tick >= 1000)
+		//{
+		//	tick += 1000;
 			InterlockedExchange64(&_this->_acceptTPS, _this->_acceptTotal - acceptBefore);
 			acceptBefore += _this->_acceptTPS;
 
@@ -714,7 +735,8 @@ unsigned int WINAPI CNetServer::MonitorThread(LPVOID lpParam)
 			InterlockedExchange64(&_this->_sendPacketTPS, _this->_sendPacketCounter);
 			InterlockedExchange64(&_this->_sendPacketCounter, 0);
 			InterlockedExchange64(&_this->_packetCount, Packet::PacketUseCount());
-		}
+			Sleep(1000);
+		//}
 	}
 
 	return 0;

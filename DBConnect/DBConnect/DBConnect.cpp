@@ -24,6 +24,14 @@ DBConnect::DBConnect()
 	mysql_init(&conn);
 }
 
+bool DBConnect::IsConnect() 
+{ 
+	if (connection != NULL) 
+		return true; 
+	return false; 
+}
+
+
 //DBConnect *DBConnect::GetInstance()
 //{
 //	if (_db == nullptr)

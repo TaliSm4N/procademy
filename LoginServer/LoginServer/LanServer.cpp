@@ -137,7 +137,7 @@ bool CLanServer::Start()
 	}
 
 	int optval = 0;
-	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	int retval = setsockopt(_listenSock, SOL_SOCKET, SO_SNDBUF, (char *)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR)
 	{
 		InterlockedIncrement((LONG *)&_acceptFail);
@@ -526,14 +526,14 @@ bool CLanServer::Disconnect(DWORD sessionID)
 unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 {
 	CLanServer *_this = (CLanServer *)lpParam;
-	int tick = timeGetTime();
+	//int tick = timeGetTime();
 	LONG64 acceptBefore = 0;
 
 	while (1)
 	{
-		if (timeGetTime() - tick >= 1000)
-		{
-			tick += 1000;
+		//if (timeGetTime() - tick >= 1000)
+		//{
+			//tick += 1000;
 			InterlockedExchange64(&_this->_acceptTPS, _this->_acceptTotal - acceptBefore);
 			acceptBefore += _this->_acceptTPS;
 
@@ -543,8 +543,8 @@ unsigned int WINAPI CLanServer::MonitorThread(LPVOID lpParam)
 			InterlockedExchange64(&_this->_sendPacketTPS, _this->_sendPacketCounter);
 			InterlockedExchange64(&_this->_sendPacketCounter, 0);
 			InterlockedExchange64(&_this->_packetCount, Packet::PacketUseCount());
-
-		}
+			Sleep(1000);
+		//}
 	}
 
 	return 0;
@@ -800,7 +800,7 @@ void CLanServer::ReleaseSession(LanSession *session)
 	{
 		closesocket(session->GetSocket());
 	}
-	OnClientLeave(session->GetID());
+	OnClientLeave(id);
 	
 
 	//남은 send Packet 제거

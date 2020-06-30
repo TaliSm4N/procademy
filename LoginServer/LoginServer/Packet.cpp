@@ -472,9 +472,15 @@ void Packet::PutHeader(char *srcheader)
 
 void Packet::Init(int key, int code)
 {
-	packetPool = new MemoryPoolTLS<Packet>(10000, true);
-	_key = key;
-	_code = code;
+	if(packetPool==NULL)
+		packetPool = new MemoryPoolTLS<Packet>(10000, true);
+
+	if (key != 0 && code != 0)
+	{
+		_key = key;
+		_code = code;
+	}
+	
 }
 
 Packet *Packet::Alloc(PacketType type)

@@ -74,14 +74,14 @@ bool Session::Disconnect()
 	shutdown(sock, SD_BOTH);
 	return true;
 
-	SOCKET closeSock = sock;
-	if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
-	{
-		_closeSocket = closeSock;
-		closesocket(closeSock);
-	}
-
-	return true;
+	//SOCKET closeSock = sock;
+	//if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
+	//{
+	//	_closeSocket = closeSock;
+	//	closesocket(closeSock);
+	//}
+	//
+	//return true;
 }
 
 BOOL Session::Release()

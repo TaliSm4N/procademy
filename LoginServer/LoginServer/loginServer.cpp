@@ -2,11 +2,13 @@
 #include <unordered_map>
 
 #include <strsafe.h>
+#include <list>
 #pragma comment(lib,"mysqlclient.lib")
 #include "include/mysql.h"
 #include "include/errmsg.h"
 
 #include "DBConnect.h"
+#include "DBConnectTLS.h"
 #include "CommonProtocol.h"
 #include "LanServerLib.h"
 #include "NetServerLib.h"
@@ -18,41 +20,49 @@ LoginServer::LoginServer()
 {
 	_connecter.Init(this);
 	InitializeSRWLock(&waiterLock);
-	InitializeSRWLock(&dbLock);
+	
+	//InitializeSRWLock(&dbLock);
 }
 
 bool LoginServer::Start(int port, int workerCnt, bool nagle, int maxUser, bool monitoring)
 {
-	accountDB.connect("127.0.0.1", "root", "1234", "accountdb");
-	accountDB.Query("UPDATE `status` SET `status` = 0");
+	//accountDB.connect("127.0.0.1", "root", "1234", "accountdb");
+	//accountDB.Query("UPDATE `status` SET `status` = 0");
+	_waiterPool = new MemoryPoolTLS<Waiter>(maxUser, true);
+	accountDB.init("127.0.0.1", "root", "1234", "accountdb");
 
 	_connecter.Start(5000, 5, true, 10);
-
 
 	return CNetServer::Start(port,workerCnt,nagle,maxUser,monitoring);
 }
 
 bool LoginServer::Start()
 {
-	accountDB.connect("127.0.0.1", "root", "1234", "accountdb");
-	accountDB.Query("UPDATE `status` SET `status` = 0");
+	//accountDB.connect("127.0.0.1", "root", "1234", "accountdb");
+	//accountDB.Query("UPDATE `status` SET `status` = 0");
 
-	
+	_waiterPool = new MemoryPoolTLS<Waiter>(GetMaxUser(), true);
+	accountDB.init("127.0.0.1", "root", "1234", "accountdb");
 	_connecter.Start();
+
 
 
 	return CNetServer::Start();
 }
 
-bool LoginServer::Config(const WCHAR *configFile, const WCHAR *block)
+bool LoginServer::Config(const WCHAR *configFile)
 {
+	if (!CNetServer::Config(configFile, L"SERVER"))
+		return false;
+	if (!_connecter.Config(configFile, L"CONNECTOR"))
+		return false;
 	TextParser parser;
 	std::wstring str;
 
 	if (!parser.init(configFile))
 		return false;
 
-	if (!parser.SetCurBlock(block))
+	if (!parser.SetCurBlock(L"LoginServer"))
 		return false;
 
 	if (!parser.findItem(L"CHAT_IP", str))
@@ -64,11 +74,7 @@ bool LoginServer::Config(const WCHAR *configFile, const WCHAR *block)
 		return false;
 	ChatPort = std::stoi(str);
 	str.clear();
-
-	_connecter.Config(configFile, L"CONNECTOR");
-
-
-	return CNetServer::Config(configFile, L"SERVER");
+	return true;
 }
 
 bool LoginServer::OnConnectionRequest(WCHAR *ClientIP, int Port)
@@ -124,11 +130,36 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 	p->GetData(sessionKey, 64);
 	*p >> version;
 
-	AcquireSRWLockExclusive(&dbLock);
-	
-	bool re = accountDB.Query("SELECT sessionkey, userid, usernick, status FROM v_account where accountno = %ld", accountNo);
+	//AcquireSRWLockExclusive(&dbLock);
 
-	DWORD time = accountDB.GetLastQueryTime();
+	//accountDB.connect();
+	DBConnect *db = accountDB.GetDB();
+
+	//if (!db->IsConnect())
+	//{
+	//	accountDB.connect();
+	//	
+	//}
+	
+	//bool re = accountDB.Query("SELECT sessionkey, userid, usernick, status FROM v_account where accountno = %ld", accountNo);
+	bool re = db->Query("SELECT sessionkey, userid, usernick, status FROM v_account where accountno = %ld", accountNo);
+
+	if (!re)
+	{
+		Packet *pk = MakeLoginResponse(accountNo, dfLOGIN_STATUS_FAIL, NULL, NULL);
+		SendPacket(sessionID, pk);
+		Packet::Free(pk);
+
+		LOG(L"query", LOG_ERROR, L"query Fail account(%d) session(%d) : %s (%d)",accountNo, sessionID, db->GetLastError(), db->GetLastErrNo());
+		//accountDB.FreeResult();
+
+		//ReleaseSRWLockExclusive(&dbLock);
+		return false;
+	}
+
+
+	DWORD time = db->GetLastQueryTime();
+	//DWORD time = accountDB.GetLastQueryTime();
 
 	//5초 이상걸린 쿼리 기록
 	if (time > 5000)
@@ -136,7 +167,8 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 		LOG(L"query", LOG_ERROR, L"Query time over %d ms : accountNo = %ld", time, accountNo);
 	}
 
-	MYSQL_ROW row = accountDB.GetRow();
+	MYSQL_ROW row = db->GetRow();
+	//MYSQL_ROW row = accountDB.GetRow();
 
 	if (row == NULL)
 	{
@@ -145,9 +177,10 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 		SendPacket(sessionID, pk);
 		Packet::Free(pk);
 
-		accountDB.FreeResult();
+		db->FreeResult();
+		//accountDB.FreeResult();
 
-		ReleaseSRWLockExclusive(&dbLock);
+		//ReleaseSRWLockExclusive(&dbLock);
 		return false;
 	}
 
@@ -157,9 +190,10 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 		SendPacket(sessionID, pk);
 		Packet::Free(pk);
 
-		accountDB.FreeResult();
+		db->FreeResult();
+		//accountDB.FreeResult();
 
-		ReleaseSRWLockExclusive(&dbLock);
+		//ReleaseSRWLockExclusive(&dbLock);
 		return false;
 	}
 
@@ -171,9 +205,10 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 		SendPacket(sessionID, pk);
 		Packet::Free(pk);
 
-		accountDB.FreeResult();
+		db->FreeResult();
+		//accountDB.FreeResult();
 
-		ReleaseSRWLockExclusive(&dbLock);
+		//ReleaseSRWLockExclusive(&dbLock);
 		return false;
 	}
 	else
@@ -185,9 +220,10 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 			SendPacket(sessionID, pk);
 			Packet::Free(pk);
 
-			accountDB.FreeResult();
+			db->FreeResult();
+			//accountDB.FreeResult();
 
-			ReleaseSRWLockExclusive(&dbLock);
+			//ReleaseSRWLockExclusive(&dbLock);
 			return false;
 		}
 	}
@@ -204,14 +240,15 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 			SendPacket(sessionID, pk);
 			Packet::Free(pk);
 
-			accountDB.FreeResult();
+			db->FreeResult();
+			//accountDB.FreeResult();
 
-			ReleaseSRWLockExclusive(&dbLock);
+			//ReleaseSRWLockExclusive(&dbLock);
 			return false;
 		}
 	}
 
-	Waiter *waiter = _waiterPool.Alloc();
+	Waiter *waiter = _waiterPool->Alloc();
 	waiter->SessionID = sessionID;
 	waiter->AccountNo = accountNo;
 	waiter->startTime = startTime;
@@ -245,14 +282,17 @@ bool LoginServer::LoginRequest(DWORD sessionID, Packet *p)
 		SendPacket(sessionID, pk);
 		Packet::Free(pk);
 
-		accountDB.FreeResult();
+		db->FreeResult();
+		//accountDB.FreeResult();
 
-		ReleaseSRWLockExclusive(&dbLock);
+		//ReleaseSRWLockExclusive(&dbLock);
 		return false;
 	}
 
-	accountDB.FreeResult();
-	ReleaseSRWLockExclusive(&dbLock);
+	db->FreeResult();
+	//accountDB.FreeResult();
+
+	//ReleaseSRWLockExclusive(&dbLock);
 
 	return true;
 	//printf("%s %s\n", row[0], row[1]);
@@ -340,21 +380,26 @@ bool LoginServer::ClientLoginRes_ss(INT64 accountNo, INT64 parameter, int type)
 	Packet::Free(p);
 
 	waiter->endTime = timeGetTime();
-	
-	InterlockedAdd64(&loginAll, waiter->endTime - waiter->startTime);
 
-	if (waiter->endTime - waiter->startTime > loginMax)
+	if (waiter->endTime >= waiter->startTime)
 	{
-		InterlockedExchange(&loginMax, waiter->endTime - waiter->startTime);
-	}
+		InterlockedAdd64(&loginAll, waiter->endTime - waiter->startTime);
 
+		if (waiter->endTime - waiter->startTime > loginMax)
+		{
+			InterlockedExchange(&loginMax, waiter->endTime - waiter->startTime);
+		}
+
+
+		if (waiter->endTime - waiter->startTime < loginMin)
+		{
+			InterlockedExchange(&loginMin, waiter->endTime - waiter->startTime);
+		}
+	}
 	
-	if (waiter->endTime - waiter->startTime < loginMin)
-	{
-		InterlockedExchange(&loginMin, waiter->endTime - waiter->startTime);
-	}
+	
 
-	_waiterPool.Free(waiter);
+	_waiterPool->Free(waiter);
 	InterlockedIncrement(&successCnt);
 	InterlockedIncrement(&successCntTPS);
 	
@@ -374,6 +419,7 @@ void LoginServer::ServerDownMsg(BYTE type)
 
 		SendPacket(waiter->SessionID, p);
 		Packet::Free(p);
+		InterlockedIncrement(&downMsg);
 	}
 
 	_WaiterMap.clear();
