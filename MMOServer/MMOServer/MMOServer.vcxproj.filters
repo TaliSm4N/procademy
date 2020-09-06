@@ -60,12 +60,15 @@
     <ClCompile Include="EchoServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="LanClient.cpp">
+      <Filter>NetWorkLib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="MonitorClient.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CrashDump.h">
-      <Filter>NetWorkLib\Header</Filter>
-    </ClInclude>
-    <ClInclude Include="header.h">
       <Filter>NetWorkLib\Header</Filter>
     </ClInclude>
     <ClInclude Include="LockFreeQueue.h">
@@ -118,6 +121,18 @@
     </ClInclude>
     <ClInclude Include="MyQueue.h">
       <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanClient.h">
+      <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanClientLib.h">
+      <Filter>NetWorkLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitorClient.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitorProtocol.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -568,7 +568,7 @@ unsigned int WINAPI CNetServer::AcceptThread(LPVOID lpParam)
 
 		CreateIoCompletionPort((HANDLE)sock, _this->_hcp, (ULONG_PTR)session, 0);
 
-		InterlockedIncrement64(&session->GetIOCount());
+		//InterlockedIncrement64(&session->GetIOCount());
 
 
 		_this->OnClientJoin(session->GetID());
@@ -668,6 +668,10 @@ unsigned int WINAPI CNetServer::WorkerThread(LPVOID lpParam)
 			if (result != FAIL)
 			{
 				_this->RecvPost(session);
+			}
+			else
+			{
+				session->Disconnect();
 			}
 
 		}
@@ -878,6 +882,7 @@ bool CNetServer::RecvPost(Session *session)
 			if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 			{
 				ReleaseSession(session);
+				//ReleaseSession(session);
 			}
 
 			return false;
@@ -968,47 +973,39 @@ Session *CNetServer::GetSession(DWORD sessionID)
 		return NULL;
 
 
+
 	//get session이 연속으로 2번 들어오면 iocount가 0이였던 session들도 이단계를 통과할 수 있는 위험이 있음
 	if (InterlockedIncrement64(&session->GetIOCount()) == 1)
 	{
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
 			ReleaseSession(session);
-			
 		}
-
 		return NULL;
 	}
 
+	
 	if (session->GetID() != sessionID)
 	{
-
+	
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
 			ReleaseSession(session);
-
+	
 		}
-
 		return NULL;
 	}
 
+	
 
-	//이미 release에 들어갔을 경우 대비
-	//여기 들어가면 down client발생	
-	if (session->GetReleaseFlag())
+	if (session->GetDisconnectFlag())
 	{
-
 		if (InterlockedDecrement64(&session->GetIOCount()) == 0)
 		{
 			ReleaseSession(session);
-
 		}
-	
 		return NULL;
 	}
-
-	
-
 	
 
 
@@ -1020,7 +1017,6 @@ void CNetServer::PutSession(Session *session)
 	{
 		ReleaseSession(session);
 	}
-
 }
 
 void CNetServer::ReleaseSession(Session *session)
@@ -1031,16 +1027,16 @@ void CNetServer::ReleaseSession(Session *session)
 	checker.IOCount = 0;
 	checker.releaseFlag = false;
 
+	if (InterlockedExchange8((char *)&session->GetDisconnectFlag(), false) == false)
+		return;
 
-
-	if (!InterlockedCompareExchange128((LONG64 *)session->GetIOBlock(), (LONG64)true, (LONG64)0, (LONG64 *)&checker))
+	if (!InterlockedCompareExchange128((LONG64 *)session->GetIOBlock(), (LONG64)true, (LONG64)1, (LONG64 *)&checker))
 	{
 		return;
 	}
 
 
-	
-	closesocket(session->GetSocket());
+	session->CloseSocket();
 
 	OnClientLeave(session->GetID());
 	

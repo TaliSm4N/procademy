@@ -177,16 +177,16 @@ PROCRESULT Session::CompleteRecvPacket()
 {
 	int recvQSize = _RecvQ.GetUseSize();
 	Packet *payload;
-	HEADER header;// = payload->GetHeaderPtr();
+	NetServerHeader header;// = payload->GetHeaderPtr();
 
-	if (sizeof(HEADER) > recvQSize)
+	if (sizeof(NetServerHeader) > recvQSize)
 	{
 		//Packet::Free(payload);
 		return NONE;
 	}
 
 
-	_RecvQ.Peek((char *)&header, sizeof(HEADER));
+	_RecvQ.Peek((char *)&header, sizeof(NetServerHeader));
 
 
 	if (header.len > DEFAULT_PACKET_SIZE)
@@ -194,7 +194,7 @@ PROCRESULT Session::CompleteRecvPacket()
 		return FAIL;
 	}
 
-	if (recvQSize < header.len + sizeof(HEADER))
+	if (recvQSize < header.len + sizeof(NetServerHeader))
 	{
 		//Packet::Free(payload);
 		return NONE;
@@ -205,7 +205,7 @@ PROCRESULT Session::CompleteRecvPacket()
 		return FAIL;
 	}
 
-	_RecvQ.MoveReadPos(sizeof(HEADER));
+	_RecvQ.MoveReadPos(sizeof(NetServerHeader));
 
 	payload = Packet::Alloc();
 	payload->RecvEncode();
@@ -217,7 +217,7 @@ PROCRESULT Session::CompleteRecvPacket()
 		return FAIL;
 	}
 
-	payload->PutHeader(&header);
+	payload->PutHeader((char *)&header);
 
 	payload->decode();
 
@@ -317,7 +317,7 @@ bool Session::ProcSend()
 	{
 		wsabuf[i].buf = (char *)peekData[i]->GetSendPtr();
 		//wsabuf[i].len = 0;
-		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(HEADER);
+		wsabuf[i].len = peekData[i]->GetDataSize() + sizeof(NetServerHeader);
 		_iSendPacketSize += wsabuf[i].len;
 	}
 

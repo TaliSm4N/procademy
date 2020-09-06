@@ -8,7 +8,7 @@ ChatServer::ChatServer()
 	:_attackDisconCount(0)
 {
 	_playerMap = new std::unordered_map<DWORD, st_PLAYER *>;
-	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(5000);
+	_msgQ = new LockFreeQueue<st_UPDATE_MESSAGE *>(100000);
 	//InitializeSRWLock(&playerLock);
 }
 

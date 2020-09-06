@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Lib">
+      <UniqueIdentifier>{b5ea6872-4390-45ad-8b9d-7c08501bc1df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lib\Header">
+      <UniqueIdentifier>{8cf6a984-17ef-48bf-a036-d019c4b5c769}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lib\Source">
+      <UniqueIdentifier>{9efb662c-720c-4beb-9ae4-a697c04feb8c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LanSession.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeQueue.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeStack.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Log.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryPool.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryPoolTLS.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="NetServer.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="NetServerLib.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Packet.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketPtr.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Profiler.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="TextParser.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="CrashDump.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="DBConnect.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="DBConnectTLS.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanServer.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="LanServerLib.h">
+      <Filter>Lib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitorProtocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitorServer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientConnector.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="LanServer.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="LanSession.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Log.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="NetServer.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Packet.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketPtr.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="RingBuffer.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="TextParser.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="CrashDump.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="DBConnect.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="DBConnectTLS.cpp">
+      <Filter>Lib\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="MonitorServer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientConnector.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

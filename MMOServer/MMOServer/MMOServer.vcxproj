@@ -174,8 +174,10 @@
   <ItemGroup>
     <ClCompile Include="CrashDump.cpp" />
     <ClCompile Include="EchoServer.cpp" />
+    <ClCompile Include="LanClient.cpp" />
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="MMOServer.cpp" />
+    <ClCompile Include="MonitorClient.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PacketPtr.cpp" />
     <ClCompile Include="player.cpp" />
@@ -189,7 +191,8 @@
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="CrashDump.h" />
     <ClInclude Include="EchoServer.h" />
-    <ClInclude Include="header.h" />
+    <ClInclude Include="LanClient.h" />
+    <ClInclude Include="LanClientLib.h" />
     <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="LockFreeStack.h" />
     <ClInclude Include="Log.h" />
@@ -197,6 +200,8 @@
     <ClInclude Include="MemoryPoolTLS.h" />
     <ClInclude Include="MMOLib.h" />
     <ClInclude Include="MMOServer.h" />
+    <ClInclude Include="MonitorClient.h" />
+    <ClInclude Include="MonitorProtocol.h" />
     <ClInclude Include="MyQueue.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketPtr.h" />

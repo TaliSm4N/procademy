@@ -78,33 +78,8 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 		return false;
 	}
 
-	ZeroMemory(&sockAddr, sizeof(sockAddr));
-	sockAddr.sin_family = AF_INET;
-	sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	sockAddr.sin_port = htons(_iListenPort);
-
-	int retval = bind(_ListenSocket, (SOCKADDR *)&sockAddr, sizeof(sockAddr));
-
-	if (retval == SOCKET_ERROR)
-	{
-		SYSLOG_LOG(L"Lib", LOG_ERROR, L"bind Error");
-		return false;
-	}
-
-	//tcp_keepalive keep;
-	//
-	//keep.onoff = 1;
-	//keep.keepalivetime = 1000;
-	//keep.keepaliveinterval = 10;
-	//
-	//WSAIoctl(_ListenSocket, SIO_KEEPALIVE_VALS, &keep, sizeof(tcp_keepalive), NULL, 0, NULL, NULL, NULL);
-
-
-	//둘다 켜는게 옳은 것인지는 모르겠음
-	//다만 SO_SNDBUF를 0으로 변경 시 Non-paged pool의 사용량이 유의미하게 줄어들음
-	//RCVBUF의 경우 거의 차이가 없음
 	int optval = 0;
-	retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
+	int retval = setsockopt(_ListenSocket, SOL_SOCKET, SO_RCVBUF, (char *)&optval, sizeof(optval));
 	if (retval == SOCKET_ERROR)
 	{
 		SYSLOG_LOG(L"Lib", LOG_ERROR, L"SETSOCKET Error");
@@ -126,6 +101,33 @@ bool CMMOServer::Start(WCHAR *szListenIP, int iPort, int iWorkerThread, bool bEn
 		return false;
 		//return -1;
 	}
+
+	ZeroMemory(&sockAddr, sizeof(sockAddr));
+	sockAddr.sin_family = AF_INET;
+	sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	sockAddr.sin_port = htons(_iListenPort);
+
+	retval = bind(_ListenSocket, (SOCKADDR *)&sockAddr, sizeof(sockAddr));
+
+	if (retval == SOCKET_ERROR)
+	{
+		SYSLOG_LOG(L"Lib", LOG_ERROR, L"bind Error");
+		return false;
+	}
+
+	//tcp_keepalive keep;
+	//
+	//keep.onoff = 1;
+	//keep.keepalivetime = 1000;
+	//keep.keepaliveinterval = 10;
+	//
+	//WSAIoctl(_ListenSocket, SIO_KEEPALIVE_VALS, &keep, sizeof(tcp_keepalive), NULL, 0, NULL, NULL, NULL);
+
+
+	//둘다 켜는게 옳은 것인지는 모르겠음
+	//다만 SO_SNDBUF를 0으로 변경 시 Non-paged pool의 사용량이 유의미하게 줄어들음
+	//RCVBUF의 경우 거의 차이가 없음
+	
 
 
 
@@ -373,7 +375,6 @@ void CMMOServer::ProcAuth_Packet()
 				break;
 			session->OnAuth_Packet(p);
 
-			p->FreeTime = GetTickCount();
 
 			Packet::Free(p);
 		}
@@ -623,16 +624,16 @@ PROCRESULT CMMOServer::CompleteRecvPacket(Session *session)
 	int recvQSize = session->_RecvQ.GetUseSize();
 
 	Packet *payload;
-	HEADER header;// = payload->GetHeaderPtr();
+	NetServerHeader header;// = payload->GetHeaderPtr();
 
-	if (sizeof(HEADER) > recvQSize)
+	if (sizeof(NetServerHeader) > recvQSize)
 	{
 		//Packet::Free(payload);
 		return NONE;
 	}
 
 	
-	session->_RecvQ.Peek((char *)&header, sizeof(HEADER));
+	session->_RecvQ.Peek((char *)&header, sizeof(NetServerHeader));
 	
 
 	if (header.len > DEFAULT_PACKET_SIZE)
@@ -640,7 +641,7 @@ PROCRESULT CMMOServer::CompleteRecvPacket(Session *session)
 		return FAIL;
 	}
 
-	if (recvQSize < header.len + sizeof(HEADER))	
+	if (recvQSize < header.len + sizeof(NetServerHeader))
 	{
 		//Packet::Free(payload);
 		return NONE;
@@ -651,7 +652,7 @@ PROCRESULT CMMOServer::CompleteRecvPacket(Session *session)
 		return FAIL;
 	}
 
-	session->_RecvQ.MoveReadPos(sizeof(HEADER));
+	session->_RecvQ.MoveReadPos(sizeof(NetServerHeader));
 
 	payload = Packet::Alloc();
 	payload->RecvEncode();
@@ -663,7 +664,7 @@ PROCRESULT CMMOServer::CompleteRecvPacket(Session *session)
 		return FAIL;
 	}
 
-	payload->PutHeader(&header);
+	payload->PutHeader((char *)&header);
 
 	payload->decode();
 

@@ -37,8 +37,10 @@ public:
 	DWORD &GetID() { return sessionID; }
 	MyOverlapped &GetSendOverlap() { return sendOverlap; }
 	MyOverlapped &GetRecvOverlap() { return recvOverlap; }
+	bool &GetDisconnectFlag() { return disconnectFlag; }
 
 	bool Disconnect();
+	bool CloseSocket();
 	BOOL Release();
 
 	void SetSendPacketCnt(int cnt) { InterlockedExchange((LONG *)&sendPacketCnt, cnt); }
@@ -65,6 +67,9 @@ private:
 	//DWORD IOCount;
 	//bool releaseFlag;
 	IOChecker *IOBlock;
+
+	bool disconnectFlag;
+	
 	
 public:
 	SOCKET _closeSocket;

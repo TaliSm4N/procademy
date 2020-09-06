@@ -4,7 +4,7 @@
 #include "NetServerLib.h"
 
 Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
-	:sock(s),sockAddr(sAddr),sendFlag(1),sessionID(id)
+	:sock(s),sockAddr(sAddr),sendFlag(1),sessionID(id), disconnectFlag(false)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
@@ -13,14 +13,14 @@ Session::Session(SOCKET s, SOCKADDR_IN &sAddr,DWORD id)
 	sendQ = new LockFreeQueue<Packet *>(1000);
 	//InitializeSRWLock(&sessionLock);
 	IOBlock = new IOChecker;
-	IOBlock->IOCount = 0;
+	IOBlock->IOCount = 1;
 	IOBlock->releaseFlag = 0;
 	//_IOChecker.IOCount = 0;
 	//_IOChecker.releaseFlag = false;
 }
 
 Session::Session()
-	:sendFlag(1),sock(INVALID_SOCKET)
+	:sendFlag(1),sock(INVALID_SOCKET), disconnectFlag(false)
 {
 	ZeroMemory(&sendOverlap, sizeof(sendOverlap));
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
@@ -28,7 +28,7 @@ Session::Session()
 	recvOverlap.type = TYPE::RECV;
 	sendQ = new LockFreeQueue<Packet *>(1000);
 	IOBlock = new IOChecker;
-	IOBlock->IOCount = 0;
+	IOBlock->IOCount = 1;
 	IOBlock->releaseFlag = 0;
 	
 	//IOBlock->IOCount = 0;
@@ -52,7 +52,7 @@ void Session::SetSessionInfo(SOCKET s, SOCKADDR_IN &sAddr, DWORD ID)
 	ZeroMemory(&recvOverlap, sizeof(recvOverlap));
 	sendOverlap.type = TYPE::SEND;
 	recvOverlap.type = TYPE::RECV;
-
+	disconnectFlag = false;
 	//sendQ.Reset();
 	recvQ.Reset();
 
@@ -66,16 +66,31 @@ Session::~Session()
 
 bool Session::Disconnect()
 {
-	shutdown(sock, SD_BOTH);
-	//SOCKET closeSock = sock;
-	//if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
-	//{
-	//	_closeSocket = closeSock;
-	//	closesocket(closeSock);
-	//}
-	//
+	InterlockedExchange8((char *)&disconnectFlag,true);
+	//shutdown(sock, SD_BOTH);
+	SOCKET closeSock = sock;
+	if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
+	{
+		_closeSocket = closeSock;
+		closesocket(closeSock);
+	}
+	
 	return true;
 }
+
+bool Session::CloseSocket()
+{
+	//shutdown(sock, SD_BOTH);
+	SOCKET closeSock = sock;
+	if (InterlockedExchange(&sock, INVALID_SOCKET) != INVALID_SOCKET)
+	{
+		_closeSocket = closeSock;
+		closesocket(closeSock);
+	}
+
+	return true;
+}
+
 
 BOOL Session::Release()
 {

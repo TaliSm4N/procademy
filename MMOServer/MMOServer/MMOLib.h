@@ -28,7 +28,6 @@ struct CLIENT_CONNECT_INFO
 };
 
 #include "Log.h"
-#include "header.h"
 #include "CrashDump.h"
 #include "MemoryPool.h"
 #include "MemoryPoolTLS.h"
